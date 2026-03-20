@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Control Negocio</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+  <h1>Mi Control de Negocio</h1>
+
+<div class="min-h-screen bg-gray-100 p-4 font-sans">
+  <header class="text-center mb-8">
+    <h1 class="text-4xl font-bold text-indigo-700">Mi Control de Negocio</h1>
+    <p class="text-gray-600 mt-2">Gestión simple desde tu teléfono</p>
+  </header>
+
+  <main class="max-w-4xl mx-auto space-y-10">
+    <section class="bg-white rounded-xl shadow-md p-6">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Lotes de Carmen</h2>
+      <div id="lotes" class="space-y-4">
+        <!-- Aquí se insertan los lotes dinámicamente -->
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl shadow-md p-6">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Ventas Crédito</h2>
+      <div id="ventas" class="space-y-4">
+        <!-- Aquí se insertan las ventas -->
+      </div>
+    </section>
+  </main>
+
+  <footer class="text-center mt-10 text-gray-500 text-sm">
+    © 2026 Tu Negocio - Hecho con ❤️ en Managua
+  </footer>
+</div>
+
+  <script src="data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
