@@ -1,15 +1,15 @@
-// Datos
+// ====================== DATOS ======================
 let lotes = JSON.parse(localStorage.getItem('lotes')) || [];
 let ventas = JSON.parse(localStorage.getItem('ventas')) || [];
 
-// Guardar
+// Guardar datos
 function saveData() {
   localStorage.setItem('lotes', JSON.stringify(lotes));
   localStorage.setItem('ventas', JSON.stringify(ventas));
   updateResumen();
 }
 
-// Resumen General
+// ====================== RESUMEN GENERAL ======================
 function updateResumen() {
   const deudaCarmen = lotes.reduce((sum, l) => sum + (l.saldoPendiente || 0), 0);
   const clientesDeben = ventas.reduce((sum, v) => sum + (v.saldo || 0), 0);
@@ -22,10 +22,11 @@ function updateResumen() {
   document.getElementById('gananciaEstimada').textContent = `C$${gananciaEstimada.toLocaleString()}`;
 }
 
-// Renderizar
+// ====================== RENDERIZAR LISTAS ======================
 function renderLotes() {
   const container = document.getElementById('lotes');
   container.innerHTML = '';
+
   lotes.forEach((lote, index) => {
     const color = lote.estado === 'PENDIENTE' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700';
     container.innerHTML += `
@@ -46,6 +47,7 @@ function renderLotes() {
 function renderVentas() {
   const container = document.getElementById('ventas');
   container.innerHTML = '';
+
   ventas.forEach((venta, index) => {
     const color = venta.estado === 'PENDIENTE' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700';
     container.innerHTML += `
@@ -64,23 +66,32 @@ function renderVentas() {
   });
 }
 
-// Formularios
+// ====================== FORMULARIOS ======================
 function showForm(type) {
   hideForms();
-  const formId = `form${type.charAt(0).toUpperCase() + type.slice(1)}`;
-  const form = document.getElementById(formId);
-  if (form) form.classList.remove('hidden');
+  document.getElementById(`form${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.remove('hidden');
 }
 
 function hideForms() {
-  const forms = ['formLote', 'formVenta', 'formCobro'];
-  forms.forEach(id => {
-    const form = document.getElementById(id);
-    if (form) form.classList.add('hidden');
+  ['formLote', 'formVenta', 'formCobro'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
   });
 }
 
-// Funciones add y delete (mantengo las básicas)
+// Buscar cliente en cobro
+function buscarCliente() {
+  const id = document.getElementById('cobroIdVenta').value.trim().toUpperCase();
+  const info = document.getElementById('infoCliente');
+  const venta = ventas.find(v => v.id === id);
+  if (venta) {
+    info.innerHTML = `Cliente: <strong>${venta.cliente}</strong><br>Saldo actual: <strong>C$${venta.saldo.toLocaleString()}</strong>`;
+  } else {
+    info.innerHTML = '';
+  }
+}
+
+// Agregar Lote
 function addLote() {
   const id = document.getElementById('loteId').value.trim().toUpperCase();
   const fecha = document.getElementById('loteFecha').value;
@@ -92,7 +103,12 @@ function addLote() {
   }
 
   lotes.push({
-    id, fechaRecepcion: fecha, totalInicial: total, abonado: 0, saldoPendiente: total, estado: "PENDIENTE"
+    id, 
+    fechaRecepcion: fecha, 
+    totalInicial: total, 
+    abonado: 0, 
+    saldoPendiente: total, 
+    estado: "PENDIENTE"
   });
 
   saveData();
@@ -101,6 +117,7 @@ function addLote() {
   alert("✅ Lote guardado");
 }
 
+// Agregar Venta
 function addVenta() {
   const id = document.getElementById('ventaId').value.trim().toUpperCase();
   const cliente = document.getElementById('ventaCliente').value.trim();
@@ -114,7 +131,12 @@ function addVenta() {
   }
 
   ventas.push({
-    id, cliente, precioTotal: total, pagado: prima, saldo: total - prima, estado: "PENDIENTE"
+    id, 
+    cliente, 
+    precioTotal: total, 
+    pagado: prima, 
+    saldo: total - prima, 
+    estado: "PENDIENTE"
   });
 
   saveData();
@@ -123,6 +145,7 @@ function addVenta() {
   alert("✅ Venta guardada");
 }
 
+// Agregar Cobro
 function addCobro() {
   const idVenta = document.getElementById('cobroIdVenta').value.trim().toUpperCase();
   const monto = parseFloat(document.getElementById('cobroMonto').value) || 0;
@@ -148,6 +171,7 @@ function addCobro() {
   alert("✅ Cobro registrado");
 }
 
+// Eliminar
 function deleteLote(index) {
   if (confirm("¿Eliminar este lote?")) {
     lotes.splice(index, 1);
@@ -164,19 +188,7 @@ function deleteVenta(index) {
   }
 }
 
-// Buscar cliente en cobro
-function buscarCliente() {
-  const id = document.getElementById('cobroIdVenta').value.trim().toUpperCase();
-  const info = document.getElementById('infoCliente');
-  const venta = ventas.find(v => v.id === id);
-  if (venta) {
-    info.innerHTML = `Cliente: <strong>${venta.cliente}</strong><br>Saldo actual: <strong>C$${venta.saldo.toLocaleString()}</strong>`;
-  } else {
-    info.innerHTML = '';
-  }
-}
-
-// Inicializar todo cuando la página cargue completamente
+// Inicializar todo
 window.onload = function() {
   renderLotes();
   renderVentas();
