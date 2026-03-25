@@ -7,104 +7,68 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#4f46e5">
-  <meta name="mobile-web-app-capable" content="yes">
-  
-  <style>
-    body.dark { background-color: #111827; color: #e5e7eb; }
-    body.dark .bg-white { background-color: #1f2937; }
-    body.dark .text-gray-800 { color: #e5e7eb; }
-    body.dark .bg-gray-100 { background-color: #111827; }
-  </style>
 </head>
-<body class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 font-sans transition-colors">
+<body class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
 
   <header class="text-center mb-8">
     <h1 class="text-4xl font-bold text-indigo-700 dark:text-indigo-400">Mi Control</h1>
     <p class="text-gray-600 dark:text-gray-400">Lotes • Ventas • Cobros</p>
-    
-    <button id="toggleDark" 
-            class="mt-4 px-5 py-2 bg-gray-200 dark:bg-gray-700 rounded-xl text-sm font-medium">
-      🌙 Modo Oscuro
-    </button>
   </header>
 
   <main class="max-w-4xl mx-auto space-y-8">
-
-    <!-- Botones grandes -->
     <div class="grid grid-cols-3 gap-4">
-      <button onclick="showForm('lote')" 
-              class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-5 rounded-2xl shadow-lg text-base">
+      <button onclick="showForm('lote')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-5 rounded-2xl text-base">
         + Nuevo Lote
       </button>
-      <button onclick="showForm('venta')" 
-              class="bg-green-600 hover:bg-green-700 text-white font-bold py-5 rounded-2xl shadow-lg text-base">
+      <button onclick="showForm('venta')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-5 rounded-2xl text-base">
         + Nueva Venta
       </button>
-      <button onclick="showForm('cobro')" 
-              class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-5 rounded-2xl shadow-lg text-base">
+      <button onclick="showForm('cobro')" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-5 rounded-2xl text-base">
         + Cobro
       </button>
     </div>
 
-    <!-- Formulario Nuevo Lote -->
+    <!-- Formularios -->
     <div id="formLote" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
       <h2 class="text-2xl font-bold mb-5">Nuevo Lote de Carmen</h2>
-      <input id="loteId" type="text" placeholder="ID Lote (ej. L05)" 
-             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
-      <input id="loteFecha" type="date" class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
-      <input id="loteTotal" type="number" placeholder="Total del lote C$" 
-             class="w-full p-4 mb-6 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
-      <button onclick="addLote()" 
-              class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg">Guardar Lote</button>
+      <input id="loteId" type="text" placeholder="ID Lote (ej. L05)" class="w-full p-4 mb-4 border rounded-xl">
+      <input id="loteFecha" type="date" class="w-full p-4 mb-4 border rounded-xl">
+      <input id="loteTotal" type="number" placeholder="Total del lote C$" class="w-full p-4 mb-6 border rounded-xl">
+      <button onclick="addLote()" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold">Guardar Lote</button>
       <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
     </div>
 
-    <!-- Formulario Nueva Venta -->
     <div id="formVenta" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
       <h2 class="text-2xl font-bold mb-5">Nueva Venta a Crédito</h2>
-      <input id="ventaId" type="text" placeholder="ID Venta (ej. V012)" 
-             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
-      <input id="ventaCliente" type="text" placeholder="Nombre del cliente" 
-             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
-      <input id="ventaTotal" type="number" placeholder="Precio total de venta C$" 
-             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
-      <input id="ventaPrima" type="number" placeholder="Prima / Inicial (0 si ninguna)" 
-             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
-      <input id="ventaMeses" type="number" placeholder="Meses de crédito" 
-             class="w-full p-4 mb-6 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
-      <button onclick="addVenta()" 
-              class="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg">Guardar Venta</button>
+      <input id="ventaId" type="text" placeholder="ID Venta (ej. V012)" class="w-full p-4 mb-4 border rounded-xl">
+      <input id="ventaCliente" type="text" placeholder="Nombre del cliente" class="w-full p-4 mb-4 border rounded-xl">
+      <input id="ventaTotal" type="number" placeholder="Precio total C$" class="w-full p-4 mb-4 border rounded-xl">
+      <input id="ventaPrima" type="number" placeholder="Prima (0 si ninguna)" class="w-full p-4 mb-4 border rounded-xl">
+      <input id="ventaMeses" type="number" placeholder="Meses de crédito" class="w-full p-4 mb-6 border rounded-xl">
+      <button onclick="addVenta()" class="w-full bg-green-600 text-white py-4 rounded-xl font-bold">Guardar Venta</button>
       <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
     </div>
 
-    <!-- Formulario Nuevo Cobro -->
     <div id="formCobro" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
       <h2 class="text-2xl font-bold mb-5">Registrar Cobro</h2>
-      <input id="cobroIdVenta" type="text" placeholder="ID Venta (ej. V001)" 
-             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
-      <input id="cobroMonto" type="number" placeholder="Monto cobrado C$" 
-             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
-      <input id="cobroFecha" type="date" class="w-full p-4 mb-6 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
-      <button onclick="addCobro()" 
-              class="w-full bg-orange-600 text-white py-4 rounded-xl font-bold text-lg">Registrar Cobro</button>
+      <input id="cobroIdVenta" type="text" placeholder="ID Venta (ej. V001)" class="w-full p-4 mb-4 border rounded-xl">
+      <input id="cobroMonto" type="number" placeholder="Monto cobrado C$" class="w-full p-4 mb-4 border rounded-xl">
+      <input id="cobroFecha" type="date" class="w-full p-4 mb-6 border rounded-xl">
+      <button onclick="addCobro()" class="w-full bg-orange-600 text-white py-4 rounded-xl font-bold">Registrar Cobro</button>
       <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
     </div>
 
-    <!-- Sección Lotes -->
     <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
       <h2 class="text-2xl font-semibold mb-4">Lotes de Carmen</h2>
       <div id="lotes" class="space-y-4"></div>
     </section>
 
-    <!-- Sección Ventas -->
     <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
       <h2 class="text-2xl font-semibold mb-4">Ventas Crédito</h2>
       <div id="ventas" class="space-y-4"></div>
     </section>
-
   </main>
 
-  <script src="data.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
