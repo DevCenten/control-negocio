@@ -42,18 +42,36 @@
   <div class="grid grid-cols-3 gap-4 mb-8">
     <button onclick="showForm('lote')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-5 rounded-2xl shadow-lg">+ Nuevo Lote</button>
     <button onclick="showForm('venta')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-5 rounded-2xl shadow-lg">+ Nueva Venta</button>
-    <button onclick="showForm('cobro')" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-5 rounded-2xl shadow-lg">+ Cobro Cliente</button>
+    <button onclick="showForm('cobro')" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-5 rounded-2xl shadow-lg">+ Cobro</button>
   </div>
 
-  <!-- Formulario Abono a Carmen (nuevo) -->
-  <div id="formAbonoCarmen" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-    <h2 class="text-2xl font-bold mb-5">Abono a Carmen</h2>
-    <select id="abonoLoteId" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
-      <option value="">Selecciona Lote</option>
-    </select>
-    <input id="abonoMonto" type="number" placeholder="Monto abonado C$" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
-    <input id="abonoFecha" type="date" class="w-full p-4 mb-6 border rounded-xl dark:bg-gray-700">
-    <button onclick="addAbonoCarmen()" class="w-full bg-purple-600 text-white py-4 rounded-xl font-bold">Registrar Abono a Carmen</button>
+  <!-- Formularios -->
+  <div id="formLote" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+    <h2 class="text-2xl font-bold mb-5">Nuevo Lote de Carmen</h2>
+    <input id="loteId" type="text" placeholder="ID Lote (ej. L05)" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <input id="loteFecha" type="date" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <input id="loteTotal" type="number" placeholder="Total del lote C$" class="w-full p-4 mb-6 border rounded-xl dark:bg-gray-700">
+    <button onclick="addLote()" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold">Guardar Lote</button>
+    <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
+  </div>
+
+  <div id="formVenta" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+    <h2 class="text-2xl font-bold mb-5">Nueva Venta a Crédito</h2>
+    <input id="ventaId" type="text" placeholder="ID Venta" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <input id="ventaCliente" type="text" placeholder="Nombre del cliente" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <input id="ventaTotal" type="number" placeholder="Precio total C$" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <input id="ventaPrima" type="number" placeholder="Prima (0 si ninguna)" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <input id="ventaMeses" type="number" placeholder="Meses de crédito" class="w-full p-4 mb-6 border rounded-xl dark:bg-gray-700">
+    <button onclick="addVenta()" class="w-full bg-green-600 text-white py-4 rounded-xl font-bold">Guardar Venta</button>
+    <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
+  </div>
+
+  <div id="formCobro" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+    <h2 class="text-2xl font-bold mb-5">Registrar Cobro</h2>
+    <input id="cobroIdVenta" type="text" placeholder="ID Venta" onkeyup="buscarCliente()" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <p id="infoCliente" class="text-sm text-gray-600 mb-4 min-h-[2.5rem]"></p>
+    <input id="cobroMonto" type="number" placeholder="Monto cobrado C$" class="w-full p-4 mb-6 border rounded-xl dark:bg-gray-700">
+    <button onclick="addCobro()" class="w-full bg-orange-600 text-white py-4 rounded-xl font-bold">Registrar Cobro</button>
     <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
   </div>
 
