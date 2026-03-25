@@ -4,21 +4,22 @@ let ventas = JSON.parse(localStorage.getItem('ventas')) || [];
 function saveData() {
   localStorage.setItem('lotes', JSON.stringify(lotes));
   localStorage.setItem('ventas', JSON.stringify(ventas));
-  updateResumen();        // ← Nueva línea
+  updateResumen();
 }
 
 function updateResumen() {
-  const deudaCarmen = lotes.reduce((sum, l) => sum + l.saldoPendiente, 0);
-  const clientesDeben = ventas.reduce((sum, v) => sum + v.saldo, 0);
-  const ventasTotal = ventas.length;
-  const ganancia = ventas.reduce((sum, v) => sum + (v.precioTotal * 0.3), 0); // estimación 30% ganancia
+  const deudaCarmen = lotes.reduce((sum, l) => sum + (l.saldoPendiente || 0), 0);
+  const clientesDeben = ventas.reduce((sum, v) => sum + (v.saldo || 0), 0);
+  const ventasActivas = ventas.length;
+  const gananciaEstimada = ventas.reduce((sum, v) => sum + Math.round((v.precioTotal || 0) * 0.35), 0);
 
   document.getElementById('deudaCarmen').textContent = `C$${deudaCarmen.toLocaleString()}`;
   document.getElementById('clientesDeben').textContent = `C$${clientesDeben.toLocaleString()}`;
-  document.getElementById('ventasTotal').textContent = ventasTotal;
-  document.getElementById('ganancia').textContent = `C$${ganancia.toLocaleString()}`;
+  document.getElementById('ventasActivas').textContent = ventasActivas;
+  document.getElementById('gananciaEstimada').textContent = `C$${gananciaEstimada.toLocaleString()}`;
 }
 
+// Renderizar (mantengo simple por ahora)
 function renderLotes() {
   const container = document.getElementById('lotes');
   container.innerHTML = '';
@@ -60,44 +61,76 @@ function renderVentas() {
   });
 }
 
-// Buscar cliente en cobro
+// Buscar cliente automáticamente en cobro
 function buscarCliente() {
   const id = document.getElementById('cobroIdVenta').value.trim().toUpperCase();
   const info = document.getElementById('infoCliente');
   const venta = ventas.find(v => v.id === id);
+  
   if (venta) {
     info.innerHTML = `Cliente: <strong>${venta.cliente}</strong><br>Saldo actual: <strong>C$${venta.saldo.toLocaleString()}</strong>`;
   } else {
-    info.innerHTML = '';
+    info.innerHTML = 'Venta no encontrada';
   }
 }
 
-// Funciones addLote, addVenta, addCobro, deleteLote, deleteVenta, showForm, hideForms
-// (las mismas del mensaje anterior, las mantengo cortas para no alargar)
+// Formularios
+function showForm(type) {
+  hideForms();
+  document.getElementById(`form${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.remove('hidden');
+}
 
-function addLote() { /* mismo código del mensaje anterior */ }
-function addVenta() { /* mismo código */ }
-function addCobro() { /* mismo código */ }
-function deleteLote(index) { /* mismo código */ }
-function deleteVenta(index) { /* mismo código */ }
-function hideForms() { /* mismo código */ }
-function showForm(type) { /* mismo código */ }
+function hideForms() {
+  document.getElementById('formLote').classList.add('hidden');
+  document.getElementById('formVenta').classList.add('hidden');
+  document.getElementById('formCobro').classList.add('hidden');
+}
 
-// ==================== RESUMEN GENERAL ====================
-function updateResumen() {
-  const deudaCarmen = lotes.reduce((sum, lote) => sum + (lote.saldoPendiente || 0), 0);
-  const clientesDeben = ventas.reduce((sum, venta) => sum + (venta.saldo || 0), 0);
-  const ventasActivas = ventas.length;
-  const gananciaEstimada = ventas.reduce((sum, venta) => sum + Math.round((venta.precioTotal || 0) * 0.35), 0); // estimación 35% ganancia
+function addLote() { /* tu código anterior */ }
+function addVenta() { /* tu código anterior */ }
 
-  document.getElementById('deudaCarmen').textContent = `C$${deudaCarmen.toLocaleString()}`;
-  document.getElementById('clientesDeben').textContent = `C$${clientesDeben.toLocaleString()}`;
-  document.getElementById('ventasActivas').textContent = ventasActivas;
-  document.getElementById('gananciaEstimada').textContent = `C$${gananciaEstimada.toLocaleString()}`;
+function addCobro() {
+  const idVenta = document.getElementById('cobroIdVenta').value.trim().toUpperCase();
+  const monto = parseFloat(document.getElementById('cobroMonto').value) || 0;
+
+  if (!idVenta || monto <= 0) {
+    alert("Ingresa ID de venta y monto");
+    return;
+  }
+
+  const venta = ventas.find(v => v.id === idVenta);
+  if (!venta) {
+    alert("Venta no encontrada");
+    return;
+  }
+
+  venta.pagado += monto;
+  venta.saldo = venta.precioTotal - venta.pagado;
+  venta.estado = venta.saldo <= 0 ? "PAGADO" : "PENDIENTE";
+
+  saveData();
+  renderVentas();
+  hideForms();
+  alert("✅ Cobro registrado correctamente");
+}
+
+function deleteLote(index) {
+  if (confirm("¿Eliminar este lote?")) {
+    lotes.splice(index, 1);
+    saveData();
+    renderLotes();
+  }
+}
+
+function deleteVenta(index) {
+  if (confirm("¿Eliminar esta venta?")) {
+    ventas.splice(index, 1);
+    saveData();
+    renderVentas();
+  }
 }
 
 // Inicializar
 renderLotes();
 renderVentas();
-updateResumen();
 updateResumen();
