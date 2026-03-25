@@ -1,15 +1,12 @@
-// ====================== DATOS ======================
 let lotes = JSON.parse(localStorage.getItem('lotes')) || [];
 let ventas = JSON.parse(localStorage.getItem('ventas')) || [];
 
-// Guardar datos
 function saveData() {
   localStorage.setItem('lotes', JSON.stringify(lotes));
   localStorage.setItem('ventas', JSON.stringify(ventas));
   updateResumen();
 }
 
-// ====================== RESUMEN GENERAL ======================
 function updateResumen() {
   const deudaCarmen = lotes.reduce((sum, l) => sum + (l.saldoPendiente || 0), 0);
   const clientesDeben = ventas.reduce((sum, v) => sum + (v.saldo || 0), 0);
@@ -22,11 +19,9 @@ function updateResumen() {
   document.getElementById('gananciaEstimada').textContent = `C$${gananciaEstimada.toLocaleString()}`;
 }
 
-// ====================== RENDERIZAR LISTAS ======================
 function renderLotes() {
   const container = document.getElementById('lotes');
   container.innerHTML = '';
-
   lotes.forEach((lote, index) => {
     const color = lote.estado === 'PENDIENTE' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700';
     container.innerHTML += `
@@ -47,7 +42,6 @@ function renderLotes() {
 function renderVentas() {
   const container = document.getElementById('ventas');
   container.innerHTML = '';
-
   ventas.forEach((venta, index) => {
     const color = venta.estado === 'PENDIENTE' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700';
     container.innerHTML += `
@@ -66,7 +60,6 @@ function renderVentas() {
   });
 }
 
-// ====================== FORMULARIOS ======================
 function showForm(type) {
   hideForms();
   document.getElementById(`form${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.remove('hidden');
@@ -79,7 +72,6 @@ function hideForms() {
   });
 }
 
-// Buscar cliente en cobro
 function buscarCliente() {
   const id = document.getElementById('cobroIdVenta').value.trim().toUpperCase();
   const info = document.getElementById('infoCliente');
@@ -91,7 +83,6 @@ function buscarCliente() {
   }
 }
 
-// Agregar Lote
 function addLote() {
   const id = document.getElementById('loteId').value.trim().toUpperCase();
   const fecha = document.getElementById('loteFecha').value;
@@ -103,12 +94,7 @@ function addLote() {
   }
 
   lotes.push({
-    id, 
-    fechaRecepcion: fecha, 
-    totalInicial: total, 
-    abonado: 0, 
-    saldoPendiente: total, 
-    estado: "PENDIENTE"
+    id, fechaRecepcion: fecha, totalInicial: total, abonado: 0, saldoPendiente: total, estado: "PENDIENTE"
   });
 
   saveData();
@@ -117,7 +103,6 @@ function addLote() {
   alert("✅ Lote guardado");
 }
 
-// Agregar Venta
 function addVenta() {
   const id = document.getElementById('ventaId').value.trim().toUpperCase();
   const cliente = document.getElementById('ventaCliente').value.trim();
@@ -131,12 +116,7 @@ function addVenta() {
   }
 
   ventas.push({
-    id, 
-    cliente, 
-    precioTotal: total, 
-    pagado: prima, 
-    saldo: total - prima, 
-    estado: "PENDIENTE"
+    id, cliente, precioTotal: total, pagado: prima, saldo: total - prima, estado: "PENDIENTE"
   });
 
   saveData();
@@ -145,7 +125,6 @@ function addVenta() {
   alert("✅ Venta guardada");
 }
 
-// Agregar Cobro
 function addCobro() {
   const idVenta = document.getElementById('cobroIdVenta').value.trim().toUpperCase();
   const monto = parseFloat(document.getElementById('cobroMonto').value) || 0;
@@ -171,7 +150,6 @@ function addCobro() {
   alert("✅ Cobro registrado");
 }
 
-// Eliminar
 function deleteLote(index) {
   if (confirm("¿Eliminar este lote?")) {
     lotes.splice(index, 1);
@@ -188,9 +166,16 @@ function deleteVenta(index) {
   }
 }
 
-// Inicializar todo
+// Inicializar
 window.onload = function() {
   renderLotes();
   renderVentas();
   updateResumen();
 };
+
+// Modo Oscuro
+document.getElementById('toggleDark').addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  const btn = document.getElementById('toggleDark');
+  btn.textContent = document.body.classList.contains('dark') ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+});
