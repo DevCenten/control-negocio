@@ -1,0 +1,15 @@
+{
+  "name": "Mi Control de Negocio",
+  "short_name": "Control Negocio",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#1e2937",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
