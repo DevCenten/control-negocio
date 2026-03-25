@@ -3,68 +3,127 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mi Control de Negocio</title>
+  <title>Mi Control de Negocio - Carmen</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#4f46e5">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800 p-4 font-sans">
+<body class="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-800 p-4 font-sans">
 
-  <header class="text-center mb-8">
-    <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl mb-4 shadow-lg">
+  <!-- Header -->
+  <header class="text-center mb-6">
+    <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl mb-3 shadow-lg">
       <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
       </svg>
     </div>
-    <h1 class="text-4xl font-bold text-indigo-700 dark:text-indigo-400 mb-2">Mi Control</h1>
-    <p class="text-gray-600 dark:text-gray-400">Gestión de Lotes, Ventas y Cobros</p>
+    <h1 class="text-3xl font-bold text-indigo-700 dark:text-indigo-400">Mi Control</h1>
+    <p class="text-gray-600 dark:text-gray-400 text-sm">Gestión de Lotes, Ventas y Finanzas</p>
   </header>
 
-  <!-- Resumen General -->
-  <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 mb-8 border border-gray-200 dark:border-gray-700">
-    <h2 class="text-xl font-semibold mb-5 text-center text-gray-800 dark:text-gray-200">Resumen General</h2>
-    <div class="grid grid-cols-2 gap-4 text-center">
-      <div class="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 p-4 rounded-2xl border border-red-200 dark:border-red-800">
-        <p class="text-sm text-red-600 dark:text-red-400 font-medium mb-1">Deuda con Carmen</p>
-        <p id="deudaCarmen" class="text-2xl font-bold text-red-600 dark:text-red-400">C$0</p>
+  <!-- RESUMEN GENERAL -->
+  <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-xl p-5 mb-6 border border-gray-200 dark:border-slate-700">
+    <h2 class="text-lg font-bold mb-4 text-center text-gray-800 dark:text-white flex items-center justify-center gap-2">
+      <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+      Resumen General
+    </h2>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 p-3 rounded-2xl border border-red-200 dark:border-red-800">
+        <p class="text-xs text-red-600 dark:text-red-400 font-medium mb-1">Deuda con Carmen</p>
+        <p id="deudaCarmen" class="text-xl font-bold text-red-600 dark:text-red-400">C$0.00</p>
+        <p id="proximoPagoCarmen" class="text-xs text-red-500 mt-1"></p>
       </div>
-      <div class="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 p-4 rounded-2xl border border-orange-200 dark:border-orange-800">
-        <p class="text-sm text-orange-600 dark:text-orange-400 font-medium mb-1">Clientes me deben</p>
-        <p id="clientesDeben" class="text-2xl font-bold text-orange-600 dark:text-orange-400">C$0</p>
+      <div class="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 p-3 rounded-2xl border border-orange-200 dark:border-orange-800">
+        <p class="text-xs text-orange-600 dark:text-orange-400 font-medium mb-1">Clientes me deben</p>
+        <p id="clientesDeben" class="text-xl font-bold text-orange-600 dark:text-orange-400">C$0.00</p>
       </div>
-      <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 p-4 rounded-2xl border border-green-200 dark:border-green-800">
-        <p class="text-sm text-green-600 dark:text-green-400 font-medium mb-1">Ventas Activas</p>
-        <p id="ventasActivas" class="text-2xl font-bold text-green-600 dark:text-green-400">0</p>
+      <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 p-3 rounded-2xl border border-blue-200 dark:border-blue-800">
+        <p class="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">Total Inventario</p>
+        <p id="totalInventario" class="text-xl font-bold text-blue-600 dark:text-blue-400">C$0.00</p>
       </div>
-      <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800">
-        <p class="text-sm text-emerald-600 dark:text-emerald-400 font-medium mb-1">Ganancia Estimada</p>
-        <p id="gananciaEstimada" class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">C$0</p>
+      <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-800">
+        <p class="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-1">Ganancia Estimada</p>
+        <p id="gananciaEstimada" class="text-xl font-bold text-emerald-600 dark:text-emerald-400">C$0.00</p>
+      </div>
+    </div>
+    <div class="mt-4 grid grid-cols-3 gap-2 text-center">
+      <div class="bg-gray-50 dark:bg-slate-700 p-2 rounded-xl">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Ventas Activas</p>
+        <p id="ventasActivas" class="text-lg font-bold text-gray-700 dark:text-gray-300">0</p>
+      </div>
+      <div class="bg-gray-50 dark:bg-slate-700 p-2 rounded-xl">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Lotes Pendientes</p>
+        <p id="lotesPendientes" class="text-lg font-bold text-gray-700 dark:text-gray-300">0</p>
+      </div>
+      <div class="bg-gray-50 dark:bg-slate-700 p-2 rounded-xl">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Próximos Cobros</p>
+        <p id="proximosCobros" class="text-lg font-bold text-gray-700 dark:text-gray-300">0</p>
       </div>
     </div>
   </div>
 
-  <!-- Botones principales -->
-  <div class="grid grid-cols-3 gap-3 mb-8">
-    <button onclick="showForm('lote')" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1">
+  <!-- BOTONES PRINCIPALES -->
+  <div class="grid grid-cols-2 gap-3 mb-6">
+    <button onclick="showSection('lotes')" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1">
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-      <span class="text-sm">Nuevo Lote</span>
+      <span class="text-sm">Lotes Carmen</span>
     </button>
-    <button onclick="showForm('venta')" class="bg-green-600 hover:bg-green-700 active:scale-95 transition-all text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1">
+    <button onclick="showSection('ventas')" class="bg-green-600 hover:bg-green-700 active:scale-95 transition-all text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+      <span class="text-sm">Ventas</span>
+    </button>
+    <button onclick="showSection('abonos')" class="bg-purple-600 hover:bg-purple-700 active:scale-95 transition-all text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1">
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-      <span class="text-sm">Nueva Venta</span>
+      <span class="text-sm">Abonar a Carmen</span>
     </button>
-    <button onclick="showForm('cobro')" class="bg-orange-600 hover:bg-orange-700 active:scale-95 transition-all text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1">
+    <button onclick="showSection('cobros')" class="bg-orange-600 hover:bg-orange-700 active:scale-95 transition-all text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1">
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-      <span class="text-sm">Cobro</span>
+      <span class="text-sm">Cobrar Cliente</span>
     </button>
   </div>
 
-  <!-- Overlay para formularios -->
-  <div id="formOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-40" onclick="hideForms()"></div>
+  <!-- SECCIÓN LOTES -->
+  <div id="sectionLotes" class="hidden space-y-4">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Lotes de Carmen</h2>
+      <button onclick="showForm('lote')" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">+ Nuevo Lote</button>
+    </div>
+    <div id="listaLotes" class="space-y-3"></div>
+  </div>
 
-  <!-- Formularios -->
-  <div id="formLote" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
+  <!-- SECCIÓN VENTAS -->
+  <div id="sectionVentas" class="hidden space-y-4">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Ventas a Clientes</h2>
+      <button onclick="showForm('venta')" class="bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">+ Nueva Venta</button>
+    </div>
+    <div id="listaVentas" class="space-y-3"></div>
+  </div>
+
+  <!-- SECCIÓN ABONOS -->
+  <div id="sectionAbonos" class="hidden space-y-4">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Abonos a Carmen</h2>
+      <button onclick="showForm('abono')" class="bg-purple-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">+ Registrar Abono</button>
+    </div>
+    <div id="listaAbonos" class="space-y-3"></div>
+  </div>
+
+  <!-- SECCIÓN COBROS -->
+  <div id="sectionCobros" class="hidden space-y-4">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Cobros a Clientes</h2>
+      <button onclick="showForm('cobro')" class="bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">+ Registrar Cobro</button>
+    </div>
+    <div id="listaCobros" class="space-y-3"></div>
+  </div>
+
+  <!-- OVERLAY Y FORMULARIOS MODALES -->
+  <div id="formOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-40" onclick="hideForms()"></div>
+
+  <!-- FORMULARIO NUEVO LOTE -->
+  <div id="formLote" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Nuevo Lote</h2>
       <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -74,21 +133,41 @@
     <div class="space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID del Lote</label>
-        <input id="loteId" type="text" placeholder="Ej: L05" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all">
+        <input id="loteId" type="text" placeholder="Ej: L05" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha de Recepción</label>
-        <input id="loteFecha" type="date" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all">
+        <input id="loteFecha" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total del Lote (C$)</label>
-        <input id="loteTotal" type="number" placeholder="0.00" min="0" step="0.01" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Límite de Pago (2 meses)</label>
+        <input id="loteFechaLimite" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
       </div>
+      
+      <!-- Productos del lote -->
+      <div class="border-t pt-4">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Productos del Lote</label>
+        <div id="productosLoteContainer" class="space-y-2 mb-3">
+          <!-- Los productos se agregan aquí dinámicamente -->
+        </div>
+        <button onclick="agregarProductoLote()" class="w-full py-2 border-2 border-dashed border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors text-sm font-medium">
+          + Agregar Producto
+        </button>
+      </div>
+
+      <div class="bg-gray-50 dark:bg-slate-700 p-3 rounded-xl">
+        <div class="flex justify-between text-sm mb-1">
+          <span class="text-gray-600 dark:text-gray-400">Total del Lote:</span>
+          <span id="previewTotalLote" class="font-bold text-indigo-600 dark:text-indigo-400">C$0.00</span>
+        </div>
+      </div>
+
       <button onclick="addLote()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Guardar Lote</button>
     </div>
   </div>
 
-  <div id="formVenta" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
+  <!-- FORMULARIO NUEVA VENTA -->
+  <div id="formVenta" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Nueva Venta</h2>
       <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -98,80 +177,177 @@
     <div class="space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID de Venta</label>
-        <input id="ventaId" type="text" placeholder="Ej: V001" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all">
+        <input id="ventaId" type="text" placeholder="Ej: V012" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre del Cliente</label>
-        <input id="ventaCliente" type="text" placeholder="Nombre completo" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all">
+        <input id="ventaCliente" type="text" placeholder="Nombre completo" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Precio Total (C$)</label>
-        <input id="ventaTotal" type="number" placeholder="0.00" min="0" step="0.01" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Teléfono</label>
+        <input id="ventaTelefono" type="tel" placeholder="0000-0000" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
       </div>
-      <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha de Venta</label>
+        <input id="ventaFecha" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
+      </div>
+
+      <!-- Productos vendidos -->
+      <div class="border-t pt-4">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Productos Vendidos</label>
+        <div id="productosVentaContainer" class="space-y-2 mb-3">
+          <!-- Productos se agregan aquí -->
+        </div>
+        <button onclick="agregarProductoVenta()" class="w-full py-2 border-2 border-dashed border-green-300 dark:border-green-700 text-green-600 dark:text-green-400 rounded-xl hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors text-sm font-medium">
+          + Agregar Producto
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prima (C$)</label>
-          <input id="ventaPrima" type="number" placeholder="0.00" min="0" step="0.01" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all">
+          <input id="ventaPrima" type="number" placeholder="0.00" min="0" step="0.01" onchange="calcularVenta()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Meses</label>
-          <input id="ventaMeses" type="number" placeholder="12" min="1" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Meses de Crédito</label>
+          <select id="ventaMeses" onchange="calcularVenta()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
+            <option value="3">3 meses</option>
+            <option value="6">6 meses</option>
+            <option value="8">8 meses</option>
+            <option value="10">10 meses</option>
+            <option value="12" selected>12 meses</option>
+          </select>
         </div>
       </div>
+
+      <div class="bg-green-50 dark:bg-green-900/30 p-4 rounded-xl space-y-2">
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-600 dark:text-gray-400">Total a Pagar:</span>
+          <span id="previewTotalVenta" class="font-bold text-green-600 dark:text-green-400">C$0.00</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-600 dark:text-gray-400">Saldo Financiado:</span>
+          <span id="previewSaldoVenta" class="font-bold text-orange-600 dark:text-orange-400">C$0.00</span>
+        </div>
+        <div class="flex justify-between text-sm border-t pt-2 border-green-200 dark:border-green-800">
+          <span class="text-gray-600 dark:text-gray-400">Cuota Mensual:</span>
+          <span id="previewCuotaVenta" class="font-bold text-indigo-600 dark:text-indigo-400">C$0.00</span>
+        </div>
+      </div>
+
       <button onclick="addVenta()" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Guardar Venta</button>
     </div>
   </div>
 
-  <div id="formCobro" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
+  <!-- FORMULARIO ABONO A CARMEN -->
+  <div id="formAbono" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700">
     <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Registrar Cobro</h2>
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Abonar a Carmen</h2>
       <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>
     <div class="space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID de Venta</label>
-        <input id="cobroIdVenta" type="text" placeholder="Ej: V001" onkeyup="buscarCliente()" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seleccionar Lote</label>
+        <select id="abonoLoteId" onchange="mostrarInfoLoteAbono()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+          <option value="">Seleccione un lote...</option>
+        </select>
       </div>
-      <div id="infoClienteContainer" class="hidden bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
-        <p id="infoCliente" class="text-sm text-blue-800 dark:text-blue-200"></p>
+      <div id="infoLoteAbono" class="hidden bg-purple-50 dark:bg-purple-900/30 p-4 rounded-xl border border-purple-200 dark:border-purple-800">
+        <!-- Info del lote seleccionado -->
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha del Abono</label>
+        <input id="abonoFecha" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monto del Abono (C$)</label>
+        <input id="abonoMonto" type="number" placeholder="0.00" min="0" step="0.01" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Método de Pago</label>
+        <select id="abonoMetodo" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+          <option value="Efectivo">Efectivo</option>
+          <option value="Transferencia">Transferencia</option>
+          <option value="Depósito">Depósito</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notas (opcional)</label>
+        <input id="abonoNotas" type="text" placeholder="Ej: Pago semanal, adelanto, etc." class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+      </div>
+      <button onclick="addAbono()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Registrar Abono</button>
+    </div>
+  </div>
+
+  <!-- FORMULARIO COBRO A CLIENTE -->
+  <div id="formCobro" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Cobrar a Cliente</h2>
+      <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Buscar Venta</label>
+        <input id="cobroBusqueda" type="text" placeholder="ID Venta o Nombre Cliente" onkeyup="buscarVentaCobro()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
+      </div>
+      <div id="resultadosBusquedaCobro" class="hidden max-h-40 overflow-y-auto space-y-2">
+        <!-- Resultados de búsqueda -->
+      </div>
+      <div id="infoVentaCobro" class="hidden bg-orange-50 dark:bg-orange-900/30 p-4 rounded-xl border border-orange-200 dark:border-orange-800">
+        <!-- Info de la venta seleccionada -->
+      </div>
+      <input type="hidden" id="cobroVentaId">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha del Cobro</label>
+        <input id="cobroFecha" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monto Cobrado (C$)</label>
-        <input id="cobroMonto" type="number" placeholder="0.00" min="0" step="0.01" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all">
+        <input id="cobroMonto" type="number" placeholder="0.00" min="0" step="0.01" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Método de Pago</label>
+        <select id="cobroMetodo" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
+          <option value="Efectivo">Efectivo</option>
+          <option value="Transferencia">Transferencia</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notas (opcional)</label>
+        <input id="cobroNotas" type="text" placeholder="Ej: Pago mensual, adelanto, etc." class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
       </div>
       <button onclick="addCobro()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Registrar Cobro</button>
     </div>
   </div>
 
-  <!-- Listas -->
-  <div class="space-y-6 mb-8">
-    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-2xl font-semibold text-gray-800 dark:text-white flex items-center gap-2">
-          <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-          Lotes de Carmen
-        </h2>
-        <span id="countLotes" class="bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 text-xs font-bold px-3 py-1 rounded-full">0</span>
-      </div>
-      <div id="lotes" class="space-y-3">
-        <p class="text-gray-500 dark:text-gray-400 text-center py-8 italic">No hay lotes registrados</p>
-      </div>
-    </section>
+  <!-- MODAL DETALLE LOTE -->
+  <div id="modalDetalleLote" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h2 id="tituloDetalleLote" class="text-2xl font-bold text-gray-800 dark:text-white">Detalle del Lote</h2>
+      <button onclick="cerrarModal('modalDetalleLote')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div id="contenidoDetalleLote" class="space-y-4">
+      <!-- Contenido dinámico -->
+    </div>
+  </div>
 
-    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-200 dark:border-gray-700">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-2xl font-semibold text-gray-800 dark:text-white flex items-center gap-2">
-          <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-          Ventas a Crédito
-        </h2>
-        <span id="countVentas" class="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs font-bold px-3 py-1 rounded-full">0</span>
-      </div>
-      <div id="ventas" class="space-y-3">
-        <p class="text-gray-500 dark:text-gray-400 text-center py-8 italic">No hay ventas registradas</p>
-      </div>
-    </section>
+  <!-- MODAL DETALLE VENTA -->
+  <div id="modalDetalleVenta" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h2 id="tituloDetalleVenta" class="text-2xl font-bold text-gray-800 dark:text-white">Detalle de Venta</h2>
+      <button onclick="cerrarModal('modalDetalleVenta')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div id="contenidoDetalleVenta" class="space-y-4">
+      <!-- Contenido dinámico -->
+    </div>
   </div>
 
   <!-- Toast Notification -->

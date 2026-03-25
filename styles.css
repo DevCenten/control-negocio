@@ -1,79 +1,118 @@
-/* Estilos adicionales y mejoras */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 * {
   font-family: 'Inter', sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Animaciones suaves */
-.transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 200ms;
-}
-
-/* Scrollbar personalizado */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
-}
-
-/* Modo oscuro scrollbar */
-.dark ::-webkit-scrollbar-track {
-  background: #374151;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #4b5563;
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
-}
-
-/* Inputs autofill en modo oscuro */
-.dark input:-webkit-autofill,
-.dark input:-webkit-autofill:hover,
-.dark input:-webkit-autofill:focus {
-  -webkit-text-fill-color: white;
-  -webkit-box-shadow: 0 0 0px 1000px #374151 inset;
-  transition: background-color 5000s ease-in-out 0s;
-}
-
-/* Efecto de carga suave */
+/* Animaciones */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-section {
+section > div {
   animation: fadeIn 0.3s ease-out;
 }
 
-/* Mejoras de accesibilidad */
-button:focus-visible,
-input:focus-visible {
-  outline: 2px solid #4f46e5;
-  outline-offset: 2px;
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* Prevenir zoom en inputs en iOS */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Inputs */
+input, select {
+  transition: all 0.2s;
+}
+
+input:focus, select:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+
+/* Botones */
+button {
+  transition: all 0.2s;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Modales */
+.fixed {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Toast */
+#toast {
+  backdrop-filter: blur(10px);
+  background: rgba(31, 41, 55, 0.95);
+}
+
+/* Utilidades responsivas */
+@media (max-width: 640px) {
+  .grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+  
+  .grid-cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Prevenir zoom en iOS */
 @media screen and (max-width: 768px) {
   input, select, textarea {
     font-size: 16px;
   }
+}
+
+/* Animación de pulso para alertas */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Focus visible para accesibilidad */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+/* Tarjetas hover effect */
+.bg-white, .dark .bg-slate-800 {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.bg-white:active, .dark .bg-slate-800:active {
+  transform: scale(0.99);
 }
