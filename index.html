@@ -10,66 +10,81 @@
 </head>
 <body class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 font-sans">
 
-  <header class="text-center mb-8">
+  <header class="text-center mb-6">
     <h1 class="text-4xl font-bold text-indigo-700 dark:text-indigo-400">Mi Control</h1>
     <p class="text-gray-600 dark:text-gray-400">Lotes • Ventas • Cobros</p>
   </header>
 
-  <main class="max-w-4xl mx-auto space-y-8">
-
-    <!-- Botones principales -->
-    <div class="grid grid-cols-3 gap-4">
-      <button onclick="showForm('lote')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-5 rounded-2xl shadow-lg">+ Nuevo Lote</button>
-      <button onclick="showForm('venta')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-5 rounded-2xl shadow-lg">+ Nueva Venta</button>
-      <button onclick="showForm('cobro')" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-5 rounded-2xl shadow-lg">+ Cobro</button>
+  <!-- RESUMEN GENERAL (nuevo) -->
+  <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-6 mb-8">
+    <h2 class="text-xl font-semibold mb-5 text-center text-gray-700 dark:text-gray-300">Resumen General</h2>
+    <div class="grid grid-cols-2 gap-6 text-center">
+      <div class="bg-red-50 dark:bg-red-950 p-4 rounded-2xl">
+        <p class="text-sm text-red-600 dark:text-red-400">Deuda con Carmen</p>
+        <p id="deudaCarmen" class="text-3xl font-bold text-red-600">C$0</p>
+      </div>
+      <div class="bg-orange-50 dark:bg-orange-950 p-4 rounded-2xl">
+        <p class="text-sm text-orange-600 dark:text-orange-400">Clientes me deben</p>
+        <p id="clientesDeben" class="text-3xl font-bold text-orange-600">C$0</p>
+      </div>
+      <div class="bg-green-50 dark:bg-green-950 p-4 rounded-2xl">
+        <p class="text-sm text-green-600 dark:text-green-400">Ventas Activas</p>
+        <p id="ventasActivas" class="text-3xl font-bold text-green-600">0</p>
+      </div>
+      <div class="bg-emerald-50 dark:bg-emerald-950 p-4 rounded-2xl">
+        <p class="text-sm text-emerald-600 dark:text-emerald-400">Ganancia Estimada</p>
+        <p id="gananciaEstimada" class="text-3xl font-bold text-emerald-600">C$0</p>
+      </div>
     </div>
+  </div>
 
-    <!-- Formulario Nuevo Lote -->
-    <div id="formLote" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-      <h2 class="text-2xl font-bold mb-5">Nuevo Lote de Carmen</h2>
-      <input id="loteId" type="text" placeholder="ID Lote (ej. L05)" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
-      <input id="loteFecha" type="date" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
-      <input id="loteTotal" type="number" placeholder="Total del lote C$" class="w-full p-4 mb-6 border rounded-xl dark:bg-gray-700">
-      <button onclick="addLote()" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold">Guardar Lote</button>
-      <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
-    </div>
+  <!-- Botones principales -->
+  <div class="grid grid-cols-3 gap-4 mb-8">
+    <button onclick="showForm('lote')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-5 rounded-2xl shadow-lg">+ Nuevo Lote</button>
+    <button onclick="showForm('venta')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-5 rounded-2xl shadow-lg">+ Nueva Venta</button>
+    <button onclick="showForm('cobro')" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-5 rounded-2xl shadow-lg">+ Cobro</button>
+  </div>
 
-    <!-- Formulario Nueva Venta -->
-    <div id="formVenta" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-      <h2 class="text-2xl font-bold mb-5">Nueva Venta a Crédito</h2>
-      <input id="ventaId" type="text" placeholder="ID Venta (ej. V012)" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
-      <input id="ventaCliente" type="text" placeholder="Nombre del cliente" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
-      <input id="ventaTotal" type="number" placeholder="Precio total C$" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
-      <input id="ventaPrima" type="number" placeholder="Prima (0 si ninguna)" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
-      <input id="ventaMeses" type="number" placeholder="Meses de crédito" class="w-full p-4 mb-6 border rounded-xl dark:bg-gray-700">
-      <button onclick="addVenta()" class="w-full bg-green-600 text-white py-4 rounded-xl font-bold">Guardar Venta</button>
-      <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
-    </div>
+  <!-- Formularios (mantengo los mismos) -->
+  <div id="formLote" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+    <h2 class="text-2xl font-bold mb-5">Nuevo Lote de Carmen</h2>
+    <input id="loteId" type="text" placeholder="ID Lote (ej. L05)" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <input id="loteFecha" type="date" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <input id="loteTotal" type="number" placeholder="Total del lote C$" class="w-full p-4 mb-6 border rounded-xl dark:bg-gray-700">
+    <button onclick="addLote()" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold">Guardar Lote</button>
+    <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
+  </div>
 
-    <!-- Formulario Cobro (mejorado) -->
-    <div id="formCobro" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-      <h2 class="text-2xl font-bold mb-5">Registrar Cobro</h2>
-      <input id="cobroIdVenta" type="text" placeholder="ID Venta (ej. V001)" 
-             onkeyup="buscarCliente()" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
-      <p id="infoCliente" class="text-sm text-gray-600 mb-4"></p>
-      <input id="cobroMonto" type="number" placeholder="Monto cobrado C$" class="w-full p-4 mb-6 border rounded-xl dark:bg-gray-700">
-      <button onclick="addCobro()" class="w-full bg-orange-600 text-white py-4 rounded-xl font-bold">Registrar Cobro</button>
-      <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
-    </div>
+  <div id="formVenta" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+    <h2 class="text-2xl font-bold mb-5">Nueva Venta a Crédito</h2>
+    <input id="ventaId" type="text" placeholder="ID Venta" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <input id="ventaCliente" type="text" placeholder="Nombre del cliente" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <input id="ventaTotal" type="number" placeholder="Precio total C$" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <input id="ventaPrima" type="number" placeholder="Prima (0 si ninguna)" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <input id="ventaMeses" type="number" placeholder="Meses de crédito" class="w-full p-4 mb-6 border rounded-xl dark:bg-gray-700">
+    <button onclick="addVenta()" class="w-full bg-green-600 text-white py-4 rounded-xl font-bold">Guardar Venta</button>
+    <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
+  </div>
 
-    <!-- Lista de Lotes -->
-    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-      <h2 class="text-2xl font-semibold mb-4">Lotes de Carmen</h2>
-      <div id="lotes" class="space-y-4"></div>
-    </section>
+  <div id="formCobro" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+    <h2 class="text-2xl font-bold mb-5">Registrar Cobro</h2>
+    <input id="cobroIdVenta" type="text" placeholder="ID Venta" onkeyup="buscarCliente()" class="w-full p-4 mb-4 border rounded-xl dark:bg-gray-700">
+    <p id="infoCliente" class="text-sm text-gray-600 mb-4 min-h-[1.25rem]"></p>
+    <input id="cobroMonto" type="number" placeholder="Monto cobrado C$" class="w-full p-4 mb-6 border rounded-xl dark:bg-gray-700">
+    <button onclick="addCobro()" class="w-full bg-orange-600 text-white py-4 rounded-xl font-bold">Registrar Cobro</button>
+    <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
+  </div>
 
-    <!-- Lista de Ventas -->
-    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-      <h2 class="text-2xl font-semibold mb-4">Ventas Crédito</h2>
-      <div id="ventas" class="space-y-4"></div>
-    </section>
+  <!-- Listas -->
+  <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+    <h2 class="text-2xl font-semibold mb-4">Lotes de Carmen</h2>
+    <div id="lotes" class="space-y-4"></div>
+  </section>
 
-  </main>
+  <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+    <h2 class="text-2xl font-semibold mb-4">Ventas Crédito</h2>
+    <div id="ventas" class="space-y-4"></div>
+  </section>
 
   <script src="script.js"></script>
 </body>
