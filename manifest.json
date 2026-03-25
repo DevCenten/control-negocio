@@ -1,32 +1,53 @@
-<<<<<<< HEAD
 {
   "name": "Mi Control de Negocio",
   "short_name": "Control Negocio",
+  "description": "Sistema de gestión para lotes, ventas a crédito y cobros",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#1e2937",
   "theme_color": "#4f46e5",
+  "orientation": "portrait",
+  "scope": "/",
   "icons": [
     {
-      "src": "https://via.placeholder.com/192",
+      "src": "https://via.placeholder.com/72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/192.png",
       "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/384.png",
+      "sizes": "384x384",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ]
-=======
-{
-  "name": "Mi Control de Negocio",
-  "short_name": "Control Negocio",
-  "start_url": "/index.html",
-  "display": "standalone",
-  "background_color": "#1e2937",
-  "theme_color": "#4f46e5",
-  "icons": [
-    {
-      "src": "https://via.placeholder.com/192",
-      "sizes": "192x192",
-      "type": "image/png"
-    }
-  ]
->>>>>>> 182c7f61615e60264dbbc5568b2db31f1875d962
 }
