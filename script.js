@@ -1,12 +1,15 @@
+// Datos
 let lotes = JSON.parse(localStorage.getItem('lotes')) || [];
 let ventas = JSON.parse(localStorage.getItem('ventas')) || [];
 
+// Guardar
 function saveData() {
   localStorage.setItem('lotes', JSON.stringify(lotes));
   localStorage.setItem('ventas', JSON.stringify(ventas));
   updateResumen();
 }
 
+// Resumen General
 function updateResumen() {
   const deudaCarmen = lotes.reduce((sum, l) => sum + (l.saldoPendiente || 0), 0);
   const clientesDeben = ventas.reduce((sum, v) => sum + (v.saldo || 0), 0);
@@ -19,7 +22,7 @@ function updateResumen() {
   document.getElementById('gananciaEstimada').textContent = `C$${gananciaEstimada.toLocaleString()}`;
 }
 
-// Renderizar (mantengo simple por ahora)
+// Renderizar
 function renderLotes() {
   const container = document.getElementById('lotes');
   container.innerHTML = '';
@@ -61,33 +64,64 @@ function renderVentas() {
   });
 }
 
-// Buscar cliente automáticamente en cobro
-function buscarCliente() {
-  const id = document.getElementById('cobroIdVenta').value.trim().toUpperCase();
-  const info = document.getElementById('infoCliente');
-  const venta = ventas.find(v => v.id === id);
-  
-  if (venta) {
-    info.innerHTML = `Cliente: <strong>${venta.cliente}</strong><br>Saldo actual: <strong>C$${venta.saldo.toLocaleString()}</strong>`;
-  } else {
-    info.innerHTML = 'Venta no encontrada';
-  }
-}
-
 // Formularios
 function showForm(type) {
   hideForms();
-  document.getElementById(`form${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.remove('hidden');
+  const formId = `form${type.charAt(0).toUpperCase() + type.slice(1)}`;
+  const form = document.getElementById(formId);
+  if (form) form.classList.remove('hidden');
 }
 
 function hideForms() {
-  document.getElementById('formLote').classList.add('hidden');
-  document.getElementById('formVenta').classList.add('hidden');
-  document.getElementById('formCobro').classList.add('hidden');
+  const forms = ['formLote', 'formVenta', 'formCobro'];
+  forms.forEach(id => {
+    const form = document.getElementById(id);
+    if (form) form.classList.add('hidden');
+  });
 }
 
-function addLote() { /* tu código anterior */ }
-function addVenta() { /* tu código anterior */ }
+// Funciones add y delete (mantengo las básicas)
+function addLote() {
+  const id = document.getElementById('loteId').value.trim().toUpperCase();
+  const fecha = document.getElementById('loteFecha').value;
+  const total = parseFloat(document.getElementById('loteTotal').value) || 0;
+
+  if (!id || !fecha || total <= 0) {
+    alert("Completa todos los campos");
+    return;
+  }
+
+  lotes.push({
+    id, fechaRecepcion: fecha, totalInicial: total, abonado: 0, saldoPendiente: total, estado: "PENDIENTE"
+  });
+
+  saveData();
+  renderLotes();
+  hideForms();
+  alert("✅ Lote guardado");
+}
+
+function addVenta() {
+  const id = document.getElementById('ventaId').value.trim().toUpperCase();
+  const cliente = document.getElementById('ventaCliente').value.trim();
+  const total = parseFloat(document.getElementById('ventaTotal').value) || 0;
+  const prima = parseFloat(document.getElementById('ventaPrima').value) || 0;
+  const meses = parseInt(document.getElementById('ventaMeses').value) || 0;
+
+  if (!id || !cliente || total <= 0 || meses <= 0) {
+    alert("Completa todos los campos");
+    return;
+  }
+
+  ventas.push({
+    id, cliente, precioTotal: total, pagado: prima, saldo: total - prima, estado: "PENDIENTE"
+  });
+
+  saveData();
+  renderVentas();
+  hideForms();
+  alert("✅ Venta guardada");
+}
 
 function addCobro() {
   const idVenta = document.getElementById('cobroIdVenta').value.trim().toUpperCase();
@@ -111,7 +145,7 @@ function addCobro() {
   saveData();
   renderVentas();
   hideForms();
-  alert("✅ Cobro registrado correctamente");
+  alert("✅ Cobro registrado");
 }
 
 function deleteLote(index) {
@@ -130,7 +164,21 @@ function deleteVenta(index) {
   }
 }
 
-// Inicializar
-renderLotes();
-renderVentas();
-updateResumen();
+// Buscar cliente en cobro
+function buscarCliente() {
+  const id = document.getElementById('cobroIdVenta').value.trim().toUpperCase();
+  const info = document.getElementById('infoCliente');
+  const venta = ventas.find(v => v.id === id);
+  if (venta) {
+    info.innerHTML = `Cliente: <strong>${venta.cliente}</strong><br>Saldo actual: <strong>C$${venta.saldo.toLocaleString()}</strong>`;
+  } else {
+    info.innerHTML = '';
+  }
+}
+
+// Inicializar todo cuando la página cargue completamente
+window.onload = function() {
+  renderLotes();
+  renderVentas();
+  updateResumen();
+};
