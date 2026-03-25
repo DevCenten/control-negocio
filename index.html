@@ -8,6 +8,7 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#4f46e5">
   <meta name="mobile-web-app-capable" content="yes">
+  
   <style>
     body.dark { background-color: #111827; color: #e5e7eb; }
     body.dark .bg-white { background-color: #1f2937; }
@@ -15,102 +16,95 @@
     body.dark .bg-gray-100 { background-color: #111827; }
   </style>
 </head>
-<body class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 font-sans transition-colors duration-300">
+<body class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 font-sans transition-colors">
 
-  <header class="text-center mb-6">
-    <h1 class="text-4xl font-bold text-indigo-700 dark:text-indigo-400">Mi Control de Negocio</h1>
-    <p class="text-gray-600 dark:text-gray-400 mt-1">Gestión desde tu teléfono</p>
+  <header class="text-center mb-8">
+    <h1 class="text-4xl font-bold text-indigo-700 dark:text-indigo-400">Mi Control</h1>
+    <p class="text-gray-600 dark:text-gray-400">Lotes • Ventas • Cobros</p>
     
-    <!-- Botón modo oscuro -->
-    <button id="toggleDark" class="mt-3 px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg text-sm">
-      Modo Oscuro
+    <button id="toggleDark" 
+            class="mt-4 px-5 py-2 bg-gray-200 dark:bg-gray-700 rounded-xl text-sm font-medium">
+      🌙 Modo Oscuro
     </button>
   </header>
 
   <main class="max-w-4xl mx-auto space-y-8">
-    <!-- Botones de acción principales (grandes y fáciles de tocar en móvil) -->
+
+    <!-- Botones grandes -->
     <div class="grid grid-cols-3 gap-4">
-      <button onclick="showForm('lote')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg text-lg">
+      <button onclick="showForm('lote')" 
+              class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-5 rounded-2xl shadow-lg text-base">
         + Nuevo Lote
       </button>
-      <button onclick="showForm('venta')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg text-lg">
+      <button onclick="showForm('venta')" 
+              class="bg-green-600 hover:bg-green-700 text-white font-bold py-5 rounded-2xl shadow-lg text-base">
         + Nueva Venta
       </button>
-      <button onclick="showForm('cobro')" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg text-lg">
+      <button onclick="showForm('cobro')" 
+              class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-5 rounded-2xl shadow-lg text-base">
         + Cobro
       </button>
     </div>
 
-    <!-- Formularios (ocultos al inicio) -->
-    <div id="formLote" class="hidden bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-      <h2 class="text-2xl font-bold mb-4">Nuevo Lote de Carmen</h2>
-      <input id="loteId" type="text" placeholder="ID Lote (ej. L05)" class="w-full p-3 mb-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-      <input id="loteFecha" type="date" class="w-full p-3 mb-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-      <input id="loteTotal" type="number" placeholder="Total inicial C$" class="w-full p-3 mb-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-      <button onclick="addLote()" class="bg-indigo-600 text-white px-6 py-3 rounded-lg w-full font-bold">Guardar Lote</button>
-      <button onclick="hideForms()" class="mt-3 text-gray-600 dark:text-gray-400 w-full text-center">Cancelar</button>
+    <!-- Formulario Nuevo Lote -->
+    <div id="formLote" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+      <h2 class="text-2xl font-bold mb-5">Nuevo Lote de Carmen</h2>
+      <input id="loteId" type="text" placeholder="ID Lote (ej. L05)" 
+             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
+      <input id="loteFecha" type="date" class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
+      <input id="loteTotal" type="number" placeholder="Total del lote C$" 
+             class="w-full p-4 mb-6 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
+      <button onclick="addLote()" 
+              class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg">Guardar Lote</button>
+      <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
     </div>
 
-    <div id="formVenta" class="hidden bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-      <h2 class="text-2xl font-bold mb-4">Nueva Venta Crédito</h2>
-      <input id="ventaId" type="text" placeholder="ID Venta (ej. V012)" class="w-full p-3 mb-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-      <input id="ventaCliente" type="text" placeholder="Nombre del cliente" class="w-full p-3 mb-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-      <input id="ventaTotal" type="number" placeholder="Precio total venta C$" class="w-full p-3 mb-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-      <input id="ventaPrima" type="number" placeholder="Prima / Inicial (0 si no)" class="w-full p-3 mb-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-      <input id="ventaMeses" type="number" placeholder="Meses de crédito" class="w-full p-3 mb-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-      <button onclick="addVenta()" class="bg-green-600 text-white px-6 py-3 rounded-lg w-full font-bold">Guardar Venta</button>
-      <button onclick="hideForms()" class="mt-3 text-gray-600 dark:text-gray-400 w-full text-center">Cancelar</button>
+    <!-- Formulario Nueva Venta -->
+    <div id="formVenta" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+      <h2 class="text-2xl font-bold mb-5">Nueva Venta a Crédito</h2>
+      <input id="ventaId" type="text" placeholder="ID Venta (ej. V012)" 
+             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
+      <input id="ventaCliente" type="text" placeholder="Nombre del cliente" 
+             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
+      <input id="ventaTotal" type="number" placeholder="Precio total de venta C$" 
+             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
+      <input id="ventaPrima" type="number" placeholder="Prima / Inicial (0 si ninguna)" 
+             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
+      <input id="ventaMeses" type="number" placeholder="Meses de crédito" 
+             class="w-full p-4 mb-6 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
+      <button onclick="addVenta()" 
+              class="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg">Guardar Venta</button>
+      <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
     </div>
 
-    <div id="formCobro" class="hidden bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-      <h2 class="text-2xl font-bold mb-4">Nuevo Cobro</h2>
-      <input id="cobroIdVenta" type="text" placeholder="ID Venta (ej. V001)" class="w-full p-3 mb-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-      <input id="cobroMonto" type="number" placeholder="Monto cobrado C$" class="w-full p-3 mb-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-      <input id="cobroFecha" type="date" class="w-full p-3 mb-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-      <select id="cobroTipo" class="w-full p-3 mb-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-        <option>Mensual</option>
-        <option>Quincenal</option>
-        <option>Semanal</option>
-        <option>Adelanto</option>
-        <option>Extra</option>
-      </select>
-      <button onclick="addCobro()" class="bg-orange-600 text-white px-6 py-3 rounded-lg w-full font-bold">Registrar Cobro</button>
-      <button onclick="hideForms()" class="mt-3 text-gray-600 dark:text-gray-400 w-full text-center">Cancelar</button>
+    <!-- Formulario Nuevo Cobro -->
+    <div id="formCobro" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+      <h2 class="text-2xl font-bold mb-5">Registrar Cobro</h2>
+      <input id="cobroIdVenta" type="text" placeholder="ID Venta (ej. V001)" 
+             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
+      <input id="cobroMonto" type="number" placeholder="Monto cobrado C$" 
+             class="w-full p-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
+      <input id="cobroFecha" type="date" class="w-full p-4 mb-6 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
+      <button onclick="addCobro()" 
+              class="w-full bg-orange-600 text-white py-4 rounded-xl font-bold text-lg">Registrar Cobro</button>
+      <button onclick="hideForms()" class="mt-4 w-full text-gray-500">Cancelar</button>
     </div>
 
-    <!-- Secciones de visualización -->
-    <section class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+    <!-- Sección Lotes -->
+    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
       <h2 class="text-2xl font-semibold mb-4">Lotes de Carmen</h2>
       <div id="lotes" class="space-y-4"></div>
     </section>
 
-    <section class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+    <!-- Sección Ventas -->
+    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
       <h2 class="text-2xl font-semibold mb-4">Ventas Crédito</h2>
       <div id="ventas" class="space-y-4"></div>
     </section>
+
   </main>
 
   <script src="data.js"></script>
   <script src="script.js"></script>
-  <script>
-    // Modo oscuro
-    const toggleDark = document.getElementById('toggleDark');
-    toggleDark.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      toggleDark.textContent = document.body.classList.contains('dark') ? 'Modo Claro' : 'Modo Oscuro';
-    });
-
-    // Ocultar formularios
-    function hideForms() {
-      document.getElementById('formLote').classList.add('hidden');
-      document.getElementById('formVenta').classList.add('hidden');
-      document.getElementById('formCobro').classList.add('hidden');
-    }
-
-    function showForm(type) {
-      hideForms();
-      document.getElementById(`form${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.remove('hidden');
-    }
-  </script>
 </body>
 </html>
