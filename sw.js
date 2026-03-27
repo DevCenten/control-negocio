@@ -1,10 +1,9 @@
-const CACHE_NAME = 'control-carmen-v1';
+const CACHE_NAME = 'control-carmen-v2';
 const urlsToCache = [
   '/',
   '/index.html',
   '/styles.css',
   '/script.js',
-  '/data.js',
   '/manifest.json'
 ];
 

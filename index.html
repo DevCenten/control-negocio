@@ -19,46 +19,66 @@
       </svg>
     </div>
     <h1 class="text-3xl font-bold text-indigo-700 dark:text-indigo-400">Mi Control</h1>
-    <p class="text-gray-600 dark:text-gray-400 text-sm">Gestión de Lotes, Ventas y Finanzas</p>
+    <p class="text-gray-600 dark:text-gray-400 text-sm">Lotes • Compras • Ventas • Finanzas</p>
+    
+    <!-- Estado de sincronización -->
+    <div id="syncStatus" class="mt-2 flex items-center justify-center gap-2 text-sm">
+      <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+      <span class="text-yellow-600 dark:text-yellow-400">Verificando...</span>
+    </div>
   </header>
+
+  <!-- Botones de acción rápida -->
+  <div class="flex justify-center gap-2 mb-4">
+    <button onclick="sincronizarAhora()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow flex items-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+      Sincronizar
+    </button>
+    <button onclick="mostrarConfigSync()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">
+      Configurar
+    </button>
+    <button onclick="exportarDatos()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">
+      Exportar
+    </button>
+  </div>
 
   <!-- RESUMEN GENERAL -->
   <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-xl p-5 mb-6 border border-gray-200 dark:border-slate-700">
-    <h2 class="text-lg font-bold mb-4 text-center text-gray-800 dark:text-white flex items-center justify-center gap-2">
-      <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-      Resumen General
-    </h2>
+    <h2 class="text-lg font-bold mb-4 text-center text-gray-800 dark:text-white">Resumen General</h2>
     <div class="grid grid-cols-2 gap-3">
       <div class="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 p-3 rounded-2xl border border-red-200 dark:border-red-800">
         <p class="text-xs text-red-600 dark:text-red-400 font-medium mb-1">Deuda con Carmen</p>
         <p id="deudaCarmen" class="text-xl font-bold text-red-600 dark:text-red-400">C$0.00</p>
-        <p id="proximoPagoCarmen" class="text-xs text-red-500 mt-1"></p>
+      </div>
+      <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 p-3 rounded-2xl border border-purple-200 dark:border-purple-800">
+        <p class="text-xs text-purple-600 dark:text-purple-400 font-medium mb-1">Mis Compras (Stock)</p>
+        <p id="totalCompras" class="text-xl font-bold text-purple-600 dark:text-purple-400">C$0.00</p>
       </div>
       <div class="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 p-3 rounded-2xl border border-orange-200 dark:border-orange-800">
         <p class="text-xs text-orange-600 dark:text-orange-400 font-medium mb-1">Clientes me deben</p>
         <p id="clientesDeben" class="text-xl font-bold text-orange-600 dark:text-orange-400">C$0.00</p>
-      </div>
-      <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 p-3 rounded-2xl border border-blue-200 dark:border-blue-800">
-        <p class="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">Total Inventario</p>
-        <p id="totalInventario" class="text-xl font-bold text-blue-600 dark:text-blue-400">C$0.00</p>
       </div>
       <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-800">
         <p class="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-1">Ganancia Estimada</p>
         <p id="gananciaEstimada" class="text-xl font-bold text-emerald-600 dark:text-emerald-400">C$0.00</p>
       </div>
     </div>
-    <div class="mt-4 grid grid-cols-3 gap-2 text-center">
+    <div class="mt-4 grid grid-cols-4 gap-2 text-center">
+      <div class="bg-gray-50 dark:bg-slate-700 p-2 rounded-xl">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Lotes</p>
+        <p id="countLotes" class="text-lg font-bold text-gray-700 dark:text-gray-300">0</p>
+      </div>
+      <div class="bg-gray-50 dark:bg-slate-700 p-2 rounded-xl">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Compras</p>
+        <p id="countCompras" class="text-lg font-bold text-gray-700 dark:text-gray-300">0</p>
+      </div>
       <div class="bg-gray-50 dark:bg-slate-700 p-2 rounded-xl">
         <p class="text-xs text-gray-500 dark:text-gray-400">Ventas Activas</p>
-        <p id="ventasActivas" class="text-lg font-bold text-gray-700 dark:text-gray-300">0</p>
+        <p id="countVentas" class="text-lg font-bold text-gray-700 dark:text-gray-300">0</p>
       </div>
       <div class="bg-gray-50 dark:bg-slate-700 p-2 rounded-xl">
-        <p class="text-xs text-gray-500 dark:text-gray-400">Lotes Pendientes</p>
-        <p id="lotesPendientes" class="text-lg font-bold text-gray-700 dark:text-gray-300">0</p>
-      </div>
-      <div class="bg-gray-50 dark:bg-slate-700 p-2 rounded-xl">
-        <p class="text-xs text-gray-500 dark:text-gray-400">Próximos Cobros</p>
-        <p id="proximosCobros" class="text-lg font-bold text-gray-700 dark:text-gray-300">0</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Stock Total</p>
+        <p id="countStock" class="text-lg font-bold text-gray-700 dark:text-gray-300">0</p>
       </div>
     </div>
   </div>
@@ -69,87 +89,117 @@
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
       <span class="text-sm">Lotes Carmen</span>
     </button>
+    <button onclick="showSection('compras')" class="bg-purple-600 hover:bg-purple-700 active:scale-95 transition-all text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+      <span class="text-sm">Mis Compras</span>
+    </button>
     <button onclick="showSection('ventas')" class="bg-green-600 hover:bg-green-700 active:scale-95 transition-all text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1">
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
       <span class="text-sm">Ventas</span>
     </button>
-    <button onclick="showSection('abonos')" class="bg-purple-600 hover:bg-purple-700 active:scale-95 transition-all text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1">
+    <button onclick="showSection('finanzas')" class="bg-orange-600 hover:bg-orange-700 active:scale-95 transition-all text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1">
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-      <span class="text-sm">Abonar a Carmen</span>
-    </button>
-    <button onclick="showSection('cobros')" class="bg-orange-600 hover:bg-orange-700 active:scale-95 transition-all text-white font-bold py-4 rounded-2xl shadow-lg flex flex-col items-center gap-1">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-      <span class="text-sm">Cobrar Cliente</span>
+      <span class="text-sm">Abonos/Cobros</span>
     </button>
   </div>
 
   <!-- SECCIÓN LOTES -->
   <div id="sectionLotes" class="hidden space-y-4">
     <div class="flex justify-between items-center mb-4">
-      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Lotes de Carmen</h2>
+      <div class="flex items-center gap-2">
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Lotes de Carmen</h2>
+        <select id="filtroLotes" onchange="renderLotes()" class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 dark:bg-slate-700 dark:text-white">
+          <option value="todos">Todos</option>
+          <option value="pendientes">Pendientes</option>
+          <option value="pagados">Pagados (Historial)</option>
+        </select>
+      </div>
       <button onclick="showForm('lote')" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">+ Nuevo Lote</button>
     </div>
     <div id="listaLotes" class="space-y-3"></div>
   </div>
 
+  <!-- SECCIÓN COMPRAS PERSONALES -->
+  <div id="sectionCompras" class="hidden space-y-4">
+    <div class="flex justify-between items-center mb-4">
+      <div class="flex items-center gap-2">
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Mis Compras</h2>
+        <select id="filtroCompras" onchange="renderCompras()" class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 dark:bg-slate-700 dark:text-white">
+          <option value="todos">Todos</option>
+          <option value="stock">En Stock</option>
+          <option value="vendidos">Vendidos</option>
+        </select>
+      </div>
+      <button onclick="showForm('compra')" class="bg-purple-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">+ Nueva Compra</button>
+    </div>
+    <div id="listaCompras" class="space-y-3"></div>
+  </div>
+
   <!-- SECCIÓN VENTAS -->
   <div id="sectionVentas" class="hidden space-y-4">
     <div class="flex justify-between items-center mb-4">
-      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Ventas a Clientes</h2>
+      <div class="flex items-center gap-2">
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Ventas a Clientes</h2>
+        <select id="filtroVentas" onchange="renderVentas()" class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 dark:bg-slate-700 dark:text-white">
+          <option value="todos">Todos</option>
+          <option value="pendientes">Pendientes</option>
+          <option value="pagados">Pagados (Historial)</option>
+        </select>
+      </div>
       <button onclick="showForm('venta')" class="bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">+ Nueva Venta</button>
     </div>
     <div id="listaVentas" class="space-y-3"></div>
   </div>
 
-  <!-- SECCIÓN ABONOS -->
-  <div id="sectionAbonos" class="hidden space-y-4">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Abonos a Carmen</h2>
-      <button onclick="showForm('abono')" class="bg-purple-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">+ Registrar Abono</button>
+  <!-- SECCIÓN FINANZAS -->
+  <div id="sectionFinanzas" class="hidden space-y-4">
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <button onclick="showForm('abono')" class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl text-sm font-bold shadow">
+        + Abonar a Carmen
+      </button>
+      <button onclick="showForm('cobro')" class="bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl text-sm font-bold shadow">
+        + Cobrar Cliente
+      </button>
     </div>
-    <div id="listaAbonos" class="space-y-3"></div>
-  </div>
-
-  <!-- SECCIÓN COBROS -->
-  <div id="sectionCobros" class="hidden space-y-4">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Cobros a Clientes</h2>
-      <button onclick="showForm('cobro')" class="bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">+ Registrar Cobro</button>
-    </div>
+    
+    <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2">Abonos a Carmen</h3>
+    <div id="listaAbonos" class="space-y-3 mb-6"></div>
+    
+    <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2">Cobros a Clientes</h3>
     <div id="listaCobros" class="space-y-3"></div>
   </div>
 
-  <!-- OVERLAY Y FORMULARIOS MODALES -->
+  <!-- OVERLAY -->
   <div id="formOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-40" onclick="hideForms()"></div>
 
-  <!-- FORMULARIO NUEVO LOTE -->
+  <!-- FORMULARIO LOTE -->
   <div id="formLote" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
     <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Nuevo Lote</h2>
+      <h2 id="tituloFormLote" class="text-2xl font-bold text-gray-800 dark:text-white">Nuevo Lote</h2>
       <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>
     <div class="space-y-4">
+      <input type="hidden" id="loteEditId">
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID del Lote</label>
         <input id="loteId" type="text" placeholder="Ej: L05" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
       </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha de Recepción</label>
-        <input id="loteFecha" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Límite de Pago (2 meses)</label>
-        <input id="loteFechaLimite" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Recepción</label>
+          <input id="loteFecha" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Límite (2 meses)</label>
+          <input id="loteFechaLimite" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
       </div>
       
-      <!-- Productos del lote -->
       <div class="border-t pt-4">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Productos del Lote</label>
-        <div id="productosLoteContainer" class="space-y-2 mb-3">
-          <!-- Los productos se agregan aquí dinámicamente -->
-        </div>
+        <div id="productosLoteContainer" class="space-y-2 mb-3"></div>
         <button onclick="agregarProductoLote()" class="w-full py-2 border-2 border-dashed border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors text-sm font-medium">
           + Agregar Producto
         </button>
@@ -162,19 +212,78 @@
         </div>
       </div>
 
-      <button onclick="addLote()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Guardar Lote</button>
+      <div id="opcionesLotePagado" class="hidden border-t pt-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="reabrirLote" class="w-4 h-4 text-indigo-600 rounded">
+          <span class="text-sm text-gray-700 dark:text-gray-300">Reabrir lote para agregar más productos</span>
+        </label>
+        <p class="text-xs text-gray-500 mt-1">El lote volverá a estado PENDIENTE</p>
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="guardarLote()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Guardar</button>
+        <button onclick="hideForms()" class="px-6 py-4 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-bold">Cancelar</button>
+      </div>
     </div>
   </div>
 
-  <!-- FORMULARIO NUEVA VENTA -->
-  <div id="formVenta" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
+  <!-- FORMULARIO COMPRA PERSONAL -->
+  <div id="formCompra" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
     <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Nueva Venta</h2>
+      <h2 id="tituloFormCompra" class="text-2xl font-bold text-gray-800 dark:text-white">Nueva Compra</h2>
       <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>
     <div class="space-y-4">
+      <input type="hidden" id="compraEditId">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID de Compra</label>
+        <input id="compraId" type="text" placeholder="Ej: C001" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Compra</label>
+          <input id="compraFecha" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Proveedor</label>
+          <input id="compraProveedor" type="text" placeholder="Ej: Almacén X" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+        </div>
+      </div>
+      
+      <div class="border-t pt-4">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Productos Comprados</label>
+        <div id="productosCompraContainer" class="space-y-2 mb-3"></div>
+        <button onclick="agregarProductoCompra()" class="w-full py-2 border-2 border-dashed border-purple-300 dark:border-purple-700 text-purple-600 dark:text-purple-400 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors text-sm font-medium">
+          + Agregar Producto
+        </button>
+      </div>
+
+      <div class="bg-gray-50 dark:bg-slate-700 p-3 rounded-xl">
+        <div class="flex justify-between text-sm mb-1">
+          <span class="text-gray-600 dark:text-gray-400">Total Compra:</span>
+          <span id="previewTotalCompra" class="font-bold text-purple-600 dark:text-purple-400">C$0.00</span>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="guardarCompra()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Guardar</button>
+        <button onclick="hideForms()" class="px-6 py-4 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-bold">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORMULARIO VENTA -->
+  <div id="formVenta" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-6">
+      <h2 id="tituloFormVenta" class="text-2xl font-bold text-gray-800 dark:text-white">Nueva Venta</h2>
+      <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="space-y-4">
+      <input type="hidden" id="ventaEditId">
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID de Venta</label>
         <input id="ventaId" type="text" placeholder="Ej: V012" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
@@ -183,23 +292,29 @@
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre del Cliente</label>
         <input id="ventaCliente" type="text" placeholder="Nombre completo" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
       </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Teléfono</label>
-        <input id="ventaTelefono" type="tel" placeholder="0000-0000" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha de Venta</label>
-        <input id="ventaFecha" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Teléfono</label>
+          <input id="ventaTelefono" type="tel" placeholder="0000-0000" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Venta</label>
+          <input id="ventaFecha" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
+        </div>
       </div>
 
-      <!-- Productos vendidos -->
       <div class="border-t pt-4">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Productos Vendidos</label>
-        <div id="productosVentaContainer" class="space-y-2 mb-3">
-          <!-- Productos se agregan aquí -->
+        <div class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-xl mb-3">
+          <p class="text-xs text-blue-700 dark:text-blue-300 mb-2">Selecciona productos de:</p>
+          <div class="flex gap-2">
+            <button onclick="mostrarSelectorProductos('lotes')" class="flex-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 py-2 rounded-lg text-xs font-medium">Lotes Carmen</button>
+            <button onclick="mostrarSelectorProductos('compras')" class="flex-1 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 py-2 rounded-lg text-xs font-medium">Mis Compras</button>
+          </div>
         </div>
-        <button onclick="agregarProductoVenta()" class="w-full py-2 border-2 border-dashed border-green-300 dark:border-green-700 text-green-600 dark:text-green-400 rounded-xl hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors text-sm font-medium">
-          + Agregar Producto
+        <div id="productosVentaContainer" class="space-y-2 mb-3"></div>
+        <button onclick="agregarProductoVentaManual()" class="w-full py-2 border-2 border-dashed border-green-300 dark:border-green-700 text-green-600 dark:text-green-400 rounded-xl hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors text-sm font-medium">
+          + Agregar Producto Manual
         </button>
       </div>
 
@@ -235,11 +350,33 @@
         </div>
       </div>
 
-      <button onclick="addVenta()" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Guardar Venta</button>
+      <div id="opcionesVentaPagada" class="hidden border-t pt-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="reactivarVenta" class="w-4 h-4 text-green-600 rounded">
+          <span class="text-sm text-gray-700 dark:text-gray-300">Cliente quiere agregar más productos (nueva venta)</span>
+        </label>
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="guardarVenta()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Guardar Venta</button>
+        <button onclick="hideForms()" class="px-6 py-4 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-bold">Cancelar</button>
+      </div>
     </div>
   </div>
 
-  <!-- FORMULARIO ABONO A CARMEN -->
+  <!-- SELECTOR DE PRODUCTOS -->
+  <div id="selectorProductos" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[80vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h3 id="tituloSelectorProductos" class="text-xl font-bold text-gray-800 dark:text-white">Seleccionar Productos</h3>
+      <button onclick="cerrarSelectorProductos()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div id="listaSelectorProductos" class="space-y-2 max-h-96 overflow-y-auto"></div>
+    <button onclick="confirmarSeleccionProductos()" class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold">Agregar Seleccionados</button>
+  </div>
+
+  <!-- FORMULARIO ABONO -->
   <div id="formAbono" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700">
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Abonar a Carmen</h2>
@@ -250,24 +387,24 @@
     <div class="space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seleccionar Lote</label>
-        <select id="abonoLoteId" onchange="mostrarInfoLoteAbono()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+        <select id="abonoLoteId" onchange="mostrarInfoLoteAbono()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
           <option value="">Seleccione un lote...</option>
         </select>
       </div>
-      <div id="infoLoteAbono" class="hidden bg-purple-50 dark:bg-purple-900/30 p-4 rounded-xl border border-purple-200 dark:border-purple-800">
-        <!-- Info del lote seleccionado -->
-      </div>
+      <div id="infoLoteAbono" class="hidden bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-xl border border-indigo-200 dark:border-indigo-800"></div>
+      
+      <input type="hidden" id="abonoEditId">
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha del Abono</label>
-        <input id="abonoFecha" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+        <input id="abonoFecha" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monto del Abono (C$)</label>
-        <input id="abonoMonto" type="number" placeholder="0.00" min="0" step="0.01" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+        <input id="abonoMonto" type="number" placeholder="0.00" min="0" step="0.01" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Método de Pago</label>
-        <select id="abonoMetodo" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+        <select id="abonoMetodo" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
           <option value="Efectivo">Efectivo</option>
           <option value="Transferencia">Transferencia</option>
           <option value="Depósito">Depósito</option>
@@ -275,13 +412,17 @@
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notas (opcional)</label>
-        <input id="abonoNotas" type="text" placeholder="Ej: Pago semanal, adelanto, etc." class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none">
+        <input id="abonoNotas" type="text" placeholder="Ej: Pago semanal, adelanto, etc." class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
       </div>
-      <button onclick="addAbono()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Registrar Abono</button>
+      
+      <div class="flex gap-2">
+        <button onclick="guardarAbono()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Registrar Abono</button>
+        <button onclick="hideForms()" class="px-6 py-4 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-bold">Cancelar</button>
+      </div>
     </div>
   </div>
 
-  <!-- FORMULARIO COBRO A CLIENTE -->
+  <!-- FORMULARIO COBRO -->
   <div id="formCobro" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700">
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Cobrar a Cliente</h2>
@@ -292,62 +433,138 @@
     <div class="space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Buscar Venta</label>
-        <input id="cobroBusqueda" type="text" placeholder="ID Venta o Nombre Cliente" onkeyup="buscarVentaCobro()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
+        <input id="cobroBusqueda" type="text" placeholder="ID Venta o Nombre Cliente" onkeyup="buscarVentaCobro()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
       </div>
-      <div id="resultadosBusquedaCobro" class="hidden max-h-40 overflow-y-auto space-y-2">
-        <!-- Resultados de búsqueda -->
-      </div>
-      <div id="infoVentaCobro" class="hidden bg-orange-50 dark:bg-orange-900/30 p-4 rounded-xl border border-orange-200 dark:border-orange-800">
-        <!-- Info de la venta seleccionada -->
-      </div>
+      <div id="resultadosBusquedaCobro" class="hidden max-h-40 overflow-y-auto space-y-2"></div>
+      <div id="infoVentaCobro" class="hidden bg-green-50 dark:bg-green-900/30 p-4 rounded-xl border border-green-200 dark:border-green-800"></div>
+      
+      <input type="hidden" id="cobroEditId">
       <input type="hidden" id="cobroVentaId">
+      
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha del Cobro</label>
-        <input id="cobroFecha" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
+        <input id="cobroFecha" type="date" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monto Cobrado (C$)</label>
-        <input id="cobroMonto" type="number" placeholder="0.00" min="0" step="0.01" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
+        <input id="cobroMonto" type="number" placeholder="0.00" min="0" step="0.01" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Método de Pago</label>
-        <select id="cobroMetodo" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
+        <select id="cobroMetodo" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
           <option value="Efectivo">Efectivo</option>
           <option value="Transferencia">Transferencia</option>
         </select>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notas (opcional)</label>
-        <input id="cobroNotas" type="text" placeholder="Ej: Pago mensual, adelanto, etc." class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
+        <input id="cobroNotas" type="text" placeholder="Ej: Pago mensual, adelanto, etc." class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none">
       </div>
-      <button onclick="addCobro()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Registrar Cobro</button>
+      
+      <div class="flex gap-2">
+        <button onclick="guardarCobro()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Registrar Cobro</button>
+        <button onclick="hideForms()" class="px-6 py-4 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-bold">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CONFIGURACIÓN SYNC -->
+  <div id="modalConfigSync" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Configurar Sincronización</h2>
+      <button onclick="cerrarModal('modalConfigSync')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="space-y-4">
+      <div class="bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded-xl border border-yellow-200 dark:border-yellow-800">
+        <p class="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+          <strong>Instrucciones paso a paso:</strong>
+        </p>
+        <ol class="text-xs text-yellow-700 dark:text-yellow-300 space-y-1 list-decimal pl-4">
+          <li>Ve a <strong>docs.google.com</strong> y crea una hoja de cálculo nueva</li>
+          <li>Haz clic en <strong>Compartir</strong> → <strong>Cambiar a cualquiera con el enlace</strong></li>
+          <li>Selecciona <strong>Editor</strong> y copia el enlace</li>
+          <li>Pega el enlace completo aquí abajo</li>
+          <li>O usa SheetDB.io para API más simple (ver instrucciones)</li>
+        </ol>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URL de Google Sheet</label>
+        <input id="sheetUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/..." class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+      </div>
+
+      <div class="flex items-center gap-2">
+        <input type="checkbox" id="syncAuto" class="w-4 h-4 text-blue-600 rounded" checked>
+        <label for="syncAuto" class="text-sm text-gray-700 dark:text-gray-300">Sincronizar automáticamente cada 30 segundos</label>
+      </div>
+
+      <button onclick="guardarConfigSync()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Guardar y Conectar</button>
+      
+      <div class="border-t pt-4">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Estado:</p>
+        <div id="estadoSync" class="text-sm font-medium text-gray-800 dark:text-white">No configurado</div>
+      </div>
+      
+      <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded-xl">
+        <p class="text-xs text-gray-600 dark:text-gray-400 mb-2"><strong>Opción alternativa - SheetDB:</strong></p>
+        <ol class="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-decimal pl-4">
+          <li>Ve a sheetdb.io y regístrate gratis</li>
+          <li>Conecta tu Google Sheet</li>
+          <li>Copia la API URL que te dan</li>
+          <li>Pégala en el campo de arriba</li>
+        </ol>
+      </div>
     </div>
   </div>
 
   <!-- MODAL DETALLE LOTE -->
   <div id="modalDetalleLote" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
     <div class="flex justify-between items-center mb-4">
-      <h2 id="tituloDetalleLote" class="text-2xl font-bold text-gray-800 dark:text-white">Detalle del Lote</h2>
-      <button onclick="cerrarModal('modalDetalleLote')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
+      <h2 id="tituloDetalleLote" class="text-2xl font-bold text-gray-800 dark:text-white">Detalle Lote</h2>
+      <div class="flex gap-2">
+        <button onclick="editarLoteDesdeModal()" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Editar">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        </button>
+        <button onclick="cerrarModal('modalDetalleLote')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
     </div>
-    <div id="contenidoDetalleLote" class="space-y-4">
-      <!-- Contenido dinámico -->
+    <div id="contenidoDetalleLote" class="space-y-4"></div>
+  </div>
+
+  <!-- MODAL DETALLE COMPRA -->
+  <div id="modalDetalleCompra" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h2 id="tituloDetalleCompra" class="text-2xl font-bold text-gray-800 dark:text-white">Detalle Compra</h2>
+      <div class="flex gap-2">
+        <button onclick="editarCompraDesdeModal()" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Editar">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        </button>
+        <button onclick="cerrarModal('modalDetalleCompra')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
     </div>
+    <div id="contenidoDetalleCompra" class="space-y-4"></div>
   </div>
 
   <!-- MODAL DETALLE VENTA -->
   <div id="modalDetalleVenta" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
     <div class="flex justify-between items-center mb-4">
-      <h2 id="tituloDetalleVenta" class="text-2xl font-bold text-gray-800 dark:text-white">Detalle de Venta</h2>
-      <button onclick="cerrarModal('modalDetalleVenta')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
+      <h2 id="tituloDetalleVenta" class="text-2xl font-bold text-gray-800 dark:text-white">Detalle Venta</h2>
+      <div class="flex gap-2">
+        <button onclick="editarVentaDesdeModal()" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Editar">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        </button>
+        <button onclick="cerrarModal('modalDetalleVenta')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
     </div>
-    <div id="contenidoDetalleVenta" class="space-y-4">
-      <!-- Contenido dinámico -->
-    </div>
+    <div id="contenidoDetalleVenta" class="space-y-4"></div>
   </div>
 
   <!-- Toast Notification -->
@@ -356,7 +573,14 @@
     <span id="toastMessage">Operación exitosa</span>
   </div>
 
-  <script src="data.js"></script>
+  <!-- Indicador de sincronización -->
+  <div id="syncIndicator" class="fixed top-4 right-4 hidden z-50">
+    <div class="bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm">
+      <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+      Sincronizando...
+    </div>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>

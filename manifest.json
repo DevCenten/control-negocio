@@ -1,7 +1,7 @@
 {
   "name": "Mi Control - Carmen",
   "short_name": "Control Carmen",
-  "description": "Sistema de gestión de lotes, ventas a crédito y cobros",
+  "description": "Sistema de gestión de lotes, compras, ventas y finanzas sincronizado",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#1e293b",
