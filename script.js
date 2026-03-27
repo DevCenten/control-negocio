@@ -154,33 +154,48 @@ async function sincronizarAhora() {
       deviceId: CONFIG.deviceId
     };
     
+    console.log('Enviando datos:', datosLocales); // Debug
+    
     const response = await fetch(CONFIG.scriptUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(datosLocales),
-      mode: 'cors'
+      // Importante: no usar mode: 'cors' explícitamente, dejar que el navegador lo maneje
     });
     
-    if (!response.ok) throw new Error('Error en sync');
+    console.log('Response status:', response.status); // Debug
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
     
     const datosRemotos = await response.json();
-    mergeDatos(datosRemotos);
+    console.log('Datos recibidos:', datosRemotos); // Debug
+    
+    if (datosRemotos.success === false) {
+      throw new Error(datosRemotos.error || 'Error del servidor');
+    }
+    
+    // Solo hacer merge si hay datos remotos válidos
+    if (datosRemotos.lotes || datosRemotos.ventas) {
+      mergeDatos(datosRemotos);
+    }
     
     CONFIG.lastSync = new Date().toISOString();
     localStorage.setItem('lastSync', CONFIG.lastSync);
     updateSyncStatus('synced');
-    showToast('Sincronizado correctamente');
+    showToast('Sincronizado correctamente ✅');
+    
   } catch (error) {
-    console.error('Sync error:', error);
+    console.error('Sync error detallado:', error);
     updateSyncStatus('error');
-    showToast('Error al sincronizar - modo offline');
+    showToast('Error: ' + error.message);
   } finally {
     document.getElementById('syncIndicator').classList.add('hidden');
   }
 }
-
-function mergeDatos(datosRemotos) {
-  if (!datosRemotos) return;
   
   // Merge con estrategia: timestamp más reciente gana
   if (datosRemotos.lotes) lotes = mergeArrays(lotes, datosRemotos.lotes, 'id');
