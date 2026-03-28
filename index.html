@@ -468,31 +468,31 @@
     </div>
   </div>
 
-  <!-- MODAL CONFIGURACIÓN SYNC -->
+  <!-- MODAL CONFIGURACIÓN SHEETDB -->
   <div id="modalConfigSync" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700">
     <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Configurar Sincronización</h2>
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Configurar SheetDB.io</h2>
       <button onclick="cerrarModal('modalConfigSync')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>
     <div class="space-y-4">
-      <div class="bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded-xl border border-yellow-200 dark:border-yellow-800">
-        <p class="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
-          <strong>Instrucciones paso a paso:</strong>
+      <div class="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
+        <p class="text-sm text-blue-800 dark:text-blue-200 mb-2">
+          <strong>Instrucciones SheetDB.io:</strong>
         </p>
-        <ol class="text-xs text-yellow-700 dark:text-yellow-300 space-y-1 list-decimal pl-4">
-          <li>Ve a <strong>docs.google.com</strong> y crea una hoja de cálculo nueva</li>
-          <li>Haz clic en <strong>Compartir</strong> → <strong>Cambiar a cualquiera con el enlace</strong></li>
-          <li>Selecciona <strong>Editor</strong> y copia el enlace</li>
-          <li>Pega el enlace completo aquí abajo</li>
-          <li>O usa SheetDB.io para API más simple (ver instrucciones)</li>
+        <ol class="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-decimal pl-4">
+          <li>Ve a <strong>sheetdb.io</strong> y regístrate gratis</li>
+          <li>Clic en <strong>"Create API"</strong></li>
+          <li>Pega la URL de tu Google Sheet</li>
+          <li>Copia la API URL (ej: https://sheetdb.io/api/v1/xxx)</li>
+          <li>Pégala aquí abajo 👇</li>
         </ol>
       </div>
       
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URL de Google Sheet</label>
-        <input id="sheetUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/..." class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API URL de SheetDB</label>
+        <input id="sheetUrl" type="text" placeholder="https://sheetdb.io/api/v1/..." class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm">
       </div>
 
       <div class="flex items-center gap-2">
@@ -505,16 +505,6 @@
       <div class="border-t pt-4">
         <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Estado:</p>
         <div id="estadoSync" class="text-sm font-medium text-gray-800 dark:text-white">No configurado</div>
-      </div>
-      
-      <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded-xl">
-        <p class="text-xs text-gray-600 dark:text-gray-400 mb-2"><strong>Opción alternativa - SheetDB:</strong></p>
-        <ol class="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-decimal pl-4">
-          <li>Ve a sheetdb.io y regístrate gratis</li>
-          <li>Conecta tu Google Sheet</li>
-          <li>Copia la API URL que te dan</li>
-          <li>Pégala en el campo de arriba</li>
-        </ol>
       </div>
     </div>
   </div>
@@ -581,6 +571,7 @@
     </div>
   </div>
 
+  <script src="data.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

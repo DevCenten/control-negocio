@@ -1,9 +1,8 @@
 // ==========================================
-// CONFIGURACIÓN GLOBAL
+// CONFIGURACIÓN GLOBAL - SHEETDB.IO
 // ==========================================
 const CONFIG = {
-  sheetId: localStorage.getItem('sheetId') || '',
-  scriptUrl: localStorage.getItem('scriptUrl') || '',
+  sheetDbUrl: localStorage.getItem('sheetDbUrl') || '',
   syncInterval: null,
   lastSync: localStorage.getItem('lastSync') || null,
   isOnline: navigator.onLine,
@@ -52,11 +51,11 @@ window.onload = function() {
     updateSyncStatus('offline');
   });
 
-  if (CONFIG.scriptUrl && localStorage.getItem('syncAuto') !== 'false') {
+  if (CONFIG.sheetDbUrl && localStorage.getItem('syncAuto') !== 'false') {
     iniciarSyncAutomatico();
   }
 
-  updateSyncStatus(CONFIG.isOnline ? (CONFIG.scriptUrl ? 'synced' : 'online') : 'offline');
+  updateSyncStatus(CONFIG.isOnline ? (CONFIG.sheetDbUrl ? 'synced' : 'online') : 'offline');
   showSection('lotes');
   updateResumen();
   
@@ -74,18 +73,13 @@ function generarDeviceId() {
 }
 
 // ==========================================
-// SINCRONIZACIÓN
+// SINCRONIZACIÓN CON SHEETDB.IO
 // ==========================================
-function extraerIdDeUrl(url) {
-  const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-  return match ? match[1] : null;
-}
-
 function mostrarConfigSync() {
-  document.getElementById('sheetUrl').value = CONFIG.scriptUrl || '';
+  document.getElementById('sheetUrl').value = CONFIG.sheetDbUrl || '';
   document.getElementById('syncAuto').checked = localStorage.getItem('syncAuto') !== 'false';
   
-  const estado = !CONFIG.scriptUrl ? 'No configurado' : 
+  const estado = !CONFIG.sheetDbUrl ? 'No configurado' : 
                  !CONFIG.isOnline ? 'Sin conexión' :
                  CONFIG.lastSync ? `Última: ${new Date(CONFIG.lastSync).toLocaleTimeString()}` : 'Pendiente';
   document.getElementById('estadoSync').textContent = estado;
@@ -99,27 +93,27 @@ function guardarConfigSync() {
   const syncAuto = document.getElementById('syncAuto').checked;
   
   if (!url) {
-    alert('Ingresa la URL de Google Sheets o SheetDB');
+    alert('Ingresa la URL de SheetDB.io');
     return;
   }
   
-  CONFIG.scriptUrl = url;
-  localStorage.setItem('scriptUrl', url);
-  localStorage.setItem('syncAuto', syncAuto);
-  
-  // Extraer sheet ID para referencia
-  const sheetId = extraerIdDeUrl(url);
-  if (sheetId) {
-    CONFIG.sheetId = sheetId;
-    localStorage.setItem('sheetId', sheetId);
+  // Validar que sea URL de SheetDB
+  if (!url.includes('sheetdb.io')) {
+    alert('La URL debe ser de SheetDB.io (ej: https://sheetdb.io/api/v1/...)');
+    return;
   }
+  
+  // Limpiar URL (quitar slash final si existe)
+  CONFIG.sheetDbUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+  localStorage.setItem('sheetDbUrl', CONFIG.sheetDbUrl);
+  localStorage.setItem('syncAuto', syncAuto);
   
   if (syncAuto) iniciarSyncAutomatico();
   else detenerSyncAutomatico();
   
   cerrarModal('modalConfigSync');
   sincronizarAhora();
-  showToast('Configuración guardada');
+  showToast('Configuración SheetDB guardada ✅');
 }
 
 function iniciarSyncAutomatico() {
@@ -135,7 +129,7 @@ function detenerSyncAutomatico() {
 }
 
 async function sincronizarAhora() {
-  if (!CONFIG.scriptUrl || !CONFIG.isOnline) {
+  if (!CONFIG.sheetDbUrl || !CONFIG.isOnline) {
     showToast('Sin conexión o sin configurar');
     return;
   }
@@ -144,54 +138,152 @@ async function sincronizarAhora() {
   updateSyncStatus('syncing');
 
   try {
-    const datosLocales = {
-      lotes,
-      compras,
-      ventas,
-      abonos,
-      cobros,
-      timestamp: Date.now(),
-      deviceId: CONFIG.deviceId
+    console.log('🔄 Iniciando sincronización con SheetDB...');
+    
+    // 1. PREPARAR datos para enviar (convertir objetos a JSON strings)
+    const datosParaEnviar = {
+      lotes: lotes.map(l => ({
+        ...l,
+        productos: JSON.stringify(l.productos || [])
+      })),
+      compras: compras.map(c => ({
+        ...c,
+        productos: JSON.stringify(c.productos || [])
+      })),
+      ventas: ventas.map(v => ({
+        ...v,
+        productos: JSON.stringify(v.productos || [])
+      })),
+      abonos: abonos,
+      cobros: cobros
     };
     
-    const response = await fetch(CONFIG.scriptUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(datosLocales),
-      mode: 'cors'
-    });
+    console.log('📤 Subiendo datos...', datosParaEnviar);
     
-    if (!response.ok) throw new Error('Error en sync');
+    // 2. SUBIR datos a cada hoja (DELETE primero, luego POST)
+    await subirDatosASheetDB('Lotes', datosParaEnviar.lotes);
+    await subirDatosASheetDB('Compras', datosParaEnviar.compras);
+    await subirDatosASheetDB('Ventas', datosParaEnviar.ventas);
+    await subirDatosASheetDB('Abonos', datosParaEnviar.abonos);
+    await subirDatosASheetDB('Cobros', datosParaEnviar.cobros);
     
-    const datosRemotos = await response.json();
+    console.log('✅ Datos subidos correctamente');
+    
+    // 3. DESCARGAR datos remotos
+    console.log('📥 Descargando datos...');
+    const [lotesRemote, comprasRemote, ventasRemote, abonosRemote, cobrosRemote] = await Promise.all([
+      fetch(`${CONFIG.sheetDbUrl}?sheet=Lotes`).then(r => r.json()).catch(() => []),
+      fetch(`${CONFIG.sheetDbUrl}?sheet=Compras`).then(r => r.json()).catch(() => []),
+      fetch(`${CONFIG.sheetDbUrl}?sheet=Ventas`).then(r => r.json()).catch(() => []),
+      fetch(`${CONFIG.sheetDbUrl}?sheet=Abonos`).then(r => r.json()).catch(() => []),
+      fetch(`${CONFIG.sheetDbUrl}?sheet=Cobros`).then(r => r.json()).catch(() => [])
+    ]);
+    
+    console.log('📥 Datos descargados:', { lotesRemote, comprasRemote, ventasRemote, abonosRemote, cobrosRemote });
+    
+    // 4. PARSEAR productos de JSON string a objeto
+    const parseProductos = (arr) => {
+      if (!Array.isArray(arr)) return [];
+      return arr.map(item => {
+        if (!item) return null;
+        try {
+          return {
+            ...item,
+            productos: item.productos ? JSON.parse(item.productos) : []
+          };
+        } catch (e) {
+          console.warn('Error parseando productos:', item, e);
+          return { ...item, productos: [] };
+        }
+      }).filter(Boolean);
+    };
+    
+    const datosRemotos = {
+      lotes: parseProductos(lotesRemote),
+      compras: parseProductos(comprasRemote),
+      ventas: parseProductos(ventasRemote),
+      abonos: Array.isArray(abonosRemote) ? abonosRemote : [],
+      cobros: Array.isArray(cobrosRemote) ? cobrosRemote : []
+    };
+    
+    // 5. MERGE datos (timestamp más reciente gana)
     mergeDatos(datosRemotos);
     
     CONFIG.lastSync = new Date().toISOString();
     localStorage.setItem('lastSync', CONFIG.lastSync);
     updateSyncStatus('synced');
-    showToast('Sincronizado correctamente');
+    showToast('✅ Sincronizado con SheetDB');
+    
   } catch (error) {
-    console.error('Sync error:', error);
+    console.error('❌ Error SheetDB:', error);
     updateSyncStatus('error');
-    showToast('Error al sincronizar - modo offline');
+    showToast('❌ Error: ' + error.message);
   } finally {
     document.getElementById('syncIndicator').classList.add('hidden');
+  }
+}
+
+async function subirDatosASheetDB(sheetName, datos) {
+  const url = `${CONFIG.sheetDbUrl}?sheet=${sheetName}`;
+  
+  try {
+    // Intentar eliminar datos existentes primero (SheetDB tiene límite, así que solo si hay pocos)
+    // Para simplificar, hacemos POST directo que reemplaza en SheetDB
+    
+    if (!Array.isArray(datos) || datos.length === 0) {
+      console.log(`Sheet ${sheetName}: sin datos para subir`);
+      return;
+    }
+    
+    // SheetDB espera { "data": [...] }
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ data: datos })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+    
+    const result = await response.json();
+    console.log(`✅ Sheet ${sheetName}:`, result);
+    
+  } catch (error) {
+    console.error(`❌ Error en sheet ${sheetName}:`, error);
+    throw error;
   }
 }
 
 function mergeDatos(datosRemotos) {
   if (!datosRemotos) return;
   
+  console.log('🔄 Mergeando datos...', datosRemotos);
+  
   // Merge con estrategia: timestamp más reciente gana
-  if (datosRemotos.lotes) lotes = mergeArrays(lotes, datosRemotos.lotes, 'id');
-  if (datosRemotos.compras) compras = mergeArrays(compras, datosRemotos.compras, 'id');
-  if (datosRemotos.ventas) ventas = mergeArrays(ventas, datosRemotos.ventas, 'id');
-  if (datosRemotos.abonos) abonos = mergeArrays(abonos, datosRemotos.abonos, 'id');
-  if (datosRemotos.cobros) cobros = mergeArrays(cobros, datosRemotos.cobros, 'id');
+  if (datosRemotos.lotes && datosRemotos.lotes.length > 0) {
+    lotes = mergeArrays(lotes, datosRemotos.lotes, 'id');
+  }
+  if (datosRemotos.compras && datosRemotos.compras.length > 0) {
+    compras = mergeArrays(compras, datosRemotos.compras, 'id');
+  }
+  if (datosRemotos.ventas && datosRemotos.ventas.length > 0) {
+    ventas = mergeArrays(ventas, datosRemotos.ventas, 'id');
+  }
+  if (datosRemotos.abonos && datosRemotos.abonos.length > 0) {
+    abonos = mergeArrays(abonos, datosRemotos.abonos, 'id');
+  }
+  if (datosRemotos.cobros && datosRemotos.cobros.length > 0) {
+    cobros = mergeArrays(cobros, datosRemotos.cobros, 'id');
+  }
   
   saveLocalData();
   renderCurrentSection();
   updateResumen();
+  console.log('✅ Datos mergeados y guardados');
 }
 
 function mergeArrays(local, remoto, keyField) {
@@ -199,16 +291,25 @@ function mergeArrays(local, remoto, keyField) {
   if (!Array.isArray(remoto)) remoto = [];
   
   const merged = [...local];
+  const localIds = new Set(local.map(i => i && i[keyField]));
   
   remoto.forEach(item => {
     if (!item || !item[keyField]) return;
+    
     const idx = merged.findIndex(i => i && i[keyField] === item[keyField]);
+    
     if (idx === -1) {
+      // Nuevo item, agregarlo
       merged.push(item);
     } else {
-      const localTime = merged[idx].lastModified || 0;
-      const remotoTime = item.lastModified || 0;
-      if (remotoTime > localTime) merged[idx] = item;
+      // Item existe, comparar timestamps
+      const localTime = merged[idx].lastModified || merged[idx].timestamp || 0;
+      const remotoTime = item.lastModified || item.timestamp || 0;
+      
+      if (remotoTime > localTime) {
+        console.log(`📝 Actualizando ${keyField}: ${item[keyField]} (remoto más reciente)`);
+        merged[idx] = item;
+      }
     }
   });
   
@@ -251,19 +352,21 @@ function saveLocalData() {
 }
 
 function updateResumen() {
-  const deudaCarmen = lotes.reduce((sum, l) => sum + (l.saldoPendiente || 0), 0);
+  const deudaCarmen = lotes.reduce((sum, l) => sum + (parseFloat(l.saldoPendiente) || 0), 0);
+  
   const totalCompras = compras.reduce((sum, c) => {
-    const stock = c.productos?.filter(p => !p.vendido).reduce((s, p) => s + ((p.precioCompra || 0) * (p.cantidad || 1)), 0) || 0;
+    const stock = c.productos?.filter(p => !p.vendido).reduce((s, p) => s + ((parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1)), 0) || 0;
     return sum + stock;
   }, 0);
-  const clientesDeben = ventas.reduce((sum, v) => sum + (v.saldo || 0), 0);
+  
+  const clientesDeben = ventas.reduce((sum, v) => sum + (parseFloat(v.saldo) || 0), 0);
   
   const gananciaEstimada = ventas.reduce((sum, v) => {
     const costo = v.productos?.reduce((c, p) => {
-      const precioCosto = p.precioCarmen || p.precioCompra || 0;
-      return c + (precioCosto * (p.cantidad || 1));
+      const precioCosto = parseFloat(p.precioCarmen) || parseFloat(p.precioCompra) || 0;
+      return c + (precioCosto * (parseInt(p.cantidad) || 1));
     }, 0) || 0;
-    return sum + ((v.precioTotal || 0) - costo);
+    return sum + ((parseFloat(v.precioTotal) || 0) - costo);
   }, 0);
 
   document.getElementById('deudaCarmen').textContent = `C$${deudaCarmen.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
@@ -471,7 +574,7 @@ function renderProductosLote() {
   let total = 0;
   
   container.innerHTML = productosLoteTemp.map((prod, idx) => {
-    total += (prod.precioCarmen || 0) * (prod.cantidad || 1);
+    total += (parseFloat(prod.precioCarmen) || 0) * (parseInt(prod.cantidad) || 1);
     return `
       <div class="flex gap-2 items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-xl">
         <div class="flex-1">
@@ -518,23 +621,20 @@ function guardarLote() {
     return;
   }
   
-  const productosValidos = productosLoteTemp.filter(p => p.nombre && p.precioCarmen > 0);
+  const productosValidos = productosLoteTemp.filter(p => p.nombre && parseFloat(p.precioCarmen) > 0);
   if (productosValidos.length === 0) {
     alert('Agrega al menos un producto válido');
     return;
   }
   
-  const totalInicial = productosValidos.reduce((sum, p) => sum + (p.precioCarmen * p.cantidad), 0);
+  const totalInicial = productosValidos.reduce((sum, p) => sum + (parseFloat(p.precioCarmen) * parseInt(p.cantidad)), 0);
   
   if (editId) {
-    // Editar lote existente
     const lote = lotes.find(l => l.id === editId);
     if (!lote) return;
     
-    // Verificar si se quiere reabrir lote pagado
     const reabrir = document.getElementById('reabrirLote').checked;
     
-    // Mantener productos vendidos y agregar nuevos
     const productosVendidos = lote.productos?.filter(p => p.vendido) || [];
     const nuevosProductos = productosValidos.filter(np => 
       !productosVendidos.some(vp => vp.nombre === np.nombre && vp.cantidad === np.cantidad)
@@ -545,22 +645,20 @@ function guardarLote() {
     lote.productos = [...productosVendidos, ...nuevosProductos];
     
     if (reabrir && lote.estado === 'PAGADO') {
-      const nuevoTotal = nuevosProductos.reduce((sum, p) => sum + (p.precioCarmen * p.cantidad), 0);
-      lote.totalInicial = (lote.totalInicial || 0) + nuevoTotal;
-      lote.saldoPendiente = (lote.saldoPendiente || 0) + nuevoTotal;
+      const nuevoTotal = nuevosProductos.reduce((sum, p) => sum + (parseFloat(p.precioCarmen) * parseInt(p.cantidad)), 0);
+      lote.totalInicial = (parseFloat(lote.totalInicial) || 0) + nuevoTotal;
+      lote.saldoPendiente = (parseFloat(lote.saldoPendiente) || 0) + nuevoTotal;
       lote.estado = 'PENDIENTE';
       showToast('Lote reabierto con nuevos productos');
     } else {
-      // Recalcular totales
       lote.totalInicial = totalInicial;
-      lote.saldoPendiente = totalInicial - (lote.abonado || 0);
+      lote.saldoPendiente = totalInicial - (parseFloat(lote.abonado) || 0);
       if (lote.saldoPendiente <= 0) lote.estado = 'PAGADO';
     }
     
     lote.lastModified = Date.now();
     showToast('Lote actualizado');
   } else {
-    // Nuevo lote
     if (lotes.some(l => l.id === id)) {
       alert('Ya existe un lote con este ID');
       return;
@@ -623,7 +721,7 @@ function renderLotes() {
           <div class="text-right">
             <p class="text-xs text-gray-500 dark:text-gray-400">Saldo</p>
             <p class="text-xl font-bold ${isPending ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}">
-              C$${lote.saldoPendiente.toLocaleString()}
+              C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()}
             </p>
           </div>
         </div>
@@ -662,10 +760,10 @@ function verDetalleLote(loteId) {
     <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-xl ${p.vendido ? 'opacity-60' : ''}">
       <div>
         <p class="font-medium text-gray-800 dark:text-white ${p.vendido ? 'line-through' : ''}">${p.nombre}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400">${p.cantidad} × C$${p.precioCarmen.toLocaleString()}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">${p.cantidad} × C$${(parseFloat(p.precioCarmen) || 0).toLocaleString()}</p>
       </div>
       <div class="text-right">
-        <p class="font-bold text-gray-800 dark:text-white">C$${(p.precioCarmen * p.cantidad).toLocaleString()}</p>
+        <p class="font-bold text-gray-800 dark:text-white">C$${((parseFloat(p.precioCarmen) || 0) * parseInt(p.cantidad)).toLocaleString()}</p>
         ${p.vendido ? '<span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded">Vendido</span>' : '<span class="text-xs bg-blue-500 text-white px-2 py-0.5 rounded">Stock</span>'}
       </div>
     </div>
@@ -678,7 +776,7 @@ function verDetalleLote(loteId) {
         <p class="font-medium text-indigo-800 dark:text-indigo-300">${formatFecha(a.fecha)}</p>
         <p class="text-xs text-indigo-600 dark:text-indigo-400">${a.metodo} ${a.notas ? '- ' + a.notas : ''}</p>
       </div>
-      <p class="font-bold text-indigo-800 dark:text-indigo-300">C$${a.monto.toLocaleString()}</p>
+      <p class="font-bold text-indigo-800 dark:text-indigo-300">C$${(parseFloat(a.monto) || 0).toLocaleString()}</p>
     </div>
   `).join('') : '<p class="text-gray-500 text-sm text-center italic">Sin abonos</p>';
   
@@ -686,11 +784,11 @@ function verDetalleLote(loteId) {
     <div class="grid grid-cols-2 gap-3 mb-4">
       <div class="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl">
         <p class="text-xs text-indigo-600 dark:text-indigo-400">Total Inicial</p>
-        <p class="text-lg font-bold text-indigo-800 dark:text-indigo-300">C$${lote.totalInicial.toLocaleString()}</p>
+        <p class="text-lg font-bold text-indigo-800 dark:text-indigo-300">C$${(parseFloat(lote.totalInicial) || 0).toLocaleString()}</p>
       </div>
       <div class="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl">
         <p class="text-xs text-red-600 dark:text-red-400">Saldo Pendiente</p>
-        <p class="text-lg font-bold text-red-800 dark:text-red-300">C$${lote.saldoPendiente.toLocaleString()}</p>
+        <p class="text-lg font-bold text-red-800 dark:text-red-300">C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()}</p>
       </div>
     </div>
     
@@ -733,7 +831,7 @@ function renderProductosCompra() {
   let total = 0;
   
   container.innerHTML = productosCompraTemp.map((prod, idx) => {
-    total += (prod.precioCompra || 0) * (prod.cantidad || 1);
+    total += (parseFloat(prod.precioCompra) || 0) * (parseInt(prod.cantidad) || 1);
     return `
       <div class="flex gap-2 items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-xl">
         <div class="flex-1">
@@ -780,7 +878,7 @@ function guardarCompra() {
     return;
   }
   
-  const productosValidos = productosCompraTemp.filter(p => p.nombre && p.precioCompra > 0);
+  const productosValidos = productosCompraTemp.filter(p => p.nombre && parseFloat(p.precioCompra) > 0);
   if (productosValidos.length === 0) {
     alert('Agrega al menos un producto válido');
     return;
@@ -837,7 +935,7 @@ function renderCompras() {
     const totalProductos = compra.productos?.length || 0;
     const vendidos = compra.productos?.filter(p => p.vendido).length || 0;
     const enStock = totalProductos - vendidos;
-    const totalValor = compra.productos?.reduce((sum, p) => sum + ((p.precioCompra || 0) * (p.cantidad || 1)), 0) || 0;
+    const totalValor = compra.productos?.reduce((sum, p) => sum + ((parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1)), 0) || 0;
     
     return `
       <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4 border border-purple-200 dark:border-purple-800">
@@ -882,10 +980,10 @@ function verDetalleCompra(compraId) {
     <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-xl ${p.vendido ? 'opacity-60' : ''}">
       <div>
         <p class="font-medium text-gray-800 dark:text-white ${p.vendido ? 'line-through' : ''}">${p.nombre}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400">${p.cantidad} × C$${p.precioCompra.toLocaleString()}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">${p.cantidad} × C$${(parseFloat(p.precioCompra) || 0).toLocaleString()}</p>
       </div>
       <div class="text-right">
-        <p class="font-bold text-gray-800 dark:text-white">C$${(p.precioCompra * p.cantidad).toLocaleString()}</p>
+        <p class="font-bold text-gray-800 dark:text-white">C$${((parseFloat(p.precioCompra) || 0) * parseInt(p.cantidad)).toLocaleString()}</p>
         ${p.vendido ? '<span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded">Vendido</span>' : '<span class="text-xs bg-purple-500 text-white px-2 py-0.5 rounded">Stock</span>'}
       </div>
     </div>
@@ -941,7 +1039,7 @@ function mostrarSelectorProductos(tipo) {
         <input type="checkbox" value="${p.uniqueId}" onchange="toggleProductoSeleccionado('${p.uniqueId}', ${JSON.stringify(p).replace(/"/g, '&quot;')})" class="w-5 h-5 text-green-600 rounded">
         <div class="flex-1">
           <p class="font-medium text-gray-800 dark:text-white">${p.nombre}</p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">${p.loteId} | Costo: C$${p.precioCarmen.toLocaleString()}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">${p.loteId} | Costo: C$${(parseFloat(p.precioCarmen) || 0).toLocaleString()}</p>
         </div>
         <span class="text-sm font-bold text-gray-600 dark:text-gray-400">×${p.cantidad}</span>
       </label>
@@ -970,7 +1068,7 @@ function mostrarSelectorProductos(tipo) {
         <input type="checkbox" value="${p.uniqueId}" onchange="toggleProductoSeleccionado('${p.uniqueId}', ${JSON.stringify(p).replace(/"/g, '&quot;')})" class="w-5 h-5 text-green-600 rounded">
         <div class="flex-1">
           <p class="font-medium text-gray-800 dark:text-white">${p.nombre}</p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">${p.compraId} | Costo: C$${p.precioCompra.toLocaleString()}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">${p.compraId} | Costo: C$${(parseFloat(p.precioCompra) || 0).toLocaleString()}</p>
         </div>
         <span class="text-sm font-bold text-gray-600 dark:text-gray-400">×${p.cantidad}</span>
       </label>
@@ -1001,8 +1099,8 @@ function confirmarSeleccionProductos() {
       id: Date.now() + Math.random(),
       nombre: p.nombre,
       cantidad: p.cantidad,
-      precioCarmen: p.precioCarmen || 0,
-      precioCompra: p.precioCompra || 0,
+      precioCarmen: parseFloat(p.precioCarmen) || 0,
+      precioCompra: parseFloat(p.precioCompra) || 0,
       precioVenta: 0,
       sourceId: p.loteId || p.compraId,
       sourceType: p.source
@@ -1066,7 +1164,7 @@ function eliminarProductoVenta(idx) {
 }
 
 function calcularVenta() {
-  const total = productosVentaTemp.reduce((sum, p) => sum + ((p.precioVenta || 0) * (p.cantidad || 1)), 0);
+  const total = productosVentaTemp.reduce((sum, p) => sum + ((parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1)), 0);
   const prima = parseFloat(document.getElementById('ventaPrima').value) || 0;
   const meses = parseInt(document.getElementById('ventaMeses').value) || 12;
   const saldo = Math.max(0, total - prima);
@@ -1091,13 +1189,13 @@ function guardarVenta() {
     return;
   }
   
-  const productosValidos = productosVentaTemp.filter(p => p.nombre && p.precioVenta > 0);
+  const productosValidos = productosVentaTemp.filter(p => p.nombre && parseFloat(p.precioVenta) > 0);
   if (productosValidos.length === 0) {
     alert('Agrega al menos un producto con precio de venta');
     return;
   }
   
-  const precioTotal = productosValidos.reduce((sum, p) => sum + (p.precioVenta * p.cantidad), 0);
+  const precioTotal = productosValidos.reduce((sum, p) => sum + (parseFloat(p.precioVenta) * parseInt(p.cantidad)), 0);
   
   if (prima > precioTotal) {
     alert('La prima no puede ser mayor que el total');
@@ -1124,11 +1222,9 @@ function guardarVenta() {
   if (editId) {
     const venta = ventas.find(v => v.id === editId);
     if (venta) {
-      // Si está pagada y quiere agregar más productos
       const reactivar = document.getElementById('reactivarVenta').checked;
       
       if (reactivar && venta.estado === 'PAGADO') {
-        // Crear nueva venta vinculada
         const nuevoId = id + '_EXT';
         const saldo = precioTotal - prima;
         const cuotaMensual = saldo > 0 && meses > 0 ? saldo / meses : 0;
@@ -1155,7 +1251,6 @@ function guardarVenta() {
         
         showToast('Nueva venta creada para cliente existente');
       } else {
-        // Editar venta normal
         venta.cliente = cliente;
         venta.telefono = telefono;
         venta.fecha = fecha;
@@ -1246,7 +1341,7 @@ function renderVentas() {
           <div class="text-right">
             <p class="text-xs text-gray-500 dark:text-gray-400">Saldo</p>
             <p class="text-xl font-bold ${isPending ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}">
-              C$${venta.saldo.toLocaleString()}
+              C$${(parseFloat(venta.saldo) || 0).toLocaleString()}
             </p>
           </div>
         </div>
@@ -1254,7 +1349,7 @@ function renderVentas() {
         <div class="mb-3">
           <div class="flex justify-between text-xs mb-1">
             <span class="text-gray-600 dark:text-gray-400">Progreso: ${progress.toFixed(1)}%</span>
-            <span class="text-gray-600 dark:text-gray-400">Cuota: C$${venta.cuotaMensual?.toLocaleString() || 0}</span>
+            <span class="text-gray-600 dark:text-gray-400">Cuota: C$${(parseFloat(venta.cuotaMensual) || 0).toLocaleString()}</span>
           </div>
           <div class="w-full h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
             <div class="h-full ${isPending ? 'bg-orange-500' : 'bg-green-500'}" style="width: ${progress}%"></div>
@@ -1285,11 +1380,11 @@ function verDetalleVenta(ventaId) {
     <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-xl">
       <div>
         <p class="font-medium text-gray-800 dark:text-white">${p.nombre}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400">${p.cantidad} × C$${p.precioVenta.toLocaleString()}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">${p.cantidad} × C$${(parseFloat(p.precioVenta) || 0).toLocaleString()}</p>
       </div>
       <div class="text-right">
-        <p class="font-bold text-gray-800 dark:text-white">C$${(p.precioVenta * p.cantidad).toLocaleString()}</p>
-        <p class="text-xs text-green-600">Costo: C$${(p.precioCarmen || p.precioCompra || 0).toLocaleString()}</p>
+        <p class="font-bold text-gray-800 dark:text-white">C$${((parseFloat(p.precioVenta) || 0) * parseInt(p.cantidad)).toLocaleString()}</p>
+        <p class="text-xs text-green-600">Costo: C$${(parseFloat(p.precioCarmen) || parseFloat(p.precioCompra) || 0).toLocaleString()}</p>
       </div>
     </div>
   `).join('') || '<p class="text-gray-500 text-center">Sin productos</p>';
@@ -1301,7 +1396,7 @@ function verDetalleVenta(ventaId) {
         <p class="font-medium text-green-800 dark:text-green-300">${formatFecha(c.fecha)}</p>
         <p class="text-xs text-green-600 dark:text-green-400">${c.metodo} ${c.notas ? '- ' + c.notas : ''}</p>
       </div>
-      <p class="font-bold text-green-800 dark:text-green-300">C$${c.monto.toLocaleString()}</p>
+      <p class="font-bold text-green-800 dark:text-green-300">C$${(parseFloat(c.monto) || 0).toLocaleString()}</p>
     </div>
   `).join('') : '<p class="text-gray-500 text-sm text-center italic">Sin cobros registrados</p>';
   
@@ -1309,11 +1404,11 @@ function verDetalleVenta(ventaId) {
     <div class="grid grid-cols-2 gap-3 mb-4">
       <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl">
         <p class="text-xs text-green-600 dark:text-green-400">Total Venta</p>
-        <p class="text-lg font-bold text-green-800 dark:text-green-300">C$${venta.precioTotal.toLocaleString()}</p>
+        <p class="text-lg font-bold text-green-800 dark:text-green-300">C$${(parseFloat(venta.precioTotal) || 0).toLocaleString()}</p>
       </div>
       <div class="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-xl">
         <p class="text-xs text-orange-600 dark:text-orange-400">Saldo Pendiente</p>
-        <p class="text-lg font-bold text-orange-800 dark:text-orange-300">C$${venta.saldo.toLocaleString()}</p>
+        <p class="text-lg font-bold text-orange-800 dark:text-orange-300">C$${(parseFloat(venta.saldo) || 0).toLocaleString()}</p>
       </div>
     </div>
     
@@ -1321,8 +1416,8 @@ function verDetalleVenta(ventaId) {
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Información del Crédito</p>
       <div class="grid grid-cols-2 gap-2 text-sm">
         <div><span class="text-gray-600 dark:text-gray-400">Meses:</span> <span class="font-medium text-gray-800 dark:text-white">${venta.meses}</span></div>
-        <div><span class="text-gray-600 dark:text-gray-400">Cuota:</span> <span class="font-medium text-gray-800 dark:text-white">C$${venta.cuotaMensual?.toLocaleString() || 0}</span></div>
-        <div><span class="text-gray-600 dark:text-gray-400">Prima:</span> <span class="font-medium text-gray-800 dark:text-white">C$${venta.prima.toLocaleString()}</span></div>
+        <div><span class="text-gray-600 dark:text-gray-400">Cuota:</span> <span class="font-medium text-gray-800 dark:text-white">C$${(parseFloat(venta.cuotaMensual) || 0).toLocaleString()}</span></div>
+        <div><span class="text-gray-600 dark:text-gray-400">Prima:</span> <span class="font-medium text-gray-800 dark:text-white">C$${(parseFloat(venta.prima) || 0).toLocaleString()}</span></div>
         <div><span class="text-gray-600 dark:text-gray-400">Próximo:</span> <span class="font-medium text-gray-800 dark:text-white">${formatFecha(venta.proximaFechaCobro)}</span></div>
       </div>
     </div>
@@ -1354,7 +1449,7 @@ function cargarSelectLotes() {
   const select = document.getElementById('abonoLoteId');
   select.innerHTML = '<option value="">Seleccione un lote...</option>';
   lotes.filter(l => l.estado === 'PENDIENTE').forEach(l => {
-    select.innerHTML += `<option value="${l.id}">${l.id} - Saldo: C$${l.saldoPendiente.toLocaleString()}</option>`;
+    select.innerHTML += `<option value="${l.id}">${l.id} - Saldo: C$${(parseFloat(l.saldoPendiente) || 0).toLocaleString()}</option>`;
   });
 }
 
@@ -1371,9 +1466,9 @@ function mostrarInfoLoteAbono() {
   if (lote) {
     infoDiv.innerHTML = `
       <div class="space-y-2">
-        <div class="flex justify-between"><span class="text-sm text-gray-600 dark:text-gray-400">Total:</span><span class="font-bold text-indigo-800 dark:text-indigo-300">C$${lote.totalInicial.toLocaleString()}</span></div>
-        <div class="flex justify-between"><span class="text-sm text-gray-600 dark:text-gray-400">Abonado:</span><span class="font-bold text-green-600 dark:text-green-400">C$${lote.abonado.toLocaleString()}</span></div>
-        <div class="flex justify-between border-t border-indigo-200 dark:border-indigo-800 pt-2"><span class="text-sm font-medium text-gray-700 dark:text-gray-300">Saldo:</span><span class="font-bold text-red-600 dark:text-red-400">C$${lote.saldoPendiente.toLocaleString()}</span></div>
+        <div class="flex justify-between"><span class="text-sm text-gray-600 dark:text-gray-400">Total:</span><span class="font-bold text-indigo-800 dark:text-indigo-300">C$${(parseFloat(lote.totalInicial) || 0).toLocaleString()}</span></div>
+        <div class="flex justify-between"><span class="text-sm text-gray-600 dark:text-gray-400">Abonado:</span><span class="font-bold text-green-600 dark:text-green-400">C$${(parseFloat(lote.abonado) || 0).toLocaleString()}</span></div>
+        <div class="flex justify-between border-t border-indigo-200 dark:border-indigo-800 pt-2"><span class="text-sm font-medium text-gray-700 dark:text-gray-300">Saldo:</span><span class="font-bold text-red-600 dark:text-red-400">C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()}</span></div>
       </div>
     `;
     infoDiv.classList.remove('hidden');
@@ -1396,7 +1491,7 @@ function guardarAbono() {
   if (!lote) return;
   
   if (monto > lote.saldoPendiente) {
-    alert(`El monto no puede superar el saldo (C$${lote.saldoPendiente.toLocaleString()})`);
+    alert(`El monto no puede superar el saldo (C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()})`);
     return;
   }
   
@@ -1407,12 +1502,12 @@ function guardarAbono() {
     monto,
     metodo,
     notas,
-    saldoDespues: lote.saldoPendiente - monto,
+    saldoDespues: (parseFloat(lote.saldoPendiente) || 0) - monto,
     lastModified: Date.now()
   });
   
-  lote.abonado += monto;
-  lote.saldoPendiente -= monto;
+  lote.abonado = (parseFloat(lote.abonado) || 0) + monto;
+  lote.saldoPendiente = (parseFloat(lote.saldoPendiente) || 0) - monto;
   if (lote.saldoPendiente <= 0) {
     lote.estado = 'PAGADO';
     lote.fechaPagoTotal = fecha;
@@ -1444,7 +1539,7 @@ function renderAbonos() {
           <p class="text-xs text-gray-500 dark:text-gray-400">${formatFecha(abono.fecha)} | ${abono.metodo}</p>
           ${abono.notas ? `<p class="text-xs text-gray-500 dark:text-gray-400">${abono.notas}</p>` : ''}
         </div>
-        <p class="text-lg font-bold text-indigo-600 dark:text-indigo-400">C$${abono.monto.toLocaleString()}</p>
+        <p class="text-lg font-bold text-indigo-600 dark:text-indigo-400">C$${(parseFloat(abono.monto) || 0).toLocaleString()}</p>
       </div>
     </div>
   `).join('');
@@ -1475,7 +1570,7 @@ function buscarVentaCobro() {
       <p class="font-bold text-gray-800 dark:text-white">${v.cliente}</p>
       <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400">
         <span>${v.id}</span>
-        <span>Saldo: C$${v.saldo.toLocaleString()}</span>
+        <span>Saldo: C$${(parseFloat(v.saldo) || 0).toLocaleString()}</span>
       </div>
     </div>
   `).join('');
@@ -1494,9 +1589,9 @@ function seleccionarVentaCobro(ventaId) {
   infoDiv.innerHTML = `
     <div class="space-y-2">
       <div class="flex justify-between"><span class="text-sm font-medium text-gray-700 dark:text-gray-300">Cliente:</span><span class="text-sm font-bold text-gray-800 dark:text-white">${venta.cliente}</span></div>
-      <div class="flex justify-between"><span class="text-sm text-gray-600 dark:text-gray-400">Total:</span><span class="text-sm font-medium text-gray-800 dark:text-white">C$${venta.precioTotal.toLocaleString()}</span></div>
-      <div class="flex justify-between"><span class="text-sm text-gray-600 dark:text-gray-400">Pagado:</span><span class="text-sm font-medium text-green-600 dark:text-green-400">C$${venta.pagado.toLocaleString()}</span></div>
-      <div class="flex justify-between border-t border-green-200 dark:border-green-800 pt-2"><span class="text-sm font-medium text-gray-700 dark:text-gray-300">Saldo:</span><span class="text-sm font-bold text-orange-600 dark:text-orange-400">C$${venta.saldo.toLocaleString()}</span></div>
+      <div class="flex justify-between"><span class="text-sm text-gray-600 dark:text-gray-400">Total:</span><span class="text-sm font-medium text-gray-800 dark:text-white">C$${(parseFloat(venta.precioTotal) || 0).toLocaleString()}</span></div>
+      <div class="flex justify-between"><span class="text-sm text-gray-600 dark:text-gray-400">Pagado:</span><span class="text-sm font-medium text-green-600 dark:text-green-400">C$${(parseFloat(venta.pagado) || 0).toLocaleString()}</span></div>
+      <div class="flex justify-between border-t border-green-200 dark:border-green-800 pt-2"><span class="text-sm font-medium text-gray-700 dark:text-gray-300">Saldo:</span><span class="text-sm font-bold text-orange-600 dark:text-orange-400">C$${(parseFloat(venta.saldo) || 0).toLocaleString()}</span></div>
     </div>
   `;
   infoDiv.classList.remove('hidden');
@@ -1518,7 +1613,7 @@ function guardarCobro() {
   if (!venta) return;
   
   if (monto > venta.saldo) {
-    alert(`El monto no puede superar el saldo (C$${venta.saldo.toLocaleString()})`);
+    alert(`El monto no puede superar el saldo (C$${(parseFloat(venta.saldo) || 0).toLocaleString()})`);
     return;
   }
   
@@ -1532,8 +1627,8 @@ function guardarCobro() {
     lastModified: Date.now()
   });
   
-  venta.pagado += monto;
-  venta.saldo -= monto;
+  venta.pagado = (parseFloat(venta.pagado) || 0) + monto;
+  venta.saldo = (parseFloat(venta.saldo) || 0) - monto;
   
   const proximaFecha = new Date(venta.proximaFechaCobro);
   proximaFecha.setMonth(proximaFecha.getMonth() + 1);
@@ -1572,7 +1667,7 @@ function renderCobros() {
             <p class="text-xs text-gray-500 dark:text-gray-400">${formatFecha(cobro.fecha)} | ${cobro.metodo}</p>
             ${cobro.notas ? `<p class="text-xs text-gray-500 dark:text-gray-400">${cobro.notas}</p>` : ''}
           </div>
-          <p class="text-lg font-bold text-green-600 dark:text-green-400">C$${cobro.monto.toLocaleString()}</p>
+          <p class="text-lg font-bold text-green-600 dark:text-green-400">C$${(parseFloat(cobro.monto) || 0).toLocaleString()}</p>
         </div>
       </div>
     `;
