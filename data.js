@@ -1,4 +1,4 @@
-// Datos iniciales de ejemplo - Se cargan solo si no hay datos en localStorage
+// Datos iniciales de ejemplo - Solo se cargan si no hay datos en localStorage
 const initialLotes = [
   {
     id: "L01",

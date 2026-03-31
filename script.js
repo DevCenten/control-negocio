@@ -1,15 +1,15 @@
 // ==========================================
-// CONFIGURACIÓN GLOBAL - SHEETDB.IO
+// CONFIGURACIÓN GLOBAL - SINCRONIZACIÓN
 // ==========================================
 const CONFIG = {
-  sheetDbUrl: localStorage.getItem('sheetDbUrl') || '',
+  syncUrl: localStorage.getItem('syncUrl') || '',
   syncInterval: null,
   lastSync: localStorage.getItem('lastSync') || null,
   isOnline: navigator.onLine,
   deviceId: localStorage.getItem('deviceId') || generarDeviceId()
 };
 
-// Datos locales
+// Datos locales - SE CARGAN DESDE LOCALSTORAGE (tus datos se preservan)
 let lotes = JSON.parse(localStorage.getItem('lotes')) || [];
 let compras = JSON.parse(localStorage.getItem('compras')) || [];
 let ventas = JSON.parse(localStorage.getItem('ventas')) || [];
@@ -23,21 +23,16 @@ let productosVentaTemp = [];
 let loteSeleccionadoId = null;
 let compraSeleccionadaId = null;
 let ventaSeleccionadaId = null;
+let abonoSeleccionadoId = null;
+let cobroSeleccionadoId = null;
 let productosSeleccionados = [];
 
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
 window.onload = function() {
-  // Cargar datos iniciales si no hay nada
-  if (lotes.length === 0 && typeof initialLotes !== 'undefined') {
-    lotes = JSON.parse(JSON.stringify(initialLotes));
-    saveLocalData();
-  }
-  if (ventas.length === 0 && typeof initialVentas !== 'undefined') {
-    ventas = JSON.parse(JSON.stringify(initialVentas));
-    saveLocalData();
-  }
+  // NO cargamos datos iniciales de ejemplo si ya hay datos del usuario
+  // Tus datos en localStorage se preservan completamente
 
   // Eventos online/offline
   window.addEventListener('online', () => {
@@ -51,11 +46,11 @@ window.onload = function() {
     updateSyncStatus('offline');
   });
 
-  if (CONFIG.sheetDbUrl && localStorage.getItem('syncAuto') !== 'false') {
+  if (CONFIG.syncUrl && localStorage.getItem('syncAuto') !== 'false') {
     iniciarSyncAutomatico();
   }
 
-  updateSyncStatus(CONFIG.isOnline ? (CONFIG.sheetDbUrl ? 'synced' : 'online') : 'offline');
+  updateSyncStatus(CONFIG.isOnline ? (CONFIG.syncUrl ? 'synced' : 'online') : 'offline');
   showSection('lotes');
   updateResumen();
   
@@ -73,13 +68,13 @@ function generarDeviceId() {
 }
 
 // ==========================================
-// SINCRONIZACIÓN CON SHEETDB.IO
+// SINCRONIZACIÓN CON GOOGLE APPS SCRIPT (GRATIS E ILIMITADO)
 // ==========================================
 function mostrarConfigSync() {
-  document.getElementById('sheetUrl').value = CONFIG.sheetDbUrl || '';
+  document.getElementById('syncUrl').value = CONFIG.syncUrl || '';
   document.getElementById('syncAuto').checked = localStorage.getItem('syncAuto') !== 'false';
   
-  const estado = !CONFIG.sheetDbUrl ? 'No configurado' : 
+  const estado = !CONFIG.syncUrl ? 'No configurado' : 
                  !CONFIG.isOnline ? 'Sin conexión' :
                  CONFIG.lastSync ? `Última: ${new Date(CONFIG.lastSync).toLocaleTimeString()}` : 'Pendiente';
   document.getElementById('estadoSync').textContent = estado;
@@ -89,23 +84,21 @@ function mostrarConfigSync() {
 }
 
 function guardarConfigSync() {
-  const url = document.getElementById('sheetUrl').value.trim();
+  const url = document.getElementById('syncUrl').value.trim();
   const syncAuto = document.getElementById('syncAuto').checked;
   
   if (!url) {
-    alert('Ingresa la URL de SheetDB.io');
+    alert('Ingresa la URL de la Web App de Google Apps Script');
     return;
   }
   
-  // Validar que sea URL de SheetDB
-  if (!url.includes('sheetdb.io')) {
-    alert('La URL debe ser de SheetDB.io (ej: https://sheetdb.io/api/v1/...)');
+  if (!url.includes('script.google.com')) {
+    alert('La URL debe ser de Google Apps Script (ej: https://script.google.com/macros/s/...)');
     return;
   }
   
-  // Limpiar URL (quitar slash final si existe)
-  CONFIG.sheetDbUrl = url.endsWith('/') ? url.slice(0, -1) : url;
-  localStorage.setItem('sheetDbUrl', CONFIG.sheetDbUrl);
+  CONFIG.syncUrl = url;
+  localStorage.setItem('syncUrl', url);
   localStorage.setItem('syncAuto', syncAuto);
   
   if (syncAuto) iniciarSyncAutomatico();
@@ -113,12 +106,12 @@ function guardarConfigSync() {
   
   cerrarModal('modalConfigSync');
   sincronizarAhora();
-  showToast('Configuración SheetDB guardada ✅');
+  showToast('Configuración guardada ✅');
 }
 
 function iniciarSyncAutomatico() {
   detenerSyncAutomatico();
-  CONFIG.syncInterval = setInterval(sincronizarAhora, 30000);
+  CONFIG.syncInterval = setInterval(sincronizarAhora, 300000); // 5 minutos
 }
 
 function detenerSyncAutomatico() {
@@ -129,7 +122,7 @@ function detenerSyncAutomatico() {
 }
 
 async function sincronizarAhora() {
-  if (!CONFIG.sheetDbUrl || !CONFIG.isOnline) {
+  if (!CONFIG.syncUrl || !CONFIG.isOnline) {
     showToast('Sin conexión o sin configurar');
     return;
   }
@@ -138,9 +131,9 @@ async function sincronizarAhora() {
   updateSyncStatus('syncing');
 
   try {
-    console.log('🔄 Iniciando sincronización con SheetDB...');
+    console.log('🔄 Sincronizando con Google Sheets...');
     
-    // 1. PREPARAR datos para enviar (convertir objetos a JSON strings)
+    // Preparar datos para enviar
     const datosParaEnviar = {
       lotes: lotes.map(l => ({
         ...l,
@@ -155,165 +148,70 @@ async function sincronizarAhora() {
         productos: JSON.stringify(v.productos || [])
       })),
       abonos: abonos,
-      cobros: cobros
+      cobros: cobros,
+      deviceId: CONFIG.deviceId,
+      lastModified: Date.now()
     };
     
-    console.log('📤 Subiendo datos...', datosParaEnviar);
+    // Enviar a Google Apps Script
+    const response = await fetch(CONFIG.syncUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(datosParaEnviar)
+    });
     
-    // 2. SUBIR datos a cada hoja (DELETE primero, luego POST)
-    await subirDatosASheetDB('Lotes', datosParaEnviar.lotes);
-    await subirDatosASheetDB('Compras', datosParaEnviar.compras);
-    await subirDatosASheetDB('Ventas', datosParaEnviar.ventas);
-    await subirDatosASheetDB('Abonos', datosParaEnviar.abonos);
-    await subirDatosASheetDB('Cobros', datosParaEnviar.cobros);
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${await response.text()}`);
+    }
     
-    console.log('✅ Datos subidos correctamente');
+    const resultado = await response.json();
     
-    // 3. DESCARGAR datos remotos
-    console.log('📥 Descargando datos...');
-    const [lotesRemote, comprasRemote, ventasRemote, abonosRemote, cobrosRemote] = await Promise.all([
-      fetch(`${CONFIG.sheetDbUrl}?sheet=Lotes`).then(r => r.json()).catch(() => []),
-      fetch(`${CONFIG.sheetDbUrl}?sheet=Compras`).then(r => r.json()).catch(() => []),
-      fetch(`${CONFIG.sheetDbUrl}?sheet=Ventas`).then(r => r.json()).catch(() => []),
-      fetch(`${CONFIG.sheetDbUrl}?sheet=Abonos`).then(r => r.json()).catch(() => []),
-      fetch(`${CONFIG.sheetDbUrl}?sheet=Cobros`).then(r => r.json()).catch(() => [])
-    ]);
-    
-    console.log('📥 Datos descargados:', { lotesRemote, comprasRemote, ventasRemote, abonosRemote, cobrosRemote });
-    
-    // 4. PARSEAR productos de JSON string a objeto
-    const parseProductos = (arr) => {
-      if (!Array.isArray(arr)) return [];
-      return arr.map(item => {
-        if (!item) return null;
-        try {
-          return {
-            ...item,
-            productos: item.productos ? JSON.parse(item.productos) : []
-          };
-        } catch (e) {
-          console.warn('Error parseando productos:', item, e);
-          return { ...item, productos: [] };
-        }
-      }).filter(Boolean);
-    };
-    
-    const datosRemotos = {
-      lotes: parseProductos(lotesRemote),
-      compras: parseProductos(comprasRemote),
-      ventas: parseProductos(ventasRemote),
-      abonos: Array.isArray(abonosRemote) ? abonosRemote : [],
-      cobros: Array.isArray(cobrosRemote) ? cobrosRemote : []
-    };
-    
-    // 5. MERGE datos (timestamp más reciente gana)
-    mergeDatos(datosRemotos);
-    
-    CONFIG.lastSync = new Date().toISOString();
-    localStorage.setItem('lastSync', CONFIG.lastSync);
-    updateSyncStatus('synced');
-    showToast('✅ Sincronizado con SheetDB');
+    if (resultado.success) {
+      // Parsear datos recibidos
+      const parseProductos = (arr) => {
+        if (!Array.isArray(arr)) return [];
+        return arr.map(item => {
+          if (!item) return null;
+          try {
+            return {
+              ...item,
+              productos: item.productos ? JSON.parse(item.productos) : []
+            };
+          } catch (e) {
+            return { ...item, productos: [] };
+          }
+        }).filter(Boolean);
+      };
+      
+      if (resultado.data) {
+        if (resultado.data.lotes) lotes = parseProductos(resultado.data.lotes);
+        if (resultado.data.compras) compras = parseProductos(resultado.data.compras);
+        if (resultado.data.ventas) ventas = parseProductos(resultado.data.ventas);
+        if (resultado.data.abonos) abonos = resultado.data.abonos;
+        if (resultado.data.cobros) cobros = resultado.data.cobros;
+        
+        saveLocalData();
+        renderCurrentSection();
+        updateResumen();
+      }
+      
+      CONFIG.lastSync = new Date().toISOString();
+      localStorage.setItem('lastSync', CONFIG.lastSync);
+      updateSyncStatus('synced');
+      showToast('✅ Sincronizado con Google Sheets');
+    } else {
+      throw new Error(resultado.error || 'Error desconocido');
+    }
     
   } catch (error) {
-    console.error('❌ Error SheetDB:', error);
+    console.error('❌ Error de sincronización:', error);
     updateSyncStatus('error');
     showToast('❌ Error: ' + error.message);
   } finally {
     document.getElementById('syncIndicator').classList.add('hidden');
   }
-}
-
-async function subirDatosASheetDB(sheetName, datos) {
-  const url = `${CONFIG.sheetDbUrl}?sheet=${sheetName}`;
-  
-  try {
-    // Intentar eliminar datos existentes primero (SheetDB tiene límite, así que solo si hay pocos)
-    // Para simplificar, hacemos POST directo que reemplaza en SheetDB
-    
-    if (!Array.isArray(datos) || datos.length === 0) {
-      console.log(`Sheet ${sheetName}: sin datos para subir`);
-      return;
-    }
-    
-    // SheetDB espera { "data": [...] }
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ data: datos })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error ${response.status}: ${errorText}`);
-    }
-    
-    const result = await response.json();
-    console.log(`✅ Sheet ${sheetName}:`, result);
-    
-  } catch (error) {
-    console.error(`❌ Error en sheet ${sheetName}:`, error);
-    throw error;
-  }
-}
-
-function mergeDatos(datosRemotos) {
-  if (!datosRemotos) return;
-  
-  console.log('🔄 Mergeando datos...', datosRemotos);
-  
-  // Merge con estrategia: timestamp más reciente gana
-  if (datosRemotos.lotes && datosRemotos.lotes.length > 0) {
-    lotes = mergeArrays(lotes, datosRemotos.lotes, 'id');
-  }
-  if (datosRemotos.compras && datosRemotos.compras.length > 0) {
-    compras = mergeArrays(compras, datosRemotos.compras, 'id');
-  }
-  if (datosRemotos.ventas && datosRemotos.ventas.length > 0) {
-    ventas = mergeArrays(ventas, datosRemotos.ventas, 'id');
-  }
-  if (datosRemotos.abonos && datosRemotos.abonos.length > 0) {
-    abonos = mergeArrays(abonos, datosRemotos.abonos, 'id');
-  }
-  if (datosRemotos.cobros && datosRemotos.cobros.length > 0) {
-    cobros = mergeArrays(cobros, datosRemotos.cobros, 'id');
-  }
-  
-  saveLocalData();
-  renderCurrentSection();
-  updateResumen();
-  console.log('✅ Datos mergeados y guardados');
-}
-
-function mergeArrays(local, remoto, keyField) {
-  if (!Array.isArray(local)) local = [];
-  if (!Array.isArray(remoto)) remoto = [];
-  
-  const merged = [...local];
-  const localIds = new Set(local.map(i => i && i[keyField]));
-  
-  remoto.forEach(item => {
-    if (!item || !item[keyField]) return;
-    
-    const idx = merged.findIndex(i => i && i[keyField] === item[keyField]);
-    
-    if (idx === -1) {
-      // Nuevo item, agregarlo
-      merged.push(item);
-    } else {
-      // Item existe, comparar timestamps
-      const localTime = merged[idx].lastModified || merged[idx].timestamp || 0;
-      const remotoTime = item.lastModified || item.timestamp || 0;
-      
-      if (remotoTime > localTime) {
-        console.log(`📝 Actualizando ${keyField}: ${item[keyField]} (remoto más reciente)`);
-        merged[idx] = item;
-      }
-    }
-  });
-  
-  return merged;
 }
 
 function updateSyncStatus(status) {
@@ -328,15 +226,65 @@ function updateSyncStatus(status) {
   indicator.innerHTML = icons[status] || icons.offline;
 }
 
+// ==========================================
+// IMPORTAR/EXPORTAR DATOS
+// ==========================================
 function exportarDatos() {
-  const datos = { lotes, compras, ventas, abonos, cobros, exportDate: new Date().toISOString() };
+  const datos = { 
+    lotes, 
+    compras, 
+    ventas, 
+    abonos, 
+    cobros, 
+    exportDate: new Date().toISOString() 
+  };
   const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = `backup-control-${new Date().toISOString().split('T')[0]}.json`;
   a.click();
-  showToast('Datos exportados');
+  showToast('Datos exportados ✅');
+}
+
+function mostrarImportar() {
+  document.getElementById('modalImportar').classList.remove('hidden');
+  document.getElementById('formOverlay').classList.remove('hidden');
+}
+
+function procesarImportacion() {
+  const fileInput = document.getElementById('importFile');
+  const file = fileInput.files[0];
+  
+  if (!file) {
+    alert('Selecciona un archivo JSON');
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const datos = JSON.parse(e.target.result);
+      
+      if (confirm('¿Estás seguro de que deseas reemplazar todos los datos actuales? Esta acción no se puede deshacer.')) {
+        lotes = datos.lotes || [];
+        compras = datos.compras || [];
+        ventas = datos.ventas || [];
+        abonos = datos.abonos || [];
+        cobros = datos.cobros || [];
+        
+        saveLocalData();
+        renderCurrentSection();
+        updateResumen();
+        
+        cerrarModal('modalImportar');
+        showToast('Datos importados ✅');
+      }
+    } catch (error) {
+      alert('Error al leer el archivo: ' + error.message);
+    }
+  };
+  reader.readAsText(file);
 }
 
 // ==========================================
@@ -414,7 +362,7 @@ function renderCurrentSection() {
 
 function hideForms() {
   document.getElementById('formOverlay').classList.add('hidden');
-  ['formLote', 'formCompra', 'formVenta', 'formAbono', 'formCobro', 'selectorProductos'].forEach(id => {
+  ['formLote', 'formCompra', 'formVenta', 'formAbono', 'formCobro', 'selectorProductos', 'modalConfigSync', 'modalImportar'].forEach(id => {
     document.getElementById(id).classList.add('hidden');
   });
 }
@@ -425,7 +373,7 @@ function cerrarModal(modalId) {
 }
 
 // ==========================================
-// LOTES - CRUD COMPLETO CON REAPERTURA
+// LOTES - CRUD COMPLETO CON EDICIÓN Y ELIMINACIÓN TOTAL
 // ==========================================
 function showForm(type, editId = null) {
   hideForms();
@@ -434,6 +382,9 @@ function showForm(type, editId = null) {
   if (type === 'lote') {
     const form = document.getElementById('formLote');
     form.classList.remove('hidden');
+    
+    // Mostrar/ocultar botón eliminar
+    const btnEliminar = document.getElementById('btnEliminarLote');
     
     if (editId) {
       const lote = lotes.find(l => l.id === editId);
@@ -456,6 +407,9 @@ function showForm(type, editId = null) {
       } else {
         opcionesPagado.classList.add('hidden');
       }
+      
+      btnEliminar.classList.remove('hidden');
+      loteSeleccionadoId = editId;
     } else {
       document.getElementById('tituloFormLote').textContent = 'Nuevo Lote';
       document.getElementById('loteEditId').value = '';
@@ -468,10 +422,15 @@ function showForm(type, editId = null) {
       productosLoteTemp = [];
       renderProductosLote();
       document.getElementById('opcionesLotePagado').classList.add('hidden');
+      
+      btnEliminar.classList.add('hidden');
+      loteSeleccionadoId = null;
     }
   } else if (type === 'compra') {
     const form = document.getElementById('formCompra');
     form.classList.remove('hidden');
+    
+    const btnEliminar = document.getElementById('btnEliminarCompra');
     
     if (editId) {
       const compra = compras.find(c => c.id === editId);
@@ -486,6 +445,9 @@ function showForm(type, editId = null) {
       
       productosCompraTemp = JSON.parse(JSON.stringify(compra.productos || []));
       renderProductosCompra();
+      
+      btnEliminar.classList.remove('hidden');
+      compraSeleccionadaId = editId;
     } else {
       document.getElementById('tituloFormCompra').textContent = 'Nueva Compra';
       document.getElementById('compraEditId').value = '';
@@ -495,10 +457,15 @@ function showForm(type, editId = null) {
       document.getElementById('compraProveedor').value = '';
       productosCompraTemp = [];
       renderProductosCompra();
+      
+      btnEliminar.classList.add('hidden');
+      compraSeleccionadaId = null;
     }
   } else if (type === 'venta') {
     const form = document.getElementById('formVenta');
     form.classList.remove('hidden');
+    
+    const btnEliminar = document.getElementById('btnEliminarVenta');
     
     if (editId) {
       const venta = ventas.find(v => v.id === editId);
@@ -525,6 +492,9 @@ function showForm(type, editId = null) {
       } else {
         opcionesPagada.classList.add('hidden');
       }
+      
+      btnEliminar.classList.remove('hidden');
+      ventaSeleccionadaId = editId;
     } else {
       document.getElementById('tituloFormVenta').textContent = 'Nueva Venta';
       document.getElementById('ventaEditId').value = '';
@@ -536,10 +506,18 @@ function showForm(type, editId = null) {
       renderProductosVenta();
       calcularVenta();
       document.getElementById('opcionesVentaPagada').classList.add('hidden');
+      
+      btnEliminar.classList.add('hidden');
+      ventaSeleccionadaId = null;
     }
   } else if (type === 'abono') {
     document.getElementById('formAbono').classList.remove('hidden');
     cargarSelectLotes();
+    
+    const btnEliminar = document.getElementById('btnEliminarAbono');
+    btnEliminar.classList.add('hidden');
+    abonoSeleccionadoId = null;
+    
     document.getElementById('abonoEditId').value = '';
     document.getElementById('abonoFecha').valueAsDate = new Date();
     document.getElementById('abonoMonto').value = '';
@@ -547,6 +525,11 @@ function showForm(type, editId = null) {
     document.getElementById('infoLoteAbono').classList.add('hidden');
   } else if (type === 'cobro') {
     document.getElementById('formCobro').classList.remove('hidden');
+    
+    const btnEliminar = document.getElementById('btnEliminarCobro');
+    btnEliminar.classList.add('hidden');
+    cobroSeleccionadoId = null;
+    
     document.getElementById('cobroEditId').value = '';
     document.getElementById('cobroFecha').valueAsDate = new Date();
     document.getElementById('cobroMonto').value = '';
@@ -557,7 +540,148 @@ function showForm(type, editId = null) {
   }
 }
 
-// Productos Lote
+// ==========================================
+// ELIMINACIÓN COMPLETA DE REGISTROS
+// ==========================================
+function eliminarLote() {
+  if (!loteSeleccionadoId) return;
+  
+  const lote = lotes.find(l => l.id === loteSeleccionadoId);
+  if (!lote) return;
+  
+  if (confirm(`¿Estás seguro de que deseas eliminar el lote ${lote.id} completamente?\n\nEsta acción no se puede deshacer.`)) {
+    // Eliminar abonos asociados a este lote
+    abonos = abonos.filter(a => a.loteId !== loteSeleccionadoId);
+    
+    // Eliminar el lote
+    lotes = lotes.filter(l => l.id !== loteSeleccionadoId);
+    
+    saveLocalData();
+    sincronizarAhora();
+    hideForms();
+    renderLotes();
+    showToast(`Lote ${lote.id} eliminado ✅`);
+  }
+}
+
+function eliminarCompra() {
+  if (!compraSeleccionadaId) return;
+  
+  const compra = compras.find(c => c.id === compraSeleccionadaId);
+  if (!compra) return;
+  
+  if (confirm(`¿Estás seguro de que deseas eliminar la compra ${compra.id} completamente?\n\nEsta acción no se puede deshacer.`)) {
+    compras = compras.filter(c => c.id !== compraSeleccionadaId);
+    
+    saveLocalData();
+    sincronizarAhora();
+    hideForms();
+    renderCompras();
+    showToast(`Compra ${compra.id} eliminada ✅`);
+  }
+}
+
+function eliminarVenta() {
+  if (!ventaSeleccionadaId) return;
+  
+  const venta = ventas.find(v => v.id === ventaSeleccionadaId);
+  if (!venta) return;
+  
+  if (confirm(`¿Estás seguro de que deseas eliminar la venta ${venta.id} completamente?\n\nEsta acción no se puede deshacer.`)) {
+    // Eliminar cobros asociados a esta venta
+    cobros = cobros.filter(c => c.ventaId !== ventaSeleccionadaId);
+    
+    // Restaurar productos como no vendidos en lotes/compras
+    venta.productos?.forEach(pv => {
+      if (pv.sourceType === 'lote' && pv.sourceId) {
+        const lote = lotes.find(l => l.id === pv.sourceId);
+        if (lote) {
+          const prod = lote.productos?.find(p => p.nombre === pv.nombre && p.vendido);
+          if (prod) prod.vendido = false;
+        }
+      } else if (pv.sourceType === 'compra' && pv.sourceId) {
+        const compra = compras.find(c => c.id === pv.sourceId);
+        if (compra) {
+          const prod = compra.productos?.find(p => p.nombre === pv.nombre && p.vendido);
+          if (prod) prod.vendido = false;
+        }
+      }
+    });
+    
+    // Eliminar la venta
+    ventas = ventas.filter(v => v.id !== ventaSeleccionadaId);
+    
+    saveLocalData();
+    sincronizarAhora();
+    hideForms();
+    renderVentas();
+    showToast(`Venta ${venta.id} eliminada ✅`);
+  }
+}
+
+function eliminarAbono() {
+  if (!abonoSeleccionadoId) return;
+  
+  const abono = abonos.find(a => a.id === abonoSeleccionadoId);
+  if (!abono) return;
+  
+  if (confirm(`¿Estás seguro de que deseas eliminar este abono de C$${(parseFloat(abono.monto) || 0).toLocaleString()}?\n\nEsta acción no se puede deshacer.`)) {
+    // Restaurar el saldo del lote
+    const lote = lotes.find(l => l.id === abono.loteId);
+    if (lote) {
+      lote.abonado = Math.max(0, (parseFloat(lote.abonado) || 0) - (parseFloat(abono.monto) || 0));
+      lote.saldoPendiente = (parseFloat(lote.totalInicial) || 0) - (parseFloat(lote.abonado) || 0);
+      if (lote.saldoPendiente > 0) {
+        lote.estado = 'PENDIENTE';
+        delete lote.fechaPagoTotal;
+      }
+      lote.lastModified = Date.now();
+    }
+    
+    // Eliminar el abono
+    abonos = abonos.filter(a => a.id !== abonoSeleccionadoId);
+    
+    saveLocalData();
+    sincronizarAhora();
+    hideForms();
+    renderAbonos();
+    showToast('Abono eliminado ✅');
+  }
+}
+
+function eliminarCobro() {
+  if (!cobroSeleccionadoId) return;
+  
+  const cobro = cobros.find(c => c.id === cobroSeleccionadoId);
+  if (!cobro) return;
+  
+  if (confirm(`¿Estás seguro de que deseas eliminar este cobro de C$${(parseFloat(cobro.monto) || 0).toLocaleString()}?\n\nEsta acción no se puede deshacer.`)) {
+    // Restaurar el saldo de la venta
+    const venta = ventas.find(v => v.id === cobro.ventaId);
+    if (venta) {
+      venta.pagado = Math.max(0, (parseFloat(venta.pagado) || 0) - (parseFloat(cobro.monto) || 0));
+      venta.saldo = (parseFloat(venta.precioTotal) || 0) - (parseFloat(venta.pagado) || 0);
+      if (venta.saldo > 0) {
+        venta.estado = 'PENDIENTE';
+        delete venta.fechaPagoTotal;
+      }
+      venta.lastModified = Date.now();
+    }
+    
+    // Eliminar el cobro
+    cobros = cobros.filter(c => c.id !== cobroSeleccionadoId);
+    
+    saveLocalData();
+    sincronizarAhora();
+    hideForms();
+    renderCobros();
+    showToast('Cobro eliminado ✅');
+  }
+}
+
+// ==========================================
+// PRODUCTOS LOTE
+// ==========================================
 function agregarProductoLote() {
   productosLoteTemp.push({ 
     id: Date.now() + Math.random(), 
@@ -771,14 +895,14 @@ function verDetalleLote(loteId) {
   
   const abonosLote = abonos.filter(a => a.loteId === loteId);
   const abonosHtml = abonosLote.length > 0 ? abonosLote.map(a => `
-    <div class="flex justify-between items-center p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-sm">
+    <div class="flex justify-between items-center p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-sm cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/40" onclick="editarAbono('${a.id}')">
       <div>
         <p class="font-medium text-indigo-800 dark:text-indigo-300">${formatFecha(a.fecha)}</p>
         <p class="text-xs text-indigo-600 dark:text-indigo-400">${a.metodo} ${a.notas ? '- ' + a.notas : ''}</p>
       </div>
       <p class="font-bold text-indigo-800 dark:text-indigo-300">C$${(parseFloat(a.monto) || 0).toLocaleString()}</p>
     </div>
-  `).join('') : '<p class="text-gray-500 text-sm text-center italic">Sin abonos</p>';
+  `).join('') : '<p class="text-gray-500 text-sm text-center italic">Sin abonos (toca para agregar)</p>';
   
   document.getElementById('contenidoDetalleLote').innerHTML = `
     <div class="grid grid-cols-2 gap-3 mb-4">
@@ -813,7 +937,7 @@ function editarLoteDesdeModal() {
 }
 
 // ==========================================
-// COMPRAS PERSONALES - CRUD
+// COMPRAS - CRUD COMPLETO
 // ==========================================
 function agregarProductoCompra() {
   productosCompraTemp.push({
@@ -1010,7 +1134,7 @@ function editarCompraDesdeModal() {
 }
 
 // ==========================================
-// VENTAS - CRUD CON REAPERTURA
+// VENTAS - CRUD COMPLETO
 // ==========================================
 function mostrarSelectorProductos(tipo) {
   document.getElementById('selectorProductos').classList.remove('hidden');
@@ -1202,6 +1326,28 @@ function guardarVenta() {
     return;
   }
   
+  // Si es edición, restaurar productos anteriores como no vendidos
+  if (editId) {
+    const ventaAnterior = ventas.find(v => v.id === editId);
+    if (ventaAnterior) {
+      ventaAnterior.productos?.forEach(pv => {
+        if (pv.sourceType === 'lote' && pv.sourceId) {
+          const lote = lotes.find(l => l.id === pv.sourceId);
+          if (lote) {
+            const prod = lote.productos?.find(p => p.nombre === pv.nombre && p.vendido);
+            if (prod) prod.vendido = false;
+          }
+        } else if (pv.sourceType === 'compra' && pv.sourceId) {
+          const compra = compras.find(c => c.id === pv.sourceId);
+          if (compra) {
+            const prod = compra.productos?.find(p => p.nombre === pv.nombre && p.vendido);
+            if (prod) prod.vendido = false;
+          }
+        }
+      });
+    }
+  }
+  
   // Marcar productos como vendidos en su origen
   productosValidos.forEach(pv => {
     if (pv.sourceType === 'lote' && pv.sourceId) {
@@ -1391,14 +1537,14 @@ function verDetalleVenta(ventaId) {
   
   const cobrosVenta = cobros.filter(c => c.ventaId === ventaId);
   const cobrosHtml = cobrosVenta.length > 0 ? cobrosVenta.map(c => `
-    <div class="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/20 rounded-lg text-sm">
+    <div class="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/20 rounded-lg text-sm cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/40" onclick="editarCobro('${c.id}')">
       <div>
         <p class="font-medium text-green-800 dark:text-green-300">${formatFecha(c.fecha)}</p>
         <p class="text-xs text-green-600 dark:text-green-400">${c.metodo} ${c.notas ? '- ' + c.notas : ''}</p>
       </div>
       <p class="font-bold text-green-800 dark:text-green-300">C$${(parseFloat(c.monto) || 0).toLocaleString()}</p>
     </div>
-  `).join('') : '<p class="text-gray-500 text-sm text-center italic">Sin cobros registrados</p>';
+  `).join('') : '<p class="text-gray-500 text-sm text-center italic">Sin cobros (toca para agregar)</p>';
   
   document.getElementById('contenidoDetalleVenta').innerHTML = `
     <div class="grid grid-cols-2 gap-3 mb-4">
@@ -1443,7 +1589,7 @@ function editarVentaDesdeModal() {
 }
 
 // ==========================================
-// ABONOS Y COBROS
+// ABONOS - CRUD COMPLETO CON EDICIÓN Y ELIMINACIÓN
 // ==========================================
 function cargarSelectLotes() {
   const select = document.getElementById('abonoLoteId');
@@ -1475,7 +1621,30 @@ function mostrarInfoLoteAbono() {
   }
 }
 
+function editarAbono(abonoId) {
+  const abono = abonos.find(a => a.id === abonoId);
+  if (!abono) return;
+  
+  abonoSeleccionadoId = abonoId;
+  
+  document.getElementById('formAbono').classList.remove('hidden');
+  document.getElementById('formOverlay').classList.remove('hidden');
+  
+  document.getElementById('tituloFormAbono').textContent = 'Editar Abono';
+  document.getElementById('abonoEditId').value = abonoId;
+  document.getElementById('abonoLoteId').value = abono.loteId;
+  document.getElementById('abonoFecha').value = abono.fecha;
+  document.getElementById('abonoMonto').value = abono.monto;
+  document.getElementById('abonoMetodo').value = abono.metodo;
+  document.getElementById('abonoNotas').value = abono.notas || '';
+  
+  mostrarInfoLoteAbono();
+  
+  document.getElementById('btnEliminarAbono').classList.remove('hidden');
+}
+
 function guardarAbono() {
+  const editId = document.getElementById('abonoEditId').value;
   const loteId = document.getElementById('abonoLoteId').value;
   const fecha = document.getElementById('abonoFecha').value;
   const monto = parseFloat(document.getElementById('abonoMonto').value) || 0;
@@ -1490,35 +1659,70 @@ function guardarAbono() {
   const lote = lotes.find(l => l.id === loteId);
   if (!lote) return;
   
-  if (monto > lote.saldoPendiente) {
-    alert(`El monto no puede superar el saldo (C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()})`);
-    return;
+  if (editId) {
+    // Editar abono existente
+    const abono = abonos.find(a => a.id === editId);
+    if (abono) {
+      // Restaurar saldo anterior
+      lote.abonado = Math.max(0, (parseFloat(lote.abonado) || 0) - (parseFloat(abono.monto) || 0));
+      
+      // Validar nuevo monto
+      if (monto > lote.saldoPendiente + (parseFloat(abono.monto) || 0)) {
+        alert(`El monto no puede superar el saldo disponible`);
+        return;
+      }
+      
+      abono.loteId = loteId;
+      abono.fecha = fecha;
+      abono.monto = monto;
+      abono.metodo = metodo;
+      abono.notas = notas;
+      abono.saldoDespues = (parseFloat(lote.saldoPendiente) || 0) + (parseFloat(abono.monto) || 0) - monto;
+      abono.lastModified = Date.now();
+      
+      lote.abonado = (parseFloat(lote.abonado) || 0) + monto;
+      lote.saldoPendiente = (parseFloat(lote.totalInicial) || 0) - (parseFloat(lote.abonado) || 0);
+      if (lote.saldoPendiente <= 0) {
+        lote.estado = 'PAGADO';
+        lote.fechaPagoTotal = fecha;
+      }
+      lote.lastModified = Date.now();
+      
+      showToast('Abono actualizado');
+    }
+  } else {
+    // Nuevo abono
+    if (monto > lote.saldoPendiente) {
+      alert(`El monto no puede superar el saldo (C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()})`);
+      return;
+    }
+    
+    abonos.push({
+      id: Date.now(),
+      loteId,
+      fecha,
+      monto,
+      metodo,
+      notas,
+      saldoDespues: (parseFloat(lote.saldoPendiente) || 0) - monto,
+      lastModified: Date.now()
+    });
+    
+    lote.abonado = (parseFloat(lote.abonado) || 0) + monto;
+    lote.saldoPendiente = (parseFloat(lote.saldoPendiente) || 0) - monto;
+    if (lote.saldoPendiente <= 0) {
+      lote.estado = 'PAGADO';
+      lote.fechaPagoTotal = fecha;
+    }
+    lote.lastModified = Date.now();
+    
+    showToast(`Abono de C$${monto.toLocaleString()} registrado`);
   }
-  
-  abonos.push({
-    id: Date.now(),
-    loteId,
-    fecha,
-    monto,
-    metodo,
-    notas,
-    saldoDespues: (parseFloat(lote.saldoPendiente) || 0) - monto,
-    lastModified: Date.now()
-  });
-  
-  lote.abonado = (parseFloat(lote.abonado) || 0) + monto;
-  lote.saldoPendiente = (parseFloat(lote.saldoPendiente) || 0) - monto;
-  if (lote.saldoPendiente <= 0) {
-    lote.estado = 'PAGADO';
-    lote.fechaPagoTotal = fecha;
-  }
-  lote.lastModified = Date.now();
   
   saveLocalData();
   sincronizarAhora();
   hideForms();
   renderAbonos();
-  showToast(`Abono de C$${monto.toLocaleString()} registrado`);
 }
 
 function renderAbonos() {
@@ -1529,10 +1733,10 @@ function renderAbonos() {
     return;
   }
   
-  const abonosOrdenados = [...abonos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 10);
+  const abonosOrdenados = [...abonos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   
   container.innerHTML = abonosOrdenados.map(abono => `
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-3 border border-indigo-200 dark:border-indigo-800">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-3 border border-indigo-200 dark:border-indigo-800 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20" onclick="editarAbono('${abono.id}')">
       <div class="flex justify-between items-start">
         <div>
           <p class="font-bold text-gray-800 dark:text-white">${abono.loteId}</p>
@@ -1545,6 +1749,9 @@ function renderAbonos() {
   `).join('');
 }
 
+// ==========================================
+// COBROS - CRUD COMPLETO CON EDICIÓN Y ELIMINACIÓN
+// ==========================================
 function buscarVentaCobro() {
   const busqueda = document.getElementById('cobroBusqueda').value.trim().toUpperCase();
   const resultadosDiv = document.getElementById('resultadosBusquedaCobro');
@@ -1597,7 +1804,30 @@ function seleccionarVentaCobro(ventaId) {
   infoDiv.classList.remove('hidden');
 }
 
+function editarCobro(cobroId) {
+  const cobro = cobros.find(c => c.id === cobroId);
+  if (!cobro) return;
+  
+  cobroSeleccionadoId = cobroId;
+  
+  document.getElementById('formCobro').classList.remove('hidden');
+  document.getElementById('formOverlay').classList.remove('hidden');
+  
+  document.getElementById('tituloFormCobro').textContent = 'Editar Cobro';
+  document.getElementById('cobroEditId').value = cobroId;
+  document.getElementById('cobroVentaId').value = cobro.ventaId;
+  document.getElementById('cobroFecha').value = cobro.fecha;
+  document.getElementById('cobroMonto').value = cobro.monto;
+  document.getElementById('cobroMetodo').value = cobro.metodo;
+  document.getElementById('cobroNotas').value = cobro.notas || '';
+  
+  seleccionarVentaCobro(cobro.ventaId);
+  
+  document.getElementById('btnEliminarCobro').classList.remove('hidden');
+}
+
 function guardarCobro() {
+  const editId = document.getElementById('cobroEditId').value;
   const ventaId = document.getElementById('cobroVentaId').value;
   const fecha = document.getElementById('cobroFecha').value;
   const monto = parseFloat(document.getElementById('cobroMonto').value) || 0;
@@ -1612,39 +1842,74 @@ function guardarCobro() {
   const venta = ventas.find(v => v.id === ventaId);
   if (!venta) return;
   
-  if (monto > venta.saldo) {
-    alert(`El monto no puede superar el saldo (C$${(parseFloat(venta.saldo) || 0).toLocaleString()})`);
-    return;
+  if (editId) {
+    // Editar cobro existente
+    const cobro = cobros.find(c => c.id === editId);
+    if (cobro) {
+      // Restaurar saldo anterior
+      venta.pagado = Math.max(0, (parseFloat(venta.pagado) || 0) - (parseFloat(cobro.monto) || 0));
+      
+      // Validar nuevo monto
+      if (monto > venta.saldo + (parseFloat(cobro.monto) || 0)) {
+        alert(`El monto no puede superar el saldo disponible`);
+        return;
+      }
+      
+      cobro.ventaId = ventaId;
+      cobro.fecha = fecha;
+      cobro.monto = monto;
+      cobro.metodo = metodo;
+      cobro.notas = notas;
+      cobro.lastModified = Date.now();
+      
+      venta.pagado = (parseFloat(venta.pagado) || 0) + monto;
+      venta.saldo = (parseFloat(venta.precioTotal) || 0) - (parseFloat(venta.pagado) || 0);
+      
+      if (venta.saldo <= 0) {
+        venta.estado = 'PAGADO';
+        venta.fechaPagoTotal = fecha;
+      }
+      venta.lastModified = Date.now();
+      
+      showToast('Cobro actualizado');
+    }
+  } else {
+    // Nuevo cobro
+    if (monto > venta.saldo) {
+      alert(`El monto no puede superar el saldo (C$${(parseFloat(venta.saldo) || 0).toLocaleString()})`);
+      return;
+    }
+    
+    cobros.push({
+      id: Date.now(),
+      ventaId,
+      fecha,
+      monto,
+      metodo,
+      notas,
+      lastModified: Date.now()
+    });
+    
+    venta.pagado = (parseFloat(venta.pagado) || 0) + monto;
+    venta.saldo = (parseFloat(venta.saldo) || 0) - monto;
+    
+    const proximaFecha = new Date(venta.proximaFechaCobro);
+    proximaFecha.setMonth(proximaFecha.getMonth() + 1);
+    venta.proximaFechaCobro = proximaFecha.toISOString().split('T')[0];
+    
+    if (venta.saldo <= 0) {
+      venta.estado = 'PAGADO';
+      venta.fechaPagoTotal = fecha;
+    }
+    venta.lastModified = Date.now();
+    
+    showToast(`Cobro de C$${monto.toLocaleString()} registrado`);
   }
-  
-  cobros.push({
-    id: Date.now(),
-    ventaId,
-    fecha,
-    monto,
-    metodo,
-    notas,
-    lastModified: Date.now()
-  });
-  
-  venta.pagado = (parseFloat(venta.pagado) || 0) + monto;
-  venta.saldo = (parseFloat(venta.saldo) || 0) - monto;
-  
-  const proximaFecha = new Date(venta.proximaFechaCobro);
-  proximaFecha.setMonth(proximaFecha.getMonth() + 1);
-  venta.proximaFechaCobro = proximaFecha.toISOString().split('T')[0];
-  
-  if (venta.saldo <= 0) {
-    venta.estado = 'PAGADO';
-    venta.fechaPagoTotal = fecha;
-  }
-  venta.lastModified = Date.now();
   
   saveLocalData();
   sincronizarAhora();
   hideForms();
   renderCobros();
-  showToast(`Cobro de C$${monto.toLocaleString()} registrado`);
 }
 
 function renderCobros() {
@@ -1655,12 +1920,12 @@ function renderCobros() {
     return;
   }
   
-  const cobrosOrdenados = [...cobros].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 10);
+  const cobrosOrdenados = [...cobros].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   
   container.innerHTML = cobrosOrdenados.map(cobro => {
     const venta = ventas.find(v => v.id === cobro.ventaId);
     return `
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-3 border border-green-200 dark:border-green-800">
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-3 border border-green-200 dark:border-green-800 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20" onclick="editarCobro('${cobro.id}')">
         <div class="flex justify-between items-start">
           <div>
             <p class="font-bold text-gray-800 dark:text-white">${venta?.cliente || 'Cliente'}</p>
@@ -1697,5 +1962,6 @@ document.addEventListener('keydown', (e) => {
     cerrarModal('modalDetalleCompra');
     cerrarModal('modalDetalleVenta');
     cerrarModal('modalConfigSync');
+    cerrarModal('modalImportar');
   }
 });

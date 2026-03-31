@@ -29,7 +29,7 @@
   </header>
 
   <!-- Botones de acción rápida -->
-  <div class="flex justify-center gap-2 mb-4">
+  <div class="flex justify-center gap-2 mb-4 flex-wrap">
     <button onclick="sincronizarAhora()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow flex items-center gap-2">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
       Sincronizar
@@ -39,6 +39,9 @@
     </button>
     <button onclick="exportarDatos()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">
       Exportar
+    </button>
+    <button onclick="mostrarImportar()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">
+      Importar
     </button>
   </div>
 
@@ -176,9 +179,14 @@
   <div id="formLote" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
     <div class="flex justify-between items-center mb-6">
       <h2 id="tituloFormLote" class="text-2xl font-bold text-gray-800 dark:text-white">Nuevo Lote</h2>
-      <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
+      <div class="flex gap-2">
+        <button type="button" id="btnEliminarLote" onclick="eliminarLote()" class="hidden text-red-500 hover:text-red-700 p-2" title="Eliminar Lote">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        </button>
+        <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
     </div>
     <div class="space-y-4">
       <input type="hidden" id="loteEditId">
@@ -231,9 +239,14 @@
   <div id="formCompra" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
     <div class="flex justify-between items-center mb-6">
       <h2 id="tituloFormCompra" class="text-2xl font-bold text-gray-800 dark:text-white">Nueva Compra</h2>
-      <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
+      <div class="flex gap-2">
+        <button type="button" id="btnEliminarCompra" onclick="eliminarCompra()" class="hidden text-red-500 hover:text-red-700 p-2" title="Eliminar Compra">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        </button>
+        <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
     </div>
     <div class="space-y-4">
       <input type="hidden" id="compraEditId">
@@ -278,9 +291,14 @@
   <div id="formVenta" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
     <div class="flex justify-between items-center mb-6">
       <h2 id="tituloFormVenta" class="text-2xl font-bold text-gray-800 dark:text-white">Nueva Venta</h2>
-      <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
+      <div class="flex gap-2">
+        <button type="button" id="btnEliminarVenta" onclick="eliminarVenta()" class="hidden text-red-500 hover:text-red-700 p-2" title="Eliminar Venta">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        </button>
+        <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
     </div>
     <div class="space-y-4">
       <input type="hidden" id="ventaEditId">
@@ -380,9 +398,14 @@
   <div id="formAbono" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700">
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Abonar a Carmen</h2>
-      <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
+      <div class="flex gap-2">
+        <button type="button" id="btnEliminarAbono" onclick="eliminarAbono()" class="hidden text-red-500 hover:text-red-700 p-2" title="Eliminar Abono">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        </button>
+        <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
     </div>
     <div class="space-y-4">
       <div>
@@ -426,9 +449,14 @@
   <div id="formCobro" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700">
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Cobrar a Cliente</h2>
-      <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
+      <div class="flex gap-2">
+        <button type="button" id="btnEliminarCobro" onclick="eliminarCobro()" class="hidden text-red-500 hover:text-red-700 p-2" title="Eliminar Cobro">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        </button>
+        <button onclick="hideForms()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
     </div>
     <div class="space-y-4">
       <div>
@@ -468,10 +496,10 @@
     </div>
   </div>
 
-  <!-- MODAL CONFIGURACIÓN SHEETDB -->
+  <!-- MODAL CONFIGURACIÓN SYNC -->
   <div id="modalConfigSync" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700">
     <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Configurar SheetDB.io</h2>
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Configurar Sincronización</h2>
       <button onclick="cerrarModal('modalConfigSync')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
@@ -479,25 +507,25 @@
     <div class="space-y-4">
       <div class="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
         <p class="text-sm text-blue-800 dark:text-blue-200 mb-2">
-          <strong>Instrucciones SheetDB.io:</strong>
+          <strong>Opción 1: Google Apps Script (Gratis e Ilimitado)</strong>
         </p>
         <ol class="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-decimal pl-4">
-          <li>Ve a <strong>sheetdb.io</strong> y regístrate gratis</li>
-          <li>Clic en <strong>"Create API"</strong></li>
-          <li>Pega la URL de tu Google Sheet</li>
-          <li>Copia la API URL (ej: https://sheetdb.io/api/v1/xxx)</li>
-          <li>Pégala aquí abajo 👇</li>
+          <li>Crea una hoja de Google Sheets</li>
+          <li>Extensiones &gt; Apps Script</li>
+          <li>Pega el código del archivo <code>apps-script.gs</code></li>
+          <li>Despliega como Web App (acceso: Cualquiera)</li>
+          <li>Copia la URL y pégala aquí</li>
         </ol>
       </div>
       
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API URL de SheetDB</label>
-        <input id="sheetUrl" type="text" placeholder="https://sheetdb.io/api/v1/..." class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URL de Apps Script Web App</label>
+        <input id="syncUrl" type="text" placeholder="https://script.google.com/macros/s/..." class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm">
       </div>
 
       <div class="flex items-center gap-2">
         <input type="checkbox" id="syncAuto" class="w-4 h-4 text-blue-600 rounded" checked>
-        <label for="syncAuto" class="text-sm text-gray-700 dark:text-gray-300">Sincronizar automáticamente cada 30 segundos</label>
+        <label for="syncAuto" class="text-sm text-gray-700 dark:text-gray-300">Sincronizar automáticamente cada 5 minutos</label>
       </div>
 
       <button onclick="guardarConfigSync()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Guardar y Conectar</button>
@@ -555,6 +583,33 @@
       </div>
     </div>
     <div id="contenidoDetalleVenta" class="space-y-4"></div>
+  </div>
+
+  <!-- MODAL IMPORTAR DATOS -->
+  <div id="modalImportar" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 z-50 border border-gray-200 dark:border-slate-700">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Importar Datos</h2>
+      <button onclick="cerrarModal('modalImportar')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="space-y-4">
+      <div class="bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded-xl border border-yellow-200 dark:border-yellow-800">
+        <p class="text-sm text-yellow-800 dark:text-yellow-200">
+          <strong>⚠️ Precaución:</strong> Esto reemplazará todos los datos actuales. Asegúrate de haber exportado una copia de seguridad primero.
+        </p>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seleccionar archivo JSON</label>
+        <input type="file" id="importFile" accept=".json" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white">
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="procesarImportacion()" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-4 rounded-xl font-bold transition-colors shadow-lg">Importar Datos</button>
+        <button onclick="cerrarModal('modalImportar')" class="px-6 py-4 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-bold">Cancelar</button>
+      </div>
+    </div>
   </div>
 
   <!-- Toast Notification -->
