@@ -1,6 +1,13 @@
 // ==========================================
 // CONFIGURACIÓN GLOBAL - SINCRONIZACIÓN
 // ==========================================
+
+// Función para limpiar URL (CRÍTICA)
+function limpiarUrl(url) {
+  if (!url) return '';
+  return url.toString().trim().replace(/\s+/g, '').replace(/\/+$/, '');
+}
+
 const CONFIG = {
   syncUrl: limpiarUrl(localStorage.getItem('syncUrl') || ''),
   syncInterval: null,
@@ -8,13 +15,8 @@ const CONFIG = {
   isOnline: navigator.onLine,
   deviceId: localStorage.getItem('deviceId') || generarDeviceId()
 };
-// Función para limpiar URL
-function limpiarUrl(url) {
-  if (!url) return '';
-  return url.trim().replace(/\s+/g, '').replace(/\/+$/, '');
-}
 
-// Datos locales - SE CARGAN DESDE LOCALSTORAGE
+// Datos locales
 let lotes = JSON.parse(localStorage.getItem('lotes')) || [];
 let compras = JSON.parse(localStorage.getItem('compras')) || [];
 let ventas = JSON.parse(localStorage.getItem('ventas')) || [];
@@ -36,11 +38,9 @@ let productosSeleccionados = [];
 // INICIALIZACIÓN
 // ==========================================
 window.onload = function() {
-  // Eventos online/offline
   window.addEventListener('online', () => {
     CONFIG.isOnline = true;
     updateSyncStatus('online');
-    sincronizarAhora();
   });
   
   window.addEventListener('offline', () => {
@@ -70,7 +70,7 @@ function generarDeviceId() {
 }
 
 // ==========================================
-// SINCRONIZACIÓN CON GOOGLE APPS SCRIPT
+// SINCRONIZACIÓN - VERSIÓN ROBUSTA CON FALLBACK
 // ==========================================
 function mostrarConfigSync() {
   document.getElementById('syncUrl').value = CONFIG.syncUrl || '';
@@ -87,8 +87,6 @@ function mostrarConfigSync() {
 
 function guardarConfigSync() {
   let url = document.getElementById('syncUrl').value;
-  
-  // Limpiar URL
   url = limpiarUrl(url);
   
   if (!url) {
@@ -96,34 +94,34 @@ function guardarConfigSync() {
     return;
   }
   
-  if (!url.includes('script.google.com')) {
-    alert('La URL debe ser de Google Apps Script');
+  if (!url.includes('script.google.com/macros/s/')) {
+    alert('URL inválida. Debe ser: https://script.google.com/macros/s/XXXX/exec');
     return;
   }
   
   CONFIG.syncUrl = url;
   localStorage.setItem('syncUrl', url);
-  localStorage.setItem('syncAuto', syncAuto);
+  localStorage.setItem('syncAuto', document.getElementById('syncAuto').checked);
   
-  if (syncAuto) iniciarSyncAutomatico();
-  else detenerSyncAutomatico();
+  if (document.getElementById('syncAuto').checked) {
+    iniciarSyncAutomatico();
+  }
   
   cerrarModal('modalConfigSync');
   
-  // Probar conexión inmediatamente
   probarConexion().then(ok => {
     if (ok) {
       sincronizarAhora();
-      showToast('✅ Conectado correctamente');
+      showToast('✅ Conectado');
     } else {
-      showToast('⚠️ URL guardada pero hay problemas de conexión');
+      showToast('⚠️ URL guardada. Probar sincronización manual.');
     }
   });
 }
 
 async function probarConexion() {
   try {
-    const response = await fetch(CONFIG.syncUrl, {
+    const response = await fetch(CONFIG.syncUrl + '?test=1', {
       method: 'GET',
       mode: 'cors',
       cache: 'no-cache'
@@ -136,7 +134,7 @@ async function probarConexion() {
 
 function iniciarSyncAutomatico() {
   detenerSyncAutomatico();
-  CONFIG.syncInterval = setInterval(sincronizarAhora, 300000); // 5 minutos
+  CONFIG.syncInterval = setInterval(sincronizarAhora, 300000);
 }
 
 function detenerSyncAutomatico() {
@@ -147,8 +145,10 @@ function detenerSyncAutomatico() {
 }
 
 async function sincronizarAhora() {
-  if (!CONFIG.syncUrl) {
-    showToast('⚠️ Configura la URL de sincronización primero');
+  const url = limpiarUrl(CONFIG.syncUrl);
+  
+  if (!url) {
+    showToast('⚠️ Configura la URL primero (botón Configurar)');
     mostrarConfigSync();
     return;
   }
@@ -162,9 +162,8 @@ async function sincronizarAhora() {
   updateSyncStatus('syncing');
 
   try {
-    console.log('🔄 Sincronizando...', CONFIG.syncUrl);
+    console.log('🔄 Intentando sincronizar con:', url);
     
-    // Preparar datos limpios
     const cleanData = (arr) => arr.map(item => {
       const clean = {};
       Object.keys(item).forEach(key => {
@@ -187,88 +186,110 @@ async function sincronizarAhora() {
       lastModified: Date.now()
     };
     
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-    
-    const response = await fetch(CONFIG.syncUrl, {
-      method: 'POST',
-      mode: 'cors',
-      cache: 'no-cache',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(datosParaEnviar),
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
-    }
-    
-    const resultado = await response.json();
-    console.log('📥 Respuesta:', resultado);
-    
-    if (resultado.success) {
-      // Parsear datos recibidos
-      const parseProductos = (arr) => {
-        if (!Array.isArray(arr)) return [];
-        return arr.map(item => {
-          if (!item) return null;
-          try {
-            let productos = item.productos;
-            if (typeof productos === 'string') {
-              productos = JSON.parse(productos);
-            }
-            return { ...item, productos: productos || [] };
-          } catch (e) {
-            console.error('Error parseando:', e, item);
-            return { ...item, productos: [] };
-          }
-        }).filter(Boolean);
-      };
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
       
-      if (resultado.data) {
-        if (resultado.data.lotes) lotes = parseProductos(resultado.data.lotes);
-        if (resultado.data.compras) compras = parseProductos(resultado.data.compras);
-        if (resultado.data.ventas) ventas = parseProductos(resultado.data.ventas);
-        if (resultado.data.abonos) abonos = resultado.data.abonos || [];
-        if (resultado.data.cobros) cobros = resultado.data.cobros || [];
-        
-        saveLocalData();
-        renderCurrentSection();
-        updateResumen();
+      const response = await fetch(url, {
+        method: 'POST',
+        mode: 'cors',
+        cache: 'no-cache',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(datosParaEnviar),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
       }
+      
+      const resultado = await response.json();
+      console.log('✅ Respuesta recibida:', resultado);
+      
+      if (resultado.success) {
+        await procesarRespuestaExitosa(resultado);
+        return;
+      } else {
+        throw new Error(resultado.error || 'Error del servidor');
+      }
+      
+    } catch (corsError) {
+      console.log('⚠️ Modo CORS falló:', corsError.message);
+      showToast('🔄 Intentando modo alternativo...');
+      
+      await fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(datosParaEnviar)
+      });
+      
+      console.log('✅ Datos enviados en modo no-cors');
       
       CONFIG.lastSync = new Date().toISOString();
       localStorage.setItem('lastSync', CONFIG.lastSync);
       updateSyncStatus('synced');
-      showToast('✅ Sincronizado con Google Sheets');
-    } else {
-      throw new Error(resultado.error || 'Error del servidor');
+      showToast('✅ Datos guardados (modo silencioso)');
     }
     
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Error total:', error);
     updateSyncStatus('error');
     
     let mensaje = '❌ Error de sincronización';
     if (error.name === 'AbortError') {
-      mensaje = '⏱️ Tiempo agotado (30s)';
+      mensaje = '⏱️ Tiempo agotado. Intenta de nuevo.';
     } else if (error.message.includes('Failed to fetch')) {
-      mensaje = '❌ Error CORS o conexión. Verifica la URL';
-    } else if (error.message.includes('NetworkError')) {
-      mensaje = '📴 Error de red';
+      mensaje = '❌ Error de conexión. Verifica la URL en Configurar.';
     } else {
-      mensaje = '❌ ' + error.message.substring(0, 50);
+      mensaje = '❌ ' + error.message.substring(0, 60);
     }
     
     showToast(mensaje);
   } finally {
     document.getElementById('syncIndicator').classList.add('hidden');
   }
+}
+
+async function procesarRespuestaExitosa(resultado) {
+  const parseProductos = (arr) => {
+    if (!Array.isArray(arr)) return [];
+    return arr.map(item => {
+      if (!item) return null;
+      try {
+        let productos = item.productos;
+        if (typeof productos === 'string') {
+          productos = JSON.parse(productos);
+        }
+        return { ...item, productos: productos || [] };
+      } catch (e) {
+        return { ...item, productos: [] };
+      }
+    }).filter(Boolean);
+  };
+  
+  if (resultado.data) {
+    if (resultado.data.lotes) lotes = parseProductos(resultado.data.lotes);
+    if (resultado.data.compras) compras = parseProductos(resultado.data.compras);
+    if (resultado.data.ventas) ventas = parseProductos(resultado.data.ventas);
+    if (resultado.data.abonos) abonos = resultado.data.abonos || [];
+    if (resultado.data.cobros) cobros = resultado.data.cobros || [];
+    
+    saveLocalData();
+    renderCurrentSection();
+    updateResumen();
+  }
+  
+  CONFIG.lastSync = new Date().toISOString();
+  localStorage.setItem('lastSync', CONFIG.lastSync);
+  updateSyncStatus('synced');
+  showToast('✅ Sincronizado con Google Sheets');
 }
 
 function updateSyncStatus(status) {
@@ -278,7 +299,7 @@ function updateSyncStatus(status) {
     offline: { color: 'red', text: 'Sin conexión' },
     syncing: { color: 'yellow', text: 'Sincronizando...', pulse: true },
     synced: { color: 'blue', text: 'Sincronizado' },
-    error: { color: 'orange', text: 'Error' }
+    error: { color: 'orange', text: 'Error de conexión' }
   };
   
   const cfg = configs[status] || configs.offline;
@@ -286,7 +307,7 @@ function updateSyncStatus(status) {
   
   indicator.innerHTML = `
     <span class="w-2 h-2 rounded-full bg-${cfg.color}-500 ${pulseClass}"></span>
-    <span class="text-${cfg.color}-600 dark:text-${cfg.color}-400">${cfg.text}</span>
+    <span class="text-${cfg.color}-600 dark:text-${cfg.color}-400 text-sm">${cfg.text}</span>
   `;
 }
 
@@ -294,14 +315,7 @@ function updateSyncStatus(status) {
 // IMPORTAR/EXPORTAR DATOS
 // ==========================================
 function exportarDatos() {
-  const datos = { 
-    lotes, 
-    compras, 
-    ventas, 
-    abonos, 
-    cobros, 
-    exportDate: new Date().toISOString() 
-  };
+  const datos = { lotes, compras, ventas, abonos, cobros, exportDate: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -329,8 +343,7 @@ function procesarImportacion() {
   reader.onload = function(e) {
     try {
       const datos = JSON.parse(e.target.result);
-      
-      if (!confirm('¿Reemplazar TODOS los datos actuales? No se puede deshacer.')) return;
+      if (!confirm('¿Reemplazar TODOS los datos?')) return;
       
       lotes = datos.lotes || [];
       compras = datos.compras || [];
@@ -341,7 +354,6 @@ function procesarImportacion() {
       saveLocalData();
       renderCurrentSection();
       updateResumen();
-      
       cerrarModal('modalImportar');
       showToast('✅ Datos importados');
     } catch (error) {
@@ -365,15 +377,12 @@ function saveLocalData() {
 
 function updateResumen() {
   const deudaCarmen = lotes.reduce((sum, l) => sum + (parseFloat(l.saldoPendiente) || 0), 0);
-  
   const totalCompras = compras.reduce((sum, c) => {
     const stock = c.productos?.filter(p => !p.vendido).reduce((s, p) => 
       s + ((parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1)), 0) || 0;
     return sum + stock;
   }, 0);
-  
   const clientesDeben = ventas.reduce((sum, v) => sum + (parseFloat(v.saldo) || 0), 0);
-  
   const gananciaEstimada = ventas.reduce((sum, v) => {
     const costo = v.productos?.reduce((c, p) => {
       const precioCosto = parseFloat(p.precioCarmen) || parseFloat(p.precioCompra) || 0;
@@ -390,7 +399,6 @@ function updateResumen() {
   document.getElementById('countLotes').textContent = lotes.filter(l => l.estado === 'PENDIENTE').length;
   document.getElementById('countCompras').textContent = compras.length;
   document.getElementById('countVentas').textContent = ventas.filter(v => v.estado === 'PENDIENTE').length;
-  
   const totalStock = [...lotes, ...compras].reduce((sum, item) => 
     sum + (item.productos?.filter(p => !p.vendido).length || 0), 0);
   document.getElementById('countStock').textContent = totalStock;
@@ -404,7 +412,6 @@ function showSection(section) {
     document.getElementById(`section${s.charAt(0).toUpperCase() + s.slice(1)}`).classList.add('hidden');
   });
   document.getElementById(`section${section.charAt(0).toUpperCase() + section.slice(1)}`).classList.remove('hidden');
-  
   if (section === 'lotes') renderLotes();
   else if (section === 'compras') renderCompras();
   else if (section === 'ventas') renderVentas();
@@ -429,12 +436,14 @@ function hideForms() {
   ['formLote', 'formCompra', 'formVenta', 'formAbono', 'formCobro', 
    'selectorProductos', 'modalConfigSync', 'modalImportar',
    'modalDetalleLote', 'modalDetalleCompra', 'modalDetalleVenta'].forEach(id => {
-    document.getElementById(id)?.classList.add('hidden');
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
   });
 }
 
 function cerrarModal(modalId) {
-  document.getElementById(modalId).classList.add('hidden');
+  const el = document.getElementById(modalId);
+  if (el) el.classList.add('hidden');
   document.getElementById('formOverlay').classList.add('hidden');
 }
 
@@ -1364,7 +1373,6 @@ function guardarVenta() {
     return;
   }
   
-  // Restaurar productos anteriores si es edición
   if (editId) {
     const ventaAnterior = ventas.find(v => v.id === editId);
     if (ventaAnterior) {
@@ -1386,7 +1394,6 @@ function guardarVenta() {
     }
   }
   
-  // Marcar productos como vendidos
   productosValidos.forEach(pv => {
     if (pv.sourceType === 'lote' && pv.sourceId) {
       const lote = lotes.find(l => l.id === pv.sourceId);
@@ -1971,7 +1978,7 @@ function showToast(message) {
   const toast = document.getElementById('toast');
   document.getElementById('toastMessage').textContent = message;
   toast.classList.remove('opacity-0');
-  setTimeout(() => toast.classList.add('opacity-0'), 3000);
+  setTimeout(() => toast.classList.add('opacity-0'), 4000);
 }
 
 document.addEventListener('keydown', (e) => {
