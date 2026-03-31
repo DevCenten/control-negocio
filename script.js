@@ -2,12 +2,17 @@
 // CONFIGURACIÓN GLOBAL - SINCRONIZACIÓN
 // ==========================================
 const CONFIG = {
-  syncUrl: localStorage.getItem('syncUrl') || '',
+  syncUrl: limpiarUrl(localStorage.getItem('syncUrl') || ''),
   syncInterval: null,
   lastSync: localStorage.getItem('lastSync') || null,
   isOnline: navigator.onLine,
   deviceId: localStorage.getItem('deviceId') || generarDeviceId()
 };
+// Función para limpiar URL
+function limpiarUrl(url) {
+  if (!url) return '';
+  return url.trim().replace(/\s+/g, '').replace(/\/+$/, '');
+}
 
 // Datos locales - SE CARGAN DESDE LOCALSTORAGE
 let lotes = JSON.parse(localStorage.getItem('lotes')) || [];
@@ -81,8 +86,10 @@ function mostrarConfigSync() {
 }
 
 function guardarConfigSync() {
-  const url = document.getElementById('syncUrl').value.trim();
-  const syncAuto = document.getElementById('syncAuto').checked;
+  let url = document.getElementById('syncUrl').value;
+  
+  // Limpiar URL
+  url = limpiarUrl(url);
   
   if (!url) {
     alert('Ingresa la URL de la Web App de Google Apps Script');
@@ -90,15 +97,12 @@ function guardarConfigSync() {
   }
   
   if (!url.includes('script.google.com')) {
-    alert('La URL debe ser de Google Apps Script (ej: https://script.google.com/macros/s/...)');
+    alert('La URL debe ser de Google Apps Script');
     return;
   }
   
-  // Limpiar URL - quitar espacios y caracteres extra
-  const urlLimpia = url.replace(/\s/g, '').replace(/\/$/, '');
-  
-  CONFIG.syncUrl = urlLimpia;
-  localStorage.setItem('syncUrl', urlLimpia);
+  CONFIG.syncUrl = url;
+  localStorage.setItem('syncUrl', url);
   localStorage.setItem('syncAuto', syncAuto);
   
   if (syncAuto) iniciarSyncAutomatico();
