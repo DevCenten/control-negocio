@@ -9,7 +9,7 @@ const CONFIG = {
   deviceId: localStorage.getItem('deviceId') || generarDeviceId()
 };
 
-// Datos locales - SE CARGAN DESDE LOCALSTORAGE (tus datos se preservan)
+// Datos locales - SE CARGAN DESDE LOCALSTORAGE
 let lotes = JSON.parse(localStorage.getItem('lotes')) || [];
 let compras = JSON.parse(localStorage.getItem('compras')) || [];
 let ventas = JSON.parse(localStorage.getItem('ventas')) || [];
@@ -31,9 +31,6 @@ let productosSeleccionados = [];
 // INICIALIZACIÓN
 // ==========================================
 window.onload = function() {
-  // NO cargamos datos iniciales de ejemplo si ya hay datos del usuario
-  // Tus datos en localStorage se preservan completamente
-
   // Eventos online/offline
   window.addEventListener('online', () => {
     CONFIG.isOnline = true;
@@ -68,7 +65,7 @@ function generarDeviceId() {
 }
 
 // ==========================================
-// SINCRONIZACIÓN CON GOOGLE APPS SCRIPT (GRATIS E ILIMITADO)
+// SINCRONIZACIÓN CON GOOGLE APPS SCRIPT
 // ==========================================
 function mostrarConfigSync() {
   document.getElementById('syncUrl').value = CONFIG.syncUrl || '';
@@ -97,16 +94,40 @@ function guardarConfigSync() {
     return;
   }
   
-  CONFIG.syncUrl = url;
-  localStorage.setItem('syncUrl', url);
+  // Limpiar URL - quitar espacios y caracteres extra
+  const urlLimpia = url.replace(/\s/g, '').replace(/\/$/, '');
+  
+  CONFIG.syncUrl = urlLimpia;
+  localStorage.setItem('syncUrl', urlLimpia);
   localStorage.setItem('syncAuto', syncAuto);
   
   if (syncAuto) iniciarSyncAutomatico();
   else detenerSyncAutomatico();
   
   cerrarModal('modalConfigSync');
-  sincronizarAhora();
-  showToast('Configuración guardada ✅');
+  
+  // Probar conexión inmediatamente
+  probarConexion().then(ok => {
+    if (ok) {
+      sincronizarAhora();
+      showToast('✅ Conectado correctamente');
+    } else {
+      showToast('⚠️ URL guardada pero hay problemas de conexión');
+    }
+  });
+}
+
+async function probarConexion() {
+  try {
+    const response = await fetch(CONFIG.syncUrl, {
+      method: 'GET',
+      mode: 'cors',
+      cache: 'no-cache'
+    });
+    return response.ok;
+  } catch (e) {
+    return false;
+  }
 }
 
 function iniciarSyncAutomatico() {
@@ -122,8 +143,14 @@ function detenerSyncAutomatico() {
 }
 
 async function sincronizarAhora() {
-  if (!CONFIG.syncUrl || !CONFIG.isOnline) {
-    showToast('Sin conexión o sin configurar');
+  if (!CONFIG.syncUrl) {
+    showToast('⚠️ Configura la URL de sincronización primero');
+    mostrarConfigSync();
+    return;
+  }
+
+  if (!CONFIG.isOnline) {
+    showToast('📴 Sin conexión a internet');
     return;
   }
 
@@ -131,42 +158,54 @@ async function sincronizarAhora() {
   updateSyncStatus('syncing');
 
   try {
-    console.log('🔄 Sincronizando con Google Sheets...');
+    console.log('🔄 Sincronizando...', CONFIG.syncUrl);
     
-    // Preparar datos para enviar
+    // Preparar datos limpios
+    const cleanData = (arr) => arr.map(item => {
+      const clean = {};
+      Object.keys(item).forEach(key => {
+        if (key === 'productos' && typeof item[key] === 'object') {
+          clean[key] = JSON.stringify(item[key]);
+        } else {
+          clean[key] = item[key];
+        }
+      });
+      return clean;
+    });
+
     const datosParaEnviar = {
-      lotes: lotes.map(l => ({
-        ...l,
-        productos: JSON.stringify(l.productos || [])
-      })),
-      compras: compras.map(c => ({
-        ...c,
-        productos: JSON.stringify(c.productos || [])
-      })),
-      ventas: ventas.map(v => ({
-        ...v,
-        productos: JSON.stringify(v.productos || [])
-      })),
+      lotes: cleanData(lotes),
+      compras: cleanData(compras),
+      ventas: cleanData(ventas),
       abonos: abonos,
       cobros: cobros,
       deviceId: CONFIG.deviceId,
       lastModified: Date.now()
     };
     
-    // Enviar a Google Apps Script
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
     const response = await fetch(CONFIG.syncUrl, {
       method: 'POST',
+      mode: 'cors',
+      cache: 'no-cache',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(datosParaEnviar)
+      body: JSON.stringify(datosParaEnviar),
+      signal: controller.signal
     });
     
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${await response.text()}`);
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
     
     const resultado = await response.json();
+    console.log('📥 Respuesta:', resultado);
     
     if (resultado.success) {
       // Parsear datos recibidos
@@ -175,11 +214,13 @@ async function sincronizarAhora() {
         return arr.map(item => {
           if (!item) return null;
           try {
-            return {
-              ...item,
-              productos: item.productos ? JSON.parse(item.productos) : []
-            };
+            let productos = item.productos;
+            if (typeof productos === 'string') {
+              productos = JSON.parse(productos);
+            }
+            return { ...item, productos: productos || [] };
           } catch (e) {
+            console.error('Error parseando:', e, item);
             return { ...item, productos: [] };
           }
         }).filter(Boolean);
@@ -189,8 +230,8 @@ async function sincronizarAhora() {
         if (resultado.data.lotes) lotes = parseProductos(resultado.data.lotes);
         if (resultado.data.compras) compras = parseProductos(resultado.data.compras);
         if (resultado.data.ventas) ventas = parseProductos(resultado.data.ventas);
-        if (resultado.data.abonos) abonos = resultado.data.abonos;
-        if (resultado.data.cobros) cobros = resultado.data.cobros;
+        if (resultado.data.abonos) abonos = resultado.data.abonos || [];
+        if (resultado.data.cobros) cobros = resultado.data.cobros || [];
         
         saveLocalData();
         renderCurrentSection();
@@ -202,13 +243,25 @@ async function sincronizarAhora() {
       updateSyncStatus('synced');
       showToast('✅ Sincronizado con Google Sheets');
     } else {
-      throw new Error(resultado.error || 'Error desconocido');
+      throw new Error(resultado.error || 'Error del servidor');
     }
     
   } catch (error) {
-    console.error('❌ Error de sincronización:', error);
+    console.error('❌ Error:', error);
     updateSyncStatus('error');
-    showToast('❌ Error: ' + error.message);
+    
+    let mensaje = '❌ Error de sincronización';
+    if (error.name === 'AbortError') {
+      mensaje = '⏱️ Tiempo agotado (30s)';
+    } else if (error.message.includes('Failed to fetch')) {
+      mensaje = '❌ Error CORS o conexión. Verifica la URL';
+    } else if (error.message.includes('NetworkError')) {
+      mensaje = '📴 Error de red';
+    } else {
+      mensaje = '❌ ' + error.message.substring(0, 50);
+    }
+    
+    showToast(mensaje);
   } finally {
     document.getElementById('syncIndicator').classList.add('hidden');
   }
@@ -216,14 +269,21 @@ async function sincronizarAhora() {
 
 function updateSyncStatus(status) {
   const indicator = document.getElementById('syncStatus');
-  const icons = {
-    online: '<span class="w-2 h-2 rounded-full bg-green-500"></span><span class="text-green-600 dark:text-green-400">En línea</span>',
-    offline: '<span class="w-2 h-2 rounded-full bg-red-500"></span><span class="text-red-600 dark:text-red-400">Sin conexión</span>',
-    syncing: '<span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span><span class="text-yellow-600 dark:text-yellow-400">Sincronizando...</span>',
-    synced: '<span class="w-2 h-2 rounded-full bg-blue-500"></span><span class="text-blue-600 dark:text-blue-400">Sincronizado</span>',
-    error: '<span class="w-2 h-2 rounded-full bg-orange-500"></span><span class="text-orange-600 dark:text-orange-400">Error</span>'
+  const configs = {
+    online: { color: 'green', text: 'En línea' },
+    offline: { color: 'red', text: 'Sin conexión' },
+    syncing: { color: 'yellow', text: 'Sincronizando...', pulse: true },
+    synced: { color: 'blue', text: 'Sincronizado' },
+    error: { color: 'orange', text: 'Error' }
   };
-  indicator.innerHTML = icons[status] || icons.offline;
+  
+  const cfg = configs[status] || configs.offline;
+  const pulseClass = cfg.pulse ? 'animate-pulse' : '';
+  
+  indicator.innerHTML = `
+    <span class="w-2 h-2 rounded-full bg-${cfg.color}-500 ${pulseClass}"></span>
+    <span class="text-${cfg.color}-600 dark:text-${cfg.color}-400">${cfg.text}</span>
+  `;
 }
 
 // ==========================================
@@ -244,7 +304,7 @@ function exportarDatos() {
   a.href = url;
   a.download = `backup-control-${new Date().toISOString().split('T')[0]}.json`;
   a.click();
-  showToast('Datos exportados ✅');
+  showToast('✅ Datos exportados');
 }
 
 function mostrarImportar() {
@@ -266,22 +326,22 @@ function procesarImportacion() {
     try {
       const datos = JSON.parse(e.target.result);
       
-      if (confirm('¿Estás seguro de que deseas reemplazar todos los datos actuales? Esta acción no se puede deshacer.')) {
-        lotes = datos.lotes || [];
-        compras = datos.compras || [];
-        ventas = datos.ventas || [];
-        abonos = datos.abonos || [];
-        cobros = datos.cobros || [];
-        
-        saveLocalData();
-        renderCurrentSection();
-        updateResumen();
-        
-        cerrarModal('modalImportar');
-        showToast('Datos importados ✅');
-      }
+      if (!confirm('¿Reemplazar TODOS los datos actuales? No se puede deshacer.')) return;
+      
+      lotes = datos.lotes || [];
+      compras = datos.compras || [];
+      ventas = datos.ventas || [];
+      abonos = datos.abonos || [];
+      cobros = datos.cobros || [];
+      
+      saveLocalData();
+      renderCurrentSection();
+      updateResumen();
+      
+      cerrarModal('modalImportar');
+      showToast('✅ Datos importados');
     } catch (error) {
-      alert('Error al leer el archivo: ' + error.message);
+      alert('Error: ' + error.message);
     }
   };
   reader.readAsText(file);
@@ -303,7 +363,8 @@ function updateResumen() {
   const deudaCarmen = lotes.reduce((sum, l) => sum + (parseFloat(l.saldoPendiente) || 0), 0);
   
   const totalCompras = compras.reduce((sum, c) => {
-    const stock = c.productos?.filter(p => !p.vendido).reduce((s, p) => s + ((parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1)), 0) || 0;
+    const stock = c.productos?.filter(p => !p.vendido).reduce((s, p) => 
+      s + ((parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1)), 0) || 0;
     return sum + stock;
   }, 0);
   
@@ -326,9 +387,8 @@ function updateResumen() {
   document.getElementById('countCompras').textContent = compras.length;
   document.getElementById('countVentas').textContent = ventas.filter(v => v.estado === 'PENDIENTE').length;
   
-  const totalStock = [...lotes, ...compras].reduce((sum, item) => {
-    return sum + (item.productos?.filter(p => !p.vendido).length || 0);
-  }, 0);
+  const totalStock = [...lotes, ...compras].reduce((sum, item) => 
+    sum + (item.productos?.filter(p => !p.vendido).length || 0), 0);
   document.getElementById('countStock').textContent = totalStock;
 }
 
@@ -362,8 +422,10 @@ function renderCurrentSection() {
 
 function hideForms() {
   document.getElementById('formOverlay').classList.add('hidden');
-  ['formLote', 'formCompra', 'formVenta', 'formAbono', 'formCobro', 'selectorProductos', 'modalConfigSync', 'modalImportar'].forEach(id => {
-    document.getElementById(id).classList.add('hidden');
+  ['formLote', 'formCompra', 'formVenta', 'formAbono', 'formCobro', 
+   'selectorProductos', 'modalConfigSync', 'modalImportar',
+   'modalDetalleLote', 'modalDetalleCompra', 'modalDetalleVenta'].forEach(id => {
+    document.getElementById(id)?.classList.add('hidden');
   });
 }
 
@@ -373,7 +435,7 @@ function cerrarModal(modalId) {
 }
 
 // ==========================================
-// LOTES - CRUD COMPLETO CON EDICIÓN Y ELIMINACIÓN TOTAL
+// LOTES - CRUD COMPLETO
 // ==========================================
 function showForm(type, editId = null) {
   hideForms();
@@ -382,8 +444,6 @@ function showForm(type, editId = null) {
   if (type === 'lote') {
     const form = document.getElementById('formLote');
     form.classList.remove('hidden');
-    
-    // Mostrar/ocultar botón eliminar
     const btnEliminar = document.getElementById('btnEliminarLote');
     
     if (editId) {
@@ -422,14 +482,12 @@ function showForm(type, editId = null) {
       productosLoteTemp = [];
       renderProductosLote();
       document.getElementById('opcionesLotePagado').classList.add('hidden');
-      
       btnEliminar.classList.add('hidden');
       loteSeleccionadoId = null;
     }
   } else if (type === 'compra') {
     const form = document.getElementById('formCompra');
     form.classList.remove('hidden');
-    
     const btnEliminar = document.getElementById('btnEliminarCompra');
     
     if (editId) {
@@ -445,7 +503,6 @@ function showForm(type, editId = null) {
       
       productosCompraTemp = JSON.parse(JSON.stringify(compra.productos || []));
       renderProductosCompra();
-      
       btnEliminar.classList.remove('hidden');
       compraSeleccionadaId = editId;
     } else {
@@ -457,14 +514,12 @@ function showForm(type, editId = null) {
       document.getElementById('compraProveedor').value = '';
       productosCompraTemp = [];
       renderProductosCompra();
-      
       btnEliminar.classList.add('hidden');
       compraSeleccionadaId = null;
     }
   } else if (type === 'venta') {
     const form = document.getElementById('formVenta');
     form.classList.remove('hidden');
-    
     const btnEliminar = document.getElementById('btnEliminarVenta');
     
     if (editId) {
@@ -506,18 +561,14 @@ function showForm(type, editId = null) {
       renderProductosVenta();
       calcularVenta();
       document.getElementById('opcionesVentaPagada').classList.add('hidden');
-      
       btnEliminar.classList.add('hidden');
       ventaSeleccionadaId = null;
     }
   } else if (type === 'abono') {
     document.getElementById('formAbono').classList.remove('hidden');
     cargarSelectLotes();
-    
-    const btnEliminar = document.getElementById('btnEliminarAbono');
-    btnEliminar.classList.add('hidden');
+    document.getElementById('btnEliminarAbono').classList.add('hidden');
     abonoSeleccionadoId = null;
-    
     document.getElementById('abonoEditId').value = '';
     document.getElementById('abonoFecha').valueAsDate = new Date();
     document.getElementById('abonoMonto').value = '';
@@ -525,11 +576,8 @@ function showForm(type, editId = null) {
     document.getElementById('infoLoteAbono').classList.add('hidden');
   } else if (type === 'cobro') {
     document.getElementById('formCobro').classList.remove('hidden');
-    
-    const btnEliminar = document.getElementById('btnEliminarCobro');
-    btnEliminar.classList.add('hidden');
+    document.getElementById('btnEliminarCobro').classList.add('hidden');
     cobroSeleccionadoId = null;
-    
     document.getElementById('cobroEditId').value = '';
     document.getElementById('cobroFecha').valueAsDate = new Date();
     document.getElementById('cobroMonto').value = '';
@@ -540,143 +588,121 @@ function showForm(type, editId = null) {
   }
 }
 
-// ==========================================
-// ELIMINACIÓN COMPLETA DE REGISTROS
-// ==========================================
 function eliminarLote() {
   if (!loteSeleccionadoId) return;
-  
   const lote = lotes.find(l => l.id === loteSeleccionadoId);
   if (!lote) return;
   
-  if (confirm(`¿Estás seguro de que deseas eliminar el lote ${lote.id} completamente?\n\nEsta acción no se puede deshacer.`)) {
-    // Eliminar abonos asociados a este lote
-    abonos = abonos.filter(a => a.loteId !== loteSeleccionadoId);
-    
-    // Eliminar el lote
-    lotes = lotes.filter(l => l.id !== loteSeleccionadoId);
-    
-    saveLocalData();
-    sincronizarAhora();
-    hideForms();
-    renderLotes();
-    showToast(`Lote ${lote.id} eliminado ✅`);
-  }
+  if (!confirm(`¿Eliminar lote ${lote.id} permanentemente?`)) return;
+  
+  abonos = abonos.filter(a => a.loteId !== loteSeleccionadoId);
+  lotes = lotes.filter(l => l.id !== loteSeleccionadoId);
+  
+  saveLocalData();
+  sincronizarAhora();
+  hideForms();
+  renderLotes();
+  showToast(`Lote ${lote.id} eliminado`);
 }
 
 function eliminarCompra() {
   if (!compraSeleccionadaId) return;
-  
   const compra = compras.find(c => c.id === compraSeleccionadaId);
   if (!compra) return;
   
-  if (confirm(`¿Estás seguro de que deseas eliminar la compra ${compra.id} completamente?\n\nEsta acción no se puede deshacer.`)) {
-    compras = compras.filter(c => c.id !== compraSeleccionadaId);
-    
-    saveLocalData();
-    sincronizarAhora();
-    hideForms();
-    renderCompras();
-    showToast(`Compra ${compra.id} eliminada ✅`);
-  }
+  if (!confirm(`¿Eliminar compra ${compra.id} permanentemente?`)) return;
+  
+  compras = compras.filter(c => c.id !== compraSeleccionadaId);
+  saveLocalData();
+  sincronizarAhora();
+  hideForms();
+  renderCompras();
+  showToast(`Compra ${compra.id} eliminada`);
 }
 
 function eliminarVenta() {
   if (!ventaSeleccionadaId) return;
-  
   const venta = ventas.find(v => v.id === ventaSeleccionadaId);
   if (!venta) return;
   
-  if (confirm(`¿Estás seguro de que deseas eliminar la venta ${venta.id} completamente?\n\nEsta acción no se puede deshacer.`)) {
-    // Eliminar cobros asociados a esta venta
-    cobros = cobros.filter(c => c.ventaId !== ventaSeleccionadaId);
-    
-    // Restaurar productos como no vendidos en lotes/compras
-    venta.productos?.forEach(pv => {
-      if (pv.sourceType === 'lote' && pv.sourceId) {
-        const lote = lotes.find(l => l.id === pv.sourceId);
-        if (lote) {
-          const prod = lote.productos?.find(p => p.nombre === pv.nombre && p.vendido);
-          if (prod) prod.vendido = false;
-        }
-      } else if (pv.sourceType === 'compra' && pv.sourceId) {
-        const compra = compras.find(c => c.id === pv.sourceId);
-        if (compra) {
-          const prod = compra.productos?.find(p => p.nombre === pv.nombre && p.vendido);
-          if (prod) prod.vendido = false;
-        }
+  if (!confirm(`¿Eliminar venta ${venta.id} permanentemente?`)) return;
+  
+  cobros = cobros.filter(c => c.ventaId !== ventaSeleccionadaId);
+  
+  venta.productos?.forEach(pv => {
+    if (pv.sourceType === 'lote' && pv.sourceId) {
+      const lote = lotes.find(l => l.id === pv.sourceId);
+      if (lote) {
+        const prod = lote.productos?.find(p => p.nombre === pv.nombre && p.vendido);
+        if (prod) prod.vendido = false;
       }
-    });
-    
-    // Eliminar la venta
-    ventas = ventas.filter(v => v.id !== ventaSeleccionadaId);
-    
-    saveLocalData();
-    sincronizarAhora();
-    hideForms();
-    renderVentas();
-    showToast(`Venta ${venta.id} eliminada ✅`);
-  }
+    } else if (pv.sourceType === 'compra' && pv.sourceId) {
+      const compra = compras.find(c => c.id === pv.sourceId);
+      if (compra) {
+        const prod = compra.productos?.find(p => p.nombre === pv.nombre && p.vendido);
+        if (prod) prod.vendido = false;
+      }
+    }
+  });
+  
+  ventas = ventas.filter(v => v.id !== ventaSeleccionadaId);
+  saveLocalData();
+  sincronizarAhora();
+  hideForms();
+  renderVentas();
+  showToast(`Venta ${venta.id} eliminada`);
 }
 
 function eliminarAbono() {
   if (!abonoSeleccionadoId) return;
-  
   const abono = abonos.find(a => a.id === abonoSeleccionadoId);
   if (!abono) return;
   
-  if (confirm(`¿Estás seguro de que deseas eliminar este abono de C$${(parseFloat(abono.monto) || 0).toLocaleString()}?\n\nEsta acción no se puede deshacer.`)) {
-    // Restaurar el saldo del lote
-    const lote = lotes.find(l => l.id === abono.loteId);
-    if (lote) {
-      lote.abonado = Math.max(0, (parseFloat(lote.abonado) || 0) - (parseFloat(abono.monto) || 0));
-      lote.saldoPendiente = (parseFloat(lote.totalInicial) || 0) - (parseFloat(lote.abonado) || 0);
-      if (lote.saldoPendiente > 0) {
-        lote.estado = 'PENDIENTE';
-        delete lote.fechaPagoTotal;
-      }
-      lote.lastModified = Date.now();
+  if (!confirm(`¿Eliminar abono de C$${(parseFloat(abono.monto) || 0).toLocaleString()}?`)) return;
+  
+  const lote = lotes.find(l => l.id === abono.loteId);
+  if (lote) {
+    lote.abonado = Math.max(0, (parseFloat(lote.abonado) || 0) - (parseFloat(abono.monto) || 0));
+    lote.saldoPendiente = (parseFloat(lote.totalInicial) || 0) - (parseFloat(lote.abonado) || 0);
+    if (lote.saldoPendiente > 0) {
+      lote.estado = 'PENDIENTE';
+      delete lote.fechaPagoTotal;
     }
-    
-    // Eliminar el abono
-    abonos = abonos.filter(a => a.id !== abonoSeleccionadoId);
-    
-    saveLocalData();
-    sincronizarAhora();
-    hideForms();
-    renderAbonos();
-    showToast('Abono eliminado ✅');
+    lote.lastModified = Date.now();
   }
+  
+  abonos = abonos.filter(a => a.id !== abonoSeleccionadoId);
+  saveLocalData();
+  sincronizarAhora();
+  hideForms();
+  renderAbonos();
+  showToast('Abono eliminado');
 }
 
 function eliminarCobro() {
   if (!cobroSeleccionadoId) return;
-  
   const cobro = cobros.find(c => c.id === cobroSeleccionadoId);
   if (!cobro) return;
   
-  if (confirm(`¿Estás seguro de que deseas eliminar este cobro de C$${(parseFloat(cobro.monto) || 0).toLocaleString()}?\n\nEsta acción no se puede deshacer.`)) {
-    // Restaurar el saldo de la venta
-    const venta = ventas.find(v => v.id === cobro.ventaId);
-    if (venta) {
-      venta.pagado = Math.max(0, (parseFloat(venta.pagado) || 0) - (parseFloat(cobro.monto) || 0));
-      venta.saldo = (parseFloat(venta.precioTotal) || 0) - (parseFloat(venta.pagado) || 0);
-      if (venta.saldo > 0) {
-        venta.estado = 'PENDIENTE';
-        delete venta.fechaPagoTotal;
-      }
-      venta.lastModified = Date.now();
+  if (!confirm(`¿Eliminar cobro de C$${(parseFloat(cobro.monto) || 0).toLocaleString()}?`)) return;
+  
+  const venta = ventas.find(v => v.id === cobro.ventaId);
+  if (venta) {
+    venta.pagado = Math.max(0, (parseFloat(venta.pagado) || 0) - (parseFloat(cobro.monto) || 0));
+    venta.saldo = (parseFloat(venta.precioTotal) || 0) - (parseFloat(venta.pagado) || 0);
+    if (venta.saldo > 0) {
+      venta.estado = 'PENDIENTE';
+      delete venta.fechaPagoTotal;
     }
-    
-    // Eliminar el cobro
-    cobros = cobros.filter(c => c.id !== cobroSeleccionadoId);
-    
-    saveLocalData();
-    sincronizarAhora();
-    hideForms();
-    renderCobros();
-    showToast('Cobro eliminado ✅');
+    venta.lastModified = Date.now();
   }
+  
+  cobros = cobros.filter(c => c.id !== cobroSeleccionadoId);
+  saveLocalData();
+  sincronizarAhora();
+  hideForms();
+  renderCobros();
+  showToast('Cobro eliminado');
 }
 
 // ==========================================
@@ -751,14 +777,14 @@ function guardarLote() {
     return;
   }
   
-  const totalInicial = productosValidos.reduce((sum, p) => sum + (parseFloat(p.precioCarmen) * parseInt(p.cantidad)), 0);
+  const totalInicial = productosValidos.reduce((sum, p) => 
+    sum + (parseFloat(p.precioCarmen) * parseInt(p.cantidad)), 0);
   
   if (editId) {
     const lote = lotes.find(l => l.id === editId);
     if (!lote) return;
     
     const reabrir = document.getElementById('reabrirLote').checked;
-    
     const productosVendidos = lote.productos?.filter(p => p.vendido) || [];
     const nuevosProductos = productosValidos.filter(np => 
       !productosVendidos.some(vp => vp.nombre === np.nombre && vp.cantidad === np.cantidad)
@@ -769,7 +795,8 @@ function guardarLote() {
     lote.productos = [...productosVendidos, ...nuevosProductos];
     
     if (reabrir && lote.estado === 'PAGADO') {
-      const nuevoTotal = nuevosProductos.reduce((sum, p) => sum + (parseFloat(p.precioCarmen) * parseInt(p.cantidad)), 0);
+      const nuevoTotal = nuevosProductos.reduce((sum, p) => 
+        sum + (parseFloat(p.precioCarmen) * parseInt(p.cantidad)), 0);
       lote.totalInicial = (parseFloat(lote.totalInicial) || 0) + nuevoTotal;
       lote.saldoPendiente = (parseFloat(lote.saldoPendiente) || 0) + nuevoTotal;
       lote.estado = 'PENDIENTE';
@@ -821,11 +848,13 @@ function renderLotes() {
     return;
   }
   
-  const lotesOrdenados = [...lotesFiltrados].sort((a, b) => new Date(a.fechaLimite) - new Date(b.fechaLimite));
+  const lotesOrdenados = [...lotesFiltrados].sort((a, b) => 
+    new Date(a.fechaLimite) - new Date(b.fechaLimite));
   
   container.innerHTML = lotesOrdenados.map(lote => {
     const isPending = lote.estado === 'PENDIENTE';
-    const progress = lote.totalInicial > 0 ? ((lote.totalInicial - lote.saldoPendiente) / lote.totalInicial * 100) : 0;
+    const progress = lote.totalInicial > 0 ? 
+      ((lote.totalInicial - lote.saldoPendiente) / lote.totalInicial * 100) : 0;
     const diasRestantes = Math.ceil((new Date(lote.fechaLimite) - new Date()) / (1000 * 60 * 60 * 24));
     
     return `
@@ -902,7 +931,7 @@ function verDetalleLote(loteId) {
       </div>
       <p class="font-bold text-indigo-800 dark:text-indigo-300">C$${(parseFloat(a.monto) || 0).toLocaleString()}</p>
     </div>
-  `).join('') : '<p class="text-gray-500 text-sm text-center italic">Sin abonos (toca para agregar)</p>';
+  `).join('') : '<p class="text-gray-500 text-sm text-center italic">Sin abonos</p>';
   
   document.getElementById('contenidoDetalleLote').innerHTML = `
     <div class="grid grid-cols-2 gap-3 mb-4">
@@ -915,12 +944,10 @@ function verDetalleLote(loteId) {
         <p class="text-lg font-bold text-red-800 dark:text-red-300">C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()}</p>
       </div>
     </div>
-    
     <div class="mb-4">
       <h4 class="font-bold text-gray-800 dark:text-white mb-2">Productos (${lote.productos?.length || 0})</h4>
       <div class="space-y-2 max-h-48 overflow-y-auto">${productosHtml}</div>
     </div>
-    
     <div>
       <h4 class="font-bold text-gray-800 dark:text-white mb-2">Historial de Abonos (${abonosLote.length})</h4>
       <div class="space-y-2 max-h-40 overflow-y-auto">${abonosHtml}</div>
@@ -1059,7 +1086,8 @@ function renderCompras() {
     const totalProductos = compra.productos?.length || 0;
     const vendidos = compra.productos?.filter(p => p.vendido).length || 0;
     const enStock = totalProductos - vendidos;
-    const totalValor = compra.productos?.reduce((sum, p) => sum + ((parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1)), 0) || 0;
+    const totalValor = compra.productos?.reduce((sum, p) => 
+      sum + ((parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1)), 0) || 0;
     
     return `
       <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4 border border-purple-200 dark:border-purple-800">
@@ -1074,12 +1102,10 @@ function renderCompras() {
             <p class="text-lg font-bold text-purple-600 dark:text-purple-400">C$${totalValor.toLocaleString()}</p>
           </div>
         </div>
-        
         <div class="flex items-center gap-2 mb-3">
           <span class="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">${enStock} en stock</span>
           <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded-full">${vendidos} vendidos</span>
         </div>
-        
         <div class="flex gap-2">
           <button onclick="verDetalleCompra('${compra.id}')" class="flex-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 py-2 rounded-xl text-sm font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50">
             Ver Detalle
@@ -1138,7 +1164,8 @@ function editarCompraDesdeModal() {
 // ==========================================
 function mostrarSelectorProductos(tipo) {
   document.getElementById('selectorProductos').classList.remove('hidden');
-  document.getElementById('tituloSelectorProductos').textContent = tipo === 'lotes' ? 'Productos de Lotes' : 'Productos de Compras';
+  document.getElementById('tituloSelectorProductos').textContent = 
+    tipo === 'lotes' ? 'Productos de Lotes' : 'Productos de Compras';
   
   const lista = document.getElementById('listaSelectorProductos');
   productosSeleccionados = [];
@@ -1160,7 +1187,7 @@ function mostrarSelectorProductos(tipo) {
     
     lista.innerHTML = productosDisponibles.map(p => `
       <label class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-600">
-        <input type="checkbox" value="${p.uniqueId}" onchange="toggleProductoSeleccionado('${p.uniqueId}', ${JSON.stringify(p).replace(/"/g, '&quot;')})" class="w-5 h-5 text-green-600 rounded">
+        <input type="checkbox" value="${p.uniqueId}" onchange="toggleProductoSeleccionado('${p.uniqueId}', '${encodeURIComponent(JSON.stringify(p)).replace(/'/g, "\\'")}')" class="w-5 h-5 text-green-600 rounded">
         <div class="flex-1">
           <p class="font-medium text-gray-800 dark:text-white">${p.nombre}</p>
           <p class="text-xs text-gray-500 dark:text-gray-400">${p.loteId} | Costo: C$${(parseFloat(p.precioCarmen) || 0).toLocaleString()}</p>
@@ -1189,7 +1216,7 @@ function mostrarSelectorProductos(tipo) {
     
     lista.innerHTML = productosDisponibles.map(p => `
       <label class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-600">
-        <input type="checkbox" value="${p.uniqueId}" onchange="toggleProductoSeleccionado('${p.uniqueId}', ${JSON.stringify(p).replace(/"/g, '&quot;')})" class="w-5 h-5 text-green-600 rounded">
+        <input type="checkbox" value="${p.uniqueId}" onchange="toggleProductoSeleccionado('${p.uniqueId}', '${encodeURIComponent(JSON.stringify(p)).replace(/'/g, "\\'")}')" class="w-5 h-5 text-green-600 rounded">
         <div class="flex-1">
           <p class="font-medium text-gray-800 dark:text-white">${p.nombre}</p>
           <p class="text-xs text-gray-500 dark:text-gray-400">${p.compraId} | Costo: C$${(parseFloat(p.precioCompra) || 0).toLocaleString()}</p>
@@ -1204,12 +1231,17 @@ function mostrarSelectorProductos(tipo) {
   }
 }
 
-function toggleProductoSeleccionado(uniqueId, producto) {
+function toggleProductoSeleccionado(uniqueId, productoEncoded) {
   const idx = productosSeleccionados.findIndex(p => p.uniqueId === uniqueId);
   if (idx > -1) {
     productosSeleccionados.splice(idx, 1);
   } else {
-    productosSeleccionados.push({...producto, uniqueId});
+    try {
+      const p = JSON.parse(decodeURIComponent(productoEncoded));
+      productosSeleccionados.push({...p, uniqueId});
+    } catch(e) {
+      console.error('Error parseando producto:', e);
+    }
   }
 }
 
@@ -1288,7 +1320,8 @@ function eliminarProductoVenta(idx) {
 }
 
 function calcularVenta() {
-  const total = productosVentaTemp.reduce((sum, p) => sum + ((parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1)), 0);
+  const total = productosVentaTemp.reduce((sum, p) => 
+    sum + ((parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1)), 0);
   const prima = parseFloat(document.getElementById('ventaPrima').value) || 0;
   const meses = parseInt(document.getElementById('ventaMeses').value) || 12;
   const saldo = Math.max(0, total - prima);
@@ -1319,14 +1352,15 @@ function guardarVenta() {
     return;
   }
   
-  const precioTotal = productosValidos.reduce((sum, p) => sum + (parseFloat(p.precioVenta) * parseInt(p.cantidad)), 0);
+  const precioTotal = productosValidos.reduce((sum, p) => 
+    sum + (parseFloat(p.precioVenta) * parseInt(p.cantidad)), 0);
   
   if (prima > precioTotal) {
     alert('La prima no puede ser mayor que el total');
     return;
   }
   
-  // Si es edición, restaurar productos anteriores como no vendidos
+  // Restaurar productos anteriores si es edición
   if (editId) {
     const ventaAnterior = ventas.find(v => v.id === editId);
     if (ventaAnterior) {
@@ -1348,7 +1382,7 @@ function guardarVenta() {
     }
   }
   
-  // Marcar productos como vendidos en su origen
+  // Marcar productos como vendidos
   productosValidos.forEach(pv => {
     if (pv.sourceType === 'lote' && pv.sourceId) {
       const lote = lotes.find(l => l.id === pv.sourceId);
@@ -1394,7 +1428,6 @@ function guardarVenta() {
           ventaOriginal: editId,
           lastModified: Date.now()
         });
-        
         showToast('Nueva venta creada para cliente existente');
       } else {
         venta.cliente = cliente;
@@ -1408,7 +1441,6 @@ function guardarVenta() {
         venta.cuotaMensual = venta.saldo > 0 && meses > 0 ? venta.saldo / meses : 0;
         if (venta.saldo <= 0) venta.estado = 'PAGADO';
         venta.lastModified = Date.now();
-        
         showToast('Venta actualizada');
       }
     }
@@ -1439,7 +1471,6 @@ function guardarVenta() {
       proximaFechaCobro: proximaFecha.toISOString().split('T')[0],
       lastModified: Date.now()
     });
-    
     showToast('Venta registrada exitosamente');
   }
   
@@ -1462,11 +1493,13 @@ function renderVentas() {
     return;
   }
   
-  const ventasOrdenadas = [...ventasFiltradas].sort((a, b) => new Date(a.proximaFechaCobro) - new Date(b.proximaFechaCobro));
+  const ventasOrdenadas = [...ventasFiltradas].sort((a, b) => 
+    new Date(a.proximaFechaCobro) - new Date(b.proximaFechaCobro));
   
   container.innerHTML = ventasOrdenadas.map(venta => {
     const isPending = venta.estado === 'PENDIENTE';
-    const progress = venta.precioTotal > 0 ? ((venta.precioTotal - venta.saldo) / venta.precioTotal * 100) : 0;
+    const progress = venta.precioTotal > 0 ? 
+      ((venta.precioTotal - venta.saldo) / venta.precioTotal * 100) : 0;
     const proximoCobro = new Date(venta.proximaFechaCobro);
     const diasRestantes = Math.ceil((proximoCobro - new Date()) / (1000 * 60 * 60 * 24));
     
@@ -1544,7 +1577,7 @@ function verDetalleVenta(ventaId) {
       </div>
       <p class="font-bold text-green-800 dark:text-green-300">C$${(parseFloat(c.monto) || 0).toLocaleString()}</p>
     </div>
-  `).join('') : '<p class="text-gray-500 text-sm text-center italic">Sin cobros (toca para agregar)</p>';
+  `).join('') : '<p class="text-gray-500 text-sm text-center italic">Sin cobros</p>';
   
   document.getElementById('contenidoDetalleVenta').innerHTML = `
     <div class="grid grid-cols-2 gap-3 mb-4">
@@ -1589,7 +1622,7 @@ function editarVentaDesdeModal() {
 }
 
 // ==========================================
-// ABONOS - CRUD COMPLETO CON EDICIÓN Y ELIMINACIÓN
+// ABONOS - CRUD COMPLETO
 // ==========================================
 function cargarSelectLotes() {
   const select = document.getElementById('abonoLoteId');
@@ -1626,10 +1659,8 @@ function editarAbono(abonoId) {
   if (!abono) return;
   
   abonoSeleccionadoId = abonoId;
-  
   document.getElementById('formAbono').classList.remove('hidden');
   document.getElementById('formOverlay').classList.remove('hidden');
-  
   document.getElementById('tituloFormAbono').textContent = 'Editar Abono';
   document.getElementById('abonoEditId').value = abonoId;
   document.getElementById('abonoLoteId').value = abono.loteId;
@@ -1639,7 +1670,6 @@ function editarAbono(abonoId) {
   document.getElementById('abonoNotas').value = abono.notas || '';
   
   mostrarInfoLoteAbono();
-  
   document.getElementById('btnEliminarAbono').classList.remove('hidden');
 }
 
@@ -1660,13 +1690,10 @@ function guardarAbono() {
   if (!lote) return;
   
   if (editId) {
-    // Editar abono existente
     const abono = abonos.find(a => a.id === editId);
     if (abono) {
-      // Restaurar saldo anterior
       lote.abonado = Math.max(0, (parseFloat(lote.abonado) || 0) - (parseFloat(abono.monto) || 0));
       
-      // Validar nuevo monto
       if (monto > lote.saldoPendiente + (parseFloat(abono.monto) || 0)) {
         alert(`El monto no puede superar el saldo disponible`);
         return;
@@ -1687,18 +1714,16 @@ function guardarAbono() {
         lote.fechaPagoTotal = fecha;
       }
       lote.lastModified = Date.now();
-      
       showToast('Abono actualizado');
     }
   } else {
-    // Nuevo abono
     if (monto > lote.saldoPendiente) {
       alert(`El monto no puede superar el saldo (C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()})`);
       return;
     }
     
     abonos.push({
-      id: Date.now(),
+      id: Date.now().toString(),
       loteId,
       fecha,
       monto,
@@ -1715,7 +1740,6 @@ function guardarAbono() {
       lote.fechaPagoTotal = fecha;
     }
     lote.lastModified = Date.now();
-    
     showToast(`Abono de C$${monto.toLocaleString()} registrado`);
   }
   
@@ -1750,7 +1774,7 @@ function renderAbonos() {
 }
 
 // ==========================================
-// COBROS - CRUD COMPLETO CON EDICIÓN Y ELIMINACIÓN
+// COBROS - CRUD COMPLETO
 // ==========================================
 function buscarVentaCobro() {
   const busqueda = document.getElementById('cobroBusqueda').value.trim().toUpperCase();
@@ -1809,10 +1833,8 @@ function editarCobro(cobroId) {
   if (!cobro) return;
   
   cobroSeleccionadoId = cobroId;
-  
   document.getElementById('formCobro').classList.remove('hidden');
   document.getElementById('formOverlay').classList.remove('hidden');
-  
   document.getElementById('tituloFormCobro').textContent = 'Editar Cobro';
   document.getElementById('cobroEditId').value = cobroId;
   document.getElementById('cobroVentaId').value = cobro.ventaId;
@@ -1822,7 +1844,6 @@ function editarCobro(cobroId) {
   document.getElementById('cobroNotas').value = cobro.notas || '';
   
   seleccionarVentaCobro(cobro.ventaId);
-  
   document.getElementById('btnEliminarCobro').classList.remove('hidden');
 }
 
@@ -1843,13 +1864,10 @@ function guardarCobro() {
   if (!venta) return;
   
   if (editId) {
-    // Editar cobro existente
     const cobro = cobros.find(c => c.id === editId);
     if (cobro) {
-      // Restaurar saldo anterior
       venta.pagado = Math.max(0, (parseFloat(venta.pagado) || 0) - (parseFloat(cobro.monto) || 0));
       
-      // Validar nuevo monto
       if (monto > venta.saldo + (parseFloat(cobro.monto) || 0)) {
         alert(`El monto no puede superar el saldo disponible`);
         return;
@@ -1870,18 +1888,16 @@ function guardarCobro() {
         venta.fechaPagoTotal = fecha;
       }
       venta.lastModified = Date.now();
-      
       showToast('Cobro actualizado');
     }
   } else {
-    // Nuevo cobro
     if (monto > venta.saldo) {
       alert(`El monto no puede superar el saldo (C$${(parseFloat(venta.saldo) || 0).toLocaleString()})`);
       return;
     }
     
     cobros.push({
-      id: Date.now(),
+      id: Date.now().toString(),
       ventaId,
       fecha,
       monto,
@@ -1902,7 +1918,6 @@ function guardarCobro() {
       venta.fechaPagoTotal = fecha;
     }
     venta.lastModified = Date.now();
-    
     showToast(`Cobro de C$${monto.toLocaleString()} registrado`);
   }
   
@@ -1956,12 +1971,5 @@ function showToast(message) {
 }
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    hideForms();
-    cerrarModal('modalDetalleLote');
-    cerrarModal('modalDetalleCompra');
-    cerrarModal('modalDetalleVenta');
-    cerrarModal('modalConfigSync');
-    cerrarModal('modalImportar');
-  }
+  if (e.key === 'Escape') hideForms();
 });
