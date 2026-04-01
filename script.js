@@ -1,8 +1,6 @@
 // ==========================================
 // CONFIGURACIÓN GLOBAL - SINCRONIZACIÓN
 // ==========================================
-
-// Función para limpiar URL (CRÍTICA)
 function limpiarUrl(url) {
   if (!url) return '';
   return url.toString().trim().replace(/\s+/g, '').replace(/\/+$/, '');
@@ -42,16 +40,15 @@ window.onload = function() {
     CONFIG.isOnline = true;
     updateSyncStatus('online');
   });
-  
   window.addEventListener('offline', () => {
     CONFIG.isOnline = false;
     updateSyncStatus('offline');
   });
-
+  
   if (CONFIG.syncUrl && localStorage.getItem('syncAuto') !== 'false') {
     iniciarSyncAutomatico();
   }
-
+  
   updateSyncStatus(CONFIG.isOnline ? (CONFIG.syncUrl ? 'synced' : 'online') : 'offline');
   showSection('lotes');
   updateResumen();
@@ -70,17 +67,15 @@ function generarDeviceId() {
 }
 
 // ==========================================
-// SINCRONIZACIÓN - VERSIÓN ROBUSTA CON FALLBACK
+// SINCRONIZACIÓN
 // ==========================================
 function mostrarConfigSync() {
   document.getElementById('syncUrl').value = CONFIG.syncUrl || '';
   document.getElementById('syncAuto').checked = localStorage.getItem('syncAuto') !== 'false';
-  
-  const estado = !CONFIG.syncUrl ? 'No configurado' : 
-                 !CONFIG.isOnline ? 'Sin conexión' :
-                 CONFIG.lastSync ? `Última: ${new Date(CONFIG.lastSync).toLocaleTimeString()}` : 'Pendiente';
+  const estado = !CONFIG.syncUrl ? 'No configurado' :
+    !CONFIG.isOnline ? 'Sin conexión' :
+    CONFIG.lastSync ? `Última: ${new Date(CONFIG.lastSync).toLocaleTimeString()}` : 'Pendiente';
   document.getElementById('estadoSync').textContent = estado;
-  
   document.getElementById('modalConfigSync').classList.remove('hidden');
   document.getElementById('formOverlay').classList.remove('hidden');
 }
@@ -88,27 +83,21 @@ function mostrarConfigSync() {
 function guardarConfigSync() {
   let url = document.getElementById('syncUrl').value;
   url = limpiarUrl(url);
-  
   if (!url) {
     alert('Ingresa la URL de la Web App de Google Apps Script');
     return;
   }
-  
   if (!url.includes('script.google.com/macros/s/')) {
     alert('URL inválida. Debe ser: https://script.google.com/macros/s/XXXX/exec');
     return;
   }
-  
   CONFIG.syncUrl = url;
   localStorage.setItem('syncUrl', url);
   localStorage.setItem('syncAuto', document.getElementById('syncAuto').checked);
-  
   if (document.getElementById('syncAuto').checked) {
     iniciarSyncAutomatico();
   }
-  
   cerrarModal('modalConfigSync');
-  
   probarConexion().then(ok => {
     if (ok) {
       sincronizarAhora();
@@ -146,24 +135,19 @@ function detenerSyncAutomatico() {
 
 async function sincronizarAhora() {
   const url = limpiarUrl(CONFIG.syncUrl);
-  
   if (!url) {
     showToast('⚠️ Configura la URL primero (botón Configurar)');
-    mostrarConfigSync();
     return;
   }
-
   if (!CONFIG.isOnline) {
     showToast('📴 Sin conexión a internet');
     return;
   }
-
+  
   document.getElementById('syncIndicator').classList.remove('hidden');
   updateSyncStatus('syncing');
-
+  
   try {
-    console.log('🔄 Intentando sincronizar con:', url);
-    
     const cleanData = (arr) => arr.map(item => {
       const clean = {};
       Object.keys(item).forEach(key => {
@@ -185,7 +169,7 @@ async function sincronizarAhora() {
       deviceId: CONFIG.deviceId,
       lastModified: Date.now()
     };
-    
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 45000);
@@ -194,21 +178,16 @@ async function sincronizarAhora() {
         method: 'POST',
         mode: 'cors',
         cache: 'no-cache',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(datosParaEnviar),
         signal: controller.signal
       });
       
       clearTimeout(timeoutId);
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
       const resultado = await response.json();
-      console.log('✅ Respuesta recibida:', resultado);
       
       if (resultado.success) {
         await procesarRespuestaExitosa(resultado);
@@ -218,30 +197,23 @@ async function sincronizarAhora() {
       }
       
     } catch (corsError) {
-      console.log('⚠️ Modo CORS falló:', corsError.message);
       showToast('🔄 Intentando modo alternativo...');
       
       await fetch(url, {
         method: 'POST',
         mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(datosParaEnviar)
       });
-      
-      console.log('✅ Datos enviados en modo no-cors');
       
       CONFIG.lastSync = new Date().toISOString();
       localStorage.setItem('lastSync', CONFIG.lastSync);
       updateSyncStatus('synced');
       showToast('✅ Datos guardados (modo silencioso)');
     }
-    
   } catch (error) {
     console.error('❌ Error total:', error);
     updateSyncStatus('error');
-    
     let mensaje = '❌ Error de sincronización';
     if (error.name === 'AbortError') {
       mensaje = '⏱️ Tiempo agotado. Intenta de nuevo.';
@@ -250,7 +222,6 @@ async function sincronizarAhora() {
     } else {
       mensaje = '❌ ' + error.message.substring(0, 60);
     }
-    
     showToast(mensaje);
   } finally {
     document.getElementById('syncIndicator').classList.add('hidden');
@@ -280,7 +251,6 @@ async function procesarRespuestaExitosa(resultado) {
     if (resultado.data.ventas) ventas = parseProductos(resultado.data.ventas);
     if (resultado.data.abonos) abonos = resultado.data.abonos || [];
     if (resultado.data.cobros) cobros = resultado.data.cobros || [];
-    
     saveLocalData();
     renderCurrentSection();
     updateResumen();
@@ -301,14 +271,9 @@ function updateSyncStatus(status) {
     synced: { color: 'blue', text: 'Sincronizado' },
     error: { color: 'orange', text: 'Error de conexión' }
   };
-  
   const cfg = configs[status] || configs.offline;
   const pulseClass = cfg.pulse ? 'animate-pulse' : '';
-  
-  indicator.innerHTML = `
-    <span class="w-2 h-2 rounded-full bg-${cfg.color}-500 ${pulseClass}"></span>
-    <span class="text-${cfg.color}-600 dark:text-${cfg.color}-400 text-sm">${cfg.text}</span>
-  `;
+  indicator.innerHTML = `<span class="w-2 h-2 rounded-full bg-${cfg.color}-500 ${pulseClass}"></span> <span class="text-${cfg.color}-600 dark:text-${cfg.color}-400 text-sm">${cfg.text}</span>`;
 }
 
 // ==========================================
@@ -333,23 +298,21 @@ function mostrarImportar() {
 function procesarImportacion() {
   const fileInput = document.getElementById('importFile');
   const file = fileInput.files[0];
-  
   if (!file) {
     alert('Selecciona un archivo JSON');
     return;
   }
-  
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
       const datos = JSON.parse(e.target.result);
       if (!confirm('¿Reemplazar TODOS los datos?')) return;
       
-      lotes = datos.lotes || [];
-      compras = datos.compras || [];
-      ventas = datos.ventas || [];
-      abonos = datos.abonos || [];
-      cobros = datos.cobros || [];
+      lotes = (datos.lotes || []).map(normalizarLote);
+      compras = (datos.compras || []).map(normalizarCompra);
+      ventas = (datos.ventas || []).map(normalizarVenta);
+      abonos = (datos.abonos || []).map(normalizarAbono);
+      cobros = (datos.cobros || []).map(normalizarCobro);
       
       saveLocalData();
       renderCurrentSection();
@@ -361,6 +324,47 @@ function procesarImportacion() {
     }
   };
   reader.readAsText(file);
+}
+
+// Normalización de datos (strings a números)
+function normalizarLote(l) {
+  return {
+    ...l,
+    totalInicial: parseFloat(l.totalInicial) || 0,
+    abonado: parseFloat(l.abonado) || 0,
+    saldoPendiente: parseFloat(l.saldoPendiente) || 0
+  };
+}
+
+function normalizarCompra(c) {
+  return c;
+}
+
+function normalizarVenta(v) {
+  return {
+    ...v,
+    precioTotal: parseFloat(v.precioTotal) || 0,
+    prima: parseFloat(v.prima) || 0,
+    saldo: parseFloat(v.saldo) || 0,
+    pagado: parseFloat(v.pagado) || 0,
+    cuotaMensual: parseFloat(v.cuotaMensual) || 0,
+    meses: parseInt(v.meses) || 12
+  };
+}
+
+function normalizarAbono(a) {
+  return {
+    ...a,
+    monto: parseFloat(a.monto) || 0,
+    saldoDespues: parseFloat(a.saldoDespues) || 0
+  };
+}
+
+function normalizarCobro(c) {
+  return {
+    ...c,
+    monto: parseFloat(c.monto) || 0
+  };
 }
 
 // ==========================================
@@ -378,7 +382,7 @@ function saveLocalData() {
 function updateResumen() {
   const deudaCarmen = lotes.reduce((sum, l) => sum + (parseFloat(l.saldoPendiente) || 0), 0);
   const totalCompras = compras.reduce((sum, c) => {
-    const stock = c.productos?.filter(p => !p.vendido).reduce((s, p) => 
+    const stock = c.productos?.filter(p => !p.vendido).reduce((s, p) =>
       s + ((parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1)), 0) || 0;
     return sum + stock;
   }, 0);
@@ -390,16 +394,16 @@ function updateResumen() {
     }, 0) || 0;
     return sum + ((parseFloat(v.precioTotal) || 0) - costo);
   }, 0);
-
+  
   document.getElementById('deudaCarmen').textContent = `C$${deudaCarmen.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
   document.getElementById('totalCompras').textContent = `C$${totalCompras.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
   document.getElementById('clientesDeben').textContent = `C$${clientesDeben.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
   document.getElementById('gananciaEstimada').textContent = `C$${gananciaEstimada.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
-  
   document.getElementById('countLotes').textContent = lotes.filter(l => l.estado === 'PENDIENTE').length;
   document.getElementById('countCompras').textContent = compras.length;
   document.getElementById('countVentas').textContent = ventas.filter(v => v.estado === 'PENDIENTE').length;
-  const totalStock = [...lotes, ...compras].reduce((sum, item) => 
+  
+  const totalStock = [...lotes, ...compras].reduce((sum, item) =>
     sum + (item.productos?.filter(p => !p.vendido).length || 0), 0);
   document.getElementById('countStock').textContent = totalStock;
 }
@@ -412,6 +416,17 @@ function showSection(section) {
     document.getElementById(`section${s.charAt(0).toUpperCase() + s.slice(1)}`).classList.add('hidden');
   });
   document.getElementById(`section${section.charAt(0).toUpperCase() + section.slice(1)}`).classList.remove('hidden');
+  
+  // Actualizar botones de navegación
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.remove('bg-indigo-600', 'text-white');
+    btn.classList.add('bg-white', 'dark:bg-slate-800');
+    if (btn.dataset.section === section) {
+      btn.classList.remove('bg-white', 'dark:bg-slate-800');
+      btn.classList.add('bg-indigo-600', 'text-white');
+    }
+  });
+  
   if (section === 'lotes') renderLotes();
   else if (section === 'compras') renderCompras();
   else if (section === 'ventas') renderVentas();
@@ -433,8 +448,8 @@ function renderCurrentSection() {
 
 function hideForms() {
   document.getElementById('formOverlay').classList.add('hidden');
-  ['formLote', 'formCompra', 'formVenta', 'formAbono', 'formCobro', 
-   'selectorProductos', 'modalConfigSync', 'modalImportar',
+  ['formLote', 'formCompra', 'formVenta', 'formAbono', 'formCobro',
+   'selectorProductos', 'modalConfigSync', 'modalImportar', 'modalQRSync',
    'modalDetalleLote', 'modalDetalleCompra', 'modalDetalleVenta'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
@@ -579,6 +594,7 @@ function showForm(type, editId = null) {
     }
   } else if (type === 'abono') {
     document.getElementById('formAbono').classList.remove('hidden');
+    document.getElementById('tituloFormAbono').textContent = 'Abonar a Carmen';
     cargarSelectLotes();
     document.getElementById('btnEliminarAbono').classList.add('hidden');
     abonoSeleccionadoId = null;
@@ -589,6 +605,7 @@ function showForm(type, editId = null) {
     document.getElementById('infoLoteAbono').classList.add('hidden');
   } else if (type === 'cobro') {
     document.getElementById('formCobro').classList.remove('hidden');
+    document.getElementById('tituloFormCobro').textContent = 'Cobrar a Cliente';
     document.getElementById('btnEliminarCobro').classList.add('hidden');
     cobroSeleccionadoId = null;
     document.getElementById('cobroEditId').value = '';
@@ -605,7 +622,6 @@ function eliminarLote() {
   if (!loteSeleccionadoId) return;
   const lote = lotes.find(l => l.id === loteSeleccionadoId);
   if (!lote) return;
-  
   if (!confirm(`¿Eliminar lote ${lote.id} permanentemente?`)) return;
   
   abonos = abonos.filter(a => a.loteId !== loteSeleccionadoId);
@@ -622,22 +638,21 @@ function eliminarCompra() {
   if (!compraSeleccionadaId) return;
   const compra = compras.find(c => c.id === compraSeleccionadaId);
   if (!compra) return;
-  
   if (!confirm(`¿Eliminar compra ${compra.id} permanentemente?`)) return;
   
   compras = compras.filter(c => c.id !== compraSeleccionadaId);
+  
   saveLocalData();
   sincronizarAhora();
   hideForms();
   renderCompras();
-  showToast(`Compra ${compra.id} eliminada`);
+  showToast(`Compra ${compra.id} eliminado`);
 }
 
 function eliminarVenta() {
   if (!ventaSeleccionadaId) return;
   const venta = ventas.find(v => v.id === ventaSeleccionadaId);
   if (!venta) return;
-  
   if (!confirm(`¿Eliminar venta ${venta.id} permanentemente?`)) return;
   
   cobros = cobros.filter(c => c.ventaId !== ventaSeleccionadaId);
@@ -659,6 +674,7 @@ function eliminarVenta() {
   });
   
   ventas = ventas.filter(v => v.id !== ventaSeleccionadaId);
+  
   saveLocalData();
   sincronizarAhora();
   hideForms();
@@ -670,7 +686,6 @@ function eliminarAbono() {
   if (!abonoSeleccionadoId) return;
   const abono = abonos.find(a => a.id === abonoSeleccionadoId);
   if (!abono) return;
-  
   if (!confirm(`¿Eliminar abono de C$${(parseFloat(abono.monto) || 0).toLocaleString()}?`)) return;
   
   const lote = lotes.find(l => l.id === abono.loteId);
@@ -685,6 +700,7 @@ function eliminarAbono() {
   }
   
   abonos = abonos.filter(a => a.id !== abonoSeleccionadoId);
+  
   saveLocalData();
   sincronizarAhora();
   hideForms();
@@ -696,7 +712,6 @@ function eliminarCobro() {
   if (!cobroSeleccionadoId) return;
   const cobro = cobros.find(c => c.id === cobroSeleccionadoId);
   if (!cobro) return;
-  
   if (!confirm(`¿Eliminar cobro de C$${(parseFloat(cobro.monto) || 0).toLocaleString()}?`)) return;
   
   const venta = ventas.find(v => v.id === cobro.ventaId);
@@ -711,6 +726,7 @@ function eliminarCobro() {
   }
   
   cobros = cobros.filter(c => c.id !== cobroSeleccionadoId);
+  
   saveLocalData();
   sincronizarAhora();
   hideForms();
@@ -722,12 +738,12 @@ function eliminarCobro() {
 // PRODUCTOS LOTE
 // ==========================================
 function agregarProductoLote() {
-  productosLoteTemp.push({ 
-    id: Date.now() + Math.random(), 
-    nombre: '', 
-    cantidad: 1, 
+  productosLoteTemp.push({
+    id: Date.now() + Math.random(),
+    nombre: '',
+    cantidad: 1,
     precioCarmen: 0,
-    vendido: false 
+    vendido: false
   });
   renderProductosLote();
 }
@@ -742,19 +758,21 @@ function renderProductosLote() {
       <div class="flex gap-2 items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-xl">
         <div class="flex-1">
           <input type="text" placeholder="Nombre del producto" value="${prod.nombre}" 
-            onchange="actualizarProductoLote(${idx}, 'nombre', this.value)"
+            onchange="actualizarProductoLote(${idx}, 'nombre', this.value)" 
             class="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-600 dark:text-white mb-2">
           <div class="flex gap-2">
-            <input type="number" placeholder="Cant" value="${prod.cantidad}" min="1"
-              onchange="actualizarProductoLote(${idx}, 'cantidad', parseInt(this.value)||1)"
+            <input type="number" placeholder="Cant" value="${prod.cantidad}" min="1" 
+              onchange="actualizarProductoLote(${idx}, 'cantidad', parseInt(this.value)||1)" 
               class="w-20 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-600 dark:text-white">
-            <input type="number" placeholder="Precio Carmen" value="${prod.precioCarmen || ''}" min="0" step="0.01"
-              onchange="actualizarProductoLote(${idx}, 'precioCarmen', parseFloat(this.value)||0)"
+            <input type="number" placeholder="Precio Carmen" value="${prod.precioCarmen || ''}" min="0" step="0.01" 
+              onchange="actualizarProductoLote(${idx}, 'precioCarmen', parseFloat(this.value)||0)" 
               class="flex-1 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-600 dark:text-white">
           </div>
         </div>
         <button onclick="eliminarProductoLote(${idx})" class="text-red-500 hover:text-red-700 p-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
         </button>
       </div>
     `;
@@ -790,7 +808,7 @@ function guardarLote() {
     return;
   }
   
-  const totalInicial = productosValidos.reduce((sum, p) => 
+  const totalInicial = productosValidos.reduce((sum, p) =>
     sum + (parseFloat(p.precioCarmen) * parseInt(p.cantidad)), 0);
   
   if (editId) {
@@ -857,16 +875,16 @@ function renderLotes() {
   else if (filtro === 'pagados') lotesFiltrados = lotes.filter(l => l.estado === 'PAGADO');
   
   if (lotesFiltrados.length === 0) {
-    container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8 italic">No hay lotes</p>';
+    container.innerHTML = '<p class="text-center text-gray-500 py-8">No hay lotes</p>';
     return;
   }
   
-  const lotesOrdenados = [...lotesFiltrados].sort((a, b) => 
+  const lotesOrdenados = [...lotesFiltrados].sort((a, b) =>
     new Date(a.fechaLimite) - new Date(b.fechaLimite));
   
   container.innerHTML = lotesOrdenados.map(lote => {
     const isPending = lote.estado === 'PENDIENTE';
-    const progress = lote.totalInicial > 0 ? 
+    const progress = lote.totalInicial > 0 ?
       ((lote.totalInicial - lote.saldoPendiente) / lote.totalInicial * 100) : 0;
     const diasRestantes = Math.ceil((new Date(lote.fechaLimite) - new Date()) / (1000 * 60 * 60 * 24));
     
@@ -907,7 +925,9 @@ function renderLotes() {
             Ver Detalle
           </button>
           <button onclick="showForm('lote', '${lote.id}')" class="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-200 dark:hover:bg-blue-900/50" title="Editar">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
           </button>
         </div>
       </div>
@@ -944,7 +964,7 @@ function verDetalleLote(loteId) {
       </div>
       <p class="font-bold text-indigo-800 dark:text-indigo-300">C$${(parseFloat(a.monto) || 0).toLocaleString()}</p>
     </div>
-  `).join('') : '<p class="text-gray-500 text-sm text-center italic">Sin abonos</p>';
+  `).join('') : '<p class="text-gray-500 text-center">Sin abonos</p>';
   
   document.getElementById('contenidoDetalleLote').innerHTML = `
     <div class="grid grid-cols-2 gap-3 mb-4">
@@ -957,10 +977,12 @@ function verDetalleLote(loteId) {
         <p class="text-lg font-bold text-red-800 dark:text-red-300">C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()}</p>
       </div>
     </div>
+    
     <div class="mb-4">
       <h4 class="font-bold text-gray-800 dark:text-white mb-2">Productos (${lote.productos?.length || 0})</h4>
       <div class="space-y-2 max-h-48 overflow-y-auto">${productosHtml}</div>
     </div>
+    
     <div>
       <h4 class="font-bold text-gray-800 dark:text-white mb-2">Historial de Abonos (${abonosLote.length})</h4>
       <div class="space-y-2 max-h-40 overflow-y-auto">${abonosHtml}</div>
@@ -1000,19 +1022,21 @@ function renderProductosCompra() {
       <div class="flex gap-2 items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-xl">
         <div class="flex-1">
           <input type="text" placeholder="Nombre del producto" value="${prod.nombre}" 
-            onchange="actualizarProductoCompra(${idx}, 'nombre', this.value)"
+            onchange="actualizarProductoCompra(${idx}, 'nombre', this.value)" 
             class="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-600 dark:text-white mb-2">
           <div class="flex gap-2">
-            <input type="number" placeholder="Cant" value="${prod.cantidad}" min="1"
-              onchange="actualizarProductoCompra(${idx}, 'cantidad', parseInt(this.value)||1)"
+            <input type="number" placeholder="Cant" value="${prod.cantidad}" min="1" 
+              onchange="actualizarProductoCompra(${idx}, 'cantidad', parseInt(this.value)||1)" 
               class="w-20 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-600 dark:text-white">
-            <input type="number" placeholder="Precio Compra" value="${prod.precioCompra || ''}" min="0" step="0.01"
-              onchange="actualizarProductoCompra(${idx}, 'precioCompra', parseFloat(this.value)||0)"
+            <input type="number" placeholder="Precio Compra" value="${prod.precioCompra || ''}" min="0" step="0.01" 
+              onchange="actualizarProductoCompra(${idx}, 'precioCompra', parseFloat(this.value)||0)" 
               class="flex-1 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-600 dark:text-white">
           </div>
         </div>
         <button onclick="eliminarProductoCompra(${idx})" class="text-red-500 hover:text-red-700 p-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
         </button>
       </div>
     `;
@@ -1091,7 +1115,7 @@ function renderCompras() {
   }
   
   if (comprasFiltradas.length === 0) {
-    container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8 italic">No hay compras</p>';
+    container.innerHTML = '<p class="text-center text-gray-500 py-8">No hay compras</p>';
     return;
   }
   
@@ -1099,7 +1123,7 @@ function renderCompras() {
     const totalProductos = compra.productos?.length || 0;
     const vendidos = compra.productos?.filter(p => p.vendido).length || 0;
     const enStock = totalProductos - vendidos;
-    const totalValor = compra.productos?.reduce((sum, p) => 
+    const totalValor = compra.productos?.reduce((sum, p) =>
       sum + ((parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1)), 0) || 0;
     
     return `
@@ -1115,16 +1139,20 @@ function renderCompras() {
             <p class="text-lg font-bold text-purple-600 dark:text-purple-400">C$${totalValor.toLocaleString()}</p>
           </div>
         </div>
+        
         <div class="flex items-center gap-2 mb-3">
           <span class="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">${enStock} en stock</span>
           <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded-full">${vendidos} vendidos</span>
         </div>
+        
         <div class="flex gap-2">
           <button onclick="verDetalleCompra('${compra.id}')" class="flex-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 py-2 rounded-xl text-sm font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50">
             Ver Detalle
           </button>
           <button onclick="showForm('compra', '${compra.id}')" class="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-200 dark:hover:bg-blue-900/50" title="Editar">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
           </button>
         </div>
       </div>
@@ -1157,6 +1185,7 @@ function verDetalleCompra(compraId) {
       <p class="text-sm text-gray-600 dark:text-gray-400">Fecha: <span class="font-medium text-gray-800 dark:text-white">${formatFecha(compra.fecha)}</span></p>
       <p class="text-sm text-gray-600 dark:text-gray-400">Proveedor: <span class="font-medium text-gray-800 dark:text-white">${compra.proveedor || 'N/A'}</span></p>
     </div>
+    
     <div>
       <h4 class="font-bold text-gray-800 dark:text-white mb-2">Productos</h4>
       <div class="space-y-2 max-h-96 overflow-y-auto">${productosHtml}</div>
@@ -1177,7 +1206,7 @@ function editarCompraDesdeModal() {
 // ==========================================
 function mostrarSelectorProductos(tipo) {
   document.getElementById('selectorProductos').classList.remove('hidden');
-  document.getElementById('tituloSelectorProductos').textContent = 
+  document.getElementById('tituloSelectorProductos').textContent =
     tipo === 'lotes' ? 'Productos de Lotes' : 'Productos de Compras';
   
   const lista = document.getElementById('listaSelectorProductos');
@@ -1275,7 +1304,6 @@ function confirmarSeleccionProductos() {
       sourceType: p.source
     });
   });
-  
   renderProductosVenta();
   calcularVenta();
   cerrarSelectorProductos();
@@ -1301,21 +1329,25 @@ function renderProductosVenta() {
     <div class="flex gap-2 items-center bg-gray-50 dark:bg-slate-700 p-3 rounded-xl">
       <div class="flex-1">
         <input type="text" placeholder="Producto" value="${prod.nombre}" 
-          onchange="actualizarProductoVenta(${idx}, 'nombre', this.value)"
-          class="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-600 dark:text-white mb-2" ${prod.sourceType !== 'manual' ? 'readonly' : ''}>
+          onchange="actualizarProductoVenta(${idx}, 'nombre', this.value)" 
+          class="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-600 dark:text-white mb-2" 
+          ${prod.sourceType !== 'manual' ? 'readonly' : ''}>
         <div class="flex gap-2">
-          <input type="number" placeholder="Cant" value="${prod.cantidad}" min="1"
-            onchange="actualizarProductoVenta(${idx}, 'cantidad', parseInt(this.value)||1)"
-            class="w-16 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-600 dark:text-white" ${prod.sourceType !== 'manual' ? 'readonly' : ''}>
-          <input type="number" placeholder="Costo" value="${prod.precioCarmen || prod.precioCompra || ''}" min="0" step="0.01"
+          <input type="number" placeholder="Cant" value="${prod.cantidad}" min="1" 
+            onchange="actualizarProductoVenta(${idx}, 'cantidad', parseInt(this.value)||1)" 
+            class="w-16 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-600 dark:text-white" 
+            ${prod.sourceType !== 'manual' ? 'readonly' : ''}>
+          <input type="number" placeholder="Costo" value="${prod.precioCarmen || prod.precioCompra || ''}" min="0" step="0.01" 
             class="w-24 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-600 dark:text-gray-400" readonly>
-          <input type="number" placeholder="Precio Venta" value="${prod.precioVenta || ''}" min="0" step="0.01"
-            onchange="actualizarProductoVenta(${idx}, 'precioVenta', parseFloat(this.value)||0); calcularVenta();"
+          <input type="number" placeholder="Precio Venta" value="${prod.precioVenta || ''}" min="0" step="0.01" 
+            onchange="actualizarProductoVenta(${idx}, 'precioVenta', parseFloat(this.value)||0); calcularVenta();" 
             class="flex-1 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-600 dark:text-white bg-green-50 dark:bg-green-900/20">
         </div>
       </div>
       <button onclick="eliminarProductoVenta(${idx})" class="text-red-500 hover:text-red-700 p-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+        </svg>
       </button>
     </div>
   `).join('');
@@ -1333,7 +1365,7 @@ function eliminarProductoVenta(idx) {
 }
 
 function calcularVenta() {
-  const total = productosVentaTemp.reduce((sum, p) => 
+  const total = productosVentaTemp.reduce((sum, p) =>
     sum + ((parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1)), 0);
   const prima = parseFloat(document.getElementById('ventaPrima').value) || 0;
   const meses = parseInt(document.getElementById('ventaMeses').value) || 12;
@@ -1365,7 +1397,7 @@ function guardarVenta() {
     return;
   }
   
-  const precioTotal = productosValidos.reduce((sum, p) => 
+  const precioTotal = productosValidos.reduce((sum, p) =>
     sum + (parseFloat(p.precioVenta) * parseInt(p.cantidad)), 0);
   
   if (prima > precioTotal) {
@@ -1500,16 +1532,16 @@ function renderVentas() {
   else if (filtro === 'pagados') ventasFiltradas = ventas.filter(v => v.estado === 'PAGADO');
   
   if (ventasFiltradas.length === 0) {
-    container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8 italic">No hay ventas</p>';
+    container.innerHTML = '<p class="text-center text-gray-500 py-8">No hay ventas</p>';
     return;
   }
   
-  const ventasOrdenadas = [...ventasFiltradas].sort((a, b) => 
+  const ventasOrdenadas = [...ventasFiltradas].sort((a, b) =>
     new Date(a.proximaFechaCobro) - new Date(b.proximaFechaCobro));
   
   container.innerHTML = ventasOrdenadas.map(venta => {
     const isPending = venta.estado === 'PENDIENTE';
-    const progress = venta.precioTotal > 0 ? 
+    const progress = venta.precioTotal > 0 ?
       ((venta.precioTotal - venta.saldo) / venta.precioTotal * 100) : 0;
     const proximoCobro = new Date(venta.proximaFechaCobro);
     const diasRestantes = Math.ceil((proximoCobro - new Date()) / (1000 * 60 * 60 * 24));
@@ -1551,7 +1583,9 @@ function renderVentas() {
             Ver Detalle
           </button>
           <button onclick="showForm('venta', '${venta.id}')" class="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-200 dark:hover:bg-blue-900/50" title="Editar">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
           </button>
         </div>
       </div>
@@ -1588,7 +1622,7 @@ function verDetalleVenta(ventaId) {
       </div>
       <p class="font-bold text-green-800 dark:text-green-300">C$${(parseFloat(c.monto) || 0).toLocaleString()}</p>
     </div>
-  `).join('') : '<p class="text-gray-500 text-sm text-center italic">Sin cobros</p>';
+  `).join('') : '<p class="text-gray-500 text-center">Sin cobros</p>';
   
   document.getElementById('contenidoDetalleVenta').innerHTML = `
     <div class="grid grid-cols-2 gap-3 mb-4">
@@ -1633,6 +1667,153 @@ function editarVentaDesdeModal() {
 }
 
 // ==========================================
+// PDF Y WHATSAPP
+// ==========================================
+async function generarPDFVenta(ventaId) {
+  const venta = ventas.find(v => v.id === ventaId);
+  if (!venta) {
+    showToast('❌ Venta no encontrada');
+    return;
+  }
+  
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Encabezado
+    doc.setFontSize(18);
+    doc.text('RECIBO DE VENTA', 105, 20, null, null, 'center');
+    doc.setFontSize(10);
+    doc.text('Mi Control - Carmen', 105, 28, null, null, 'center');
+    
+    // Información del cliente
+    doc.setFontSize(12);
+    doc.text(`ID: ${venta.id}`, 20, 45);
+    doc.text(`Cliente: ${venta.cliente}`, 20, 55);
+    doc.text(`Fecha: ${formatFecha(venta.fecha)}`, 20, 65);
+    doc.text(`Teléfono: ${venta.telefono || 'N/A'}`, 20, 75);
+    
+    // Productos
+    doc.text('PRODUCTOS:', 20, 90);
+    let y = 100;
+    venta.productos.forEach((p, i) => {
+      const subtotal = (parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1);
+      doc.text(`${i+1}. ${p.nombre} x${p.cantidad} - C$${subtotal.toLocaleString()}`, 25, y);
+      y += 8;
+    });
+    
+    // Totales
+    y += 5;
+    doc.line(20, y, 190, y);
+    y += 10;
+    doc.setFontSize(12);
+    doc.text(`Total: C$${(venta.precioTotal).toLocaleString()}`, 20, y);
+    doc.text(`Prima: C$${(venta.prima).toLocaleString()}`, 20, y+10);
+    doc.text(`Saldo: C$${(venta.saldo).toLocaleString()}`, 20, y+20);
+    doc.text(`Cuota Mensual: C$${(venta.cuotaMensual).toLocaleString()}`, 20, y+30);
+    doc.text(`Meses: ${venta.meses}`, 20, y+40);
+    
+    // Pie
+    doc.setFontSize(10);
+    doc.text('¡Gracias por su compra!', 105, y+60, null, null, 'center');
+    doc.text('Mi Control - Carmen', 105, y+68, null, null, 'center');
+    
+    // Guardar
+    doc.save(`Recibo_${venta.id}_${venta.cliente.replace(/\s+/g, '_')}.pdf`);
+    showToast('✅ PDF generado');
+  } catch (error) {
+    console.error('Error generando PDF:', error);
+    showToast('❌ Error al generar PDF');
+  }
+}
+
+function enviarWhatsAppVenta(ventaId) {
+  const venta = ventas.find(v => v.id === ventaId);
+  if (!venta) {
+    showToast('❌ Venta no encontrada');
+    return;
+  }
+  
+  let mensaje = `📋 *RECIBO DE VENTA*\n\n`;
+  mensaje += `*ID:* ${venta.id}\n`;
+  mensaje += `*Cliente:* ${venta.cliente}\n`;
+  mensaje += `*Fecha:* ${formatFecha(venta.fecha)}\n\n`;
+  mensaje += `*PRODUCTOS:*\n`;
+  
+  venta.productos.forEach((p, i) => {
+    const subtotal = (parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1);
+    mensaje += `${i+1}. ${p.nombre} x${p.cantidad} - C$${subtotal.toLocaleString()}\n`;
+  });
+  
+  mensaje += `\n*TOTAL:* C$${(venta.precioTotal).toLocaleString()}`;
+  mensaje += `\n*PRIMA:* C$${(venta.prima).toLocaleString()}`;
+  mensaje += `\n*SALDO:* C$${(venta.saldo).toLocaleString()}`;
+  mensaje += `\n*CUOTA:* C$${(venta.cuotaMensual).toLocaleString()} x ${venta.meses} meses`;
+  mensaje += `\n\n¡Gracias por su compra! 🛒`;
+  mensaje += `\n\n_Mi Control - Carmen_`;
+  
+  const telefono = venta.telefono?.replace(/[^0-9]/g, '') || '';
+  const url = telefono 
+    ? `https://wa.me/505${telefono}?text=${encodeURIComponent(mensaje)}`
+    : `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+  
+  window.open(url, '_blank');
+  showToast('📱 Abriendo WhatsApp...');
+}
+
+// ==========================================
+// QR SYNC
+// ==========================================
+function mostrarQRSync() {
+  document.getElementById('modalQRSync').classList.remove('hidden');
+  document.getElementById('formOverlay').classList.remove('hidden');
+  document.getElementById('qrContainer').innerHTML = '';
+  document.getElementById('qrInstrucciones').classList.add('hidden');
+}
+
+function generarQRParaExportar() {
+  const datos = { lotes, compras, ventas, abonos, cobros };
+  const datosComprimidos = btoa(encodeURIComponent(JSON.stringify(datos)));
+  
+  // Verificar tamaño (QR tiene límite de ~3000 caracteres)
+  if (datosComprimidos.length > 2500) {
+    showToast('⚠️ Datos muy grandes. Usa Exportar JSON en su lugar.');
+    return;
+  }
+  
+  document.getElementById('qrContainer').innerHTML = '';
+  new QRCode(document.getElementById('qrContainer'), {
+    text: datosComprimidos,
+    width: 256,
+    height: 256,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+  
+  document.getElementById('qrInstrucciones').classList.remove('hidden');
+  showToast('📱 Escanea con el otro dispositivo');
+}
+
+function importarDesdeQR() {
+  // Crear input para escanear QR desde imagen
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    showToast('📷 Procesando imagen QR...');
+    
+    // Para lectura de QR necesitarías una librería como jsQR
+    // Por simplicidad, mostramos mensaje
+    showToast('⚠️ Para escanear QR, usa la cámara del otro dispositivo y la función "Generar QR para Exportar"');
+  };
+  input.click();
+}
+
+// ==========================================
 // ABONOS - CRUD COMPLETO
 // ==========================================
 function cargarSelectLotes() {
@@ -1656,9 +1837,18 @@ function mostrarInfoLoteAbono() {
   if (lote) {
     infoDiv.innerHTML = `
       <div class="space-y-2">
-        <div class="flex justify-between"><span class="text-sm text-gray-600 dark:text-gray-400">Total:</span><span class="font-bold text-indigo-800 dark:text-indigo-300">C$${(parseFloat(lote.totalInicial) || 0).toLocaleString()}</span></div>
-        <div class="flex justify-between"><span class="text-sm text-gray-600 dark:text-gray-400">Abonado:</span><span class="font-bold text-green-600 dark:text-green-400">C$${(parseFloat(lote.abonado) || 0).toLocaleString()}</span></div>
-        <div class="flex justify-between border-t border-indigo-200 dark:border-indigo-800 pt-2"><span class="text-sm font-medium text-gray-700 dark:text-gray-300">Saldo:</span><span class="font-bold text-red-600 dark:text-red-400">C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()}</span></div>
+        <div class="flex justify-between">
+          <span class="text-sm text-gray-600 dark:text-gray-400">Total:</span>
+          <span class="font-bold text-indigo-800 dark:text-indigo-300">C$${(parseFloat(lote.totalInicial) || 0).toLocaleString()}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-sm text-gray-600 dark:text-gray-400">Abonado:</span>
+          <span class="font-bold text-green-600 dark:text-green-400">C$${(parseFloat(lote.abonado) || 0).toLocaleString()}</span>
+        </div>
+        <div class="flex justify-between border-t border-indigo-200 dark:border-indigo-800 pt-2">
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Saldo:</span>
+          <span class="font-bold text-red-600 dark:text-red-400">C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()}</span>
+        </div>
       </div>
     `;
     infoDiv.classList.remove('hidden');
@@ -1679,7 +1869,6 @@ function editarAbono(abonoId) {
   document.getElementById('abonoMonto').value = abono.monto;
   document.getElementById('abonoMetodo').value = abono.metodo;
   document.getElementById('abonoNotas').value = abono.notas || '';
-  
   mostrarInfoLoteAbono();
   document.getElementById('btnEliminarAbono').classList.remove('hidden');
 }
@@ -1703,6 +1892,7 @@ function guardarAbono() {
   if (editId) {
     const abono = abonos.find(a => a.id === editId);
     if (abono) {
+      // Restar el monto anterior
       lote.abonado = Math.max(0, (parseFloat(lote.abonado) || 0) - (parseFloat(abono.monto) || 0));
       
       if (monto > lote.saldoPendiente + (parseFloat(abono.monto) || 0)) {
@@ -1764,7 +1954,7 @@ function renderAbonos() {
   const container = document.getElementById('listaAbonos');
   
   if (abonos.length === 0) {
-    container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-4 italic">No hay abonos</p>';
+    container.innerHTML = '<p class="text-gray-500 text-center py-4">No hay abonos</p>';
     return;
   }
   
@@ -1776,7 +1966,7 @@ function renderAbonos() {
         <div>
           <p class="font-bold text-gray-800 dark:text-white">${abono.loteId}</p>
           <p class="text-xs text-gray-500 dark:text-gray-400">${formatFecha(abono.fecha)} | ${abono.metodo}</p>
-          ${abono.notas ? `<p class="text-xs text-gray-500 dark:text-gray-400">${abono.notas}</p>` : ''}
+          ${abono.notas ? `<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">${abono.notas}</p>` : ''}
         </div>
         <p class="text-lg font-bold text-indigo-600 dark:text-indigo-400">C$${(parseFloat(abono.monto) || 0).toLocaleString()}</p>
       </div>
@@ -1796,13 +1986,13 @@ function buscarVentaCobro() {
     return;
   }
   
-  const resultados = ventas.filter(v => 
-    v.estado === 'PENDIENTE' && 
+  const resultados = ventas.filter(v =>
+    v.estado === 'PENDIENTE' &&
     (v.id.toUpperCase().includes(busqueda) || v.cliente.toUpperCase().includes(busqueda))
   );
   
   if (resultados.length === 0) {
-    resultadosDiv.innerHTML = '<p class="text-gray-500 text-sm text-center py-2">No se encontraron ventas</p>';
+    resultadosDiv.innerHTML = '<p class="text-gray-500 text-center py-2">No se encontraron ventas</p>';
     resultadosDiv.classList.remove('hidden');
     return;
   }
@@ -1830,10 +2020,22 @@ function seleccionarVentaCobro(ventaId) {
   const infoDiv = document.getElementById('infoVentaCobro');
   infoDiv.innerHTML = `
     <div class="space-y-2">
-      <div class="flex justify-between"><span class="text-sm font-medium text-gray-700 dark:text-gray-300">Cliente:</span><span class="text-sm font-bold text-gray-800 dark:text-white">${venta.cliente}</span></div>
-      <div class="flex justify-between"><span class="text-sm text-gray-600 dark:text-gray-400">Total:</span><span class="text-sm font-medium text-gray-800 dark:text-white">C$${(parseFloat(venta.precioTotal) || 0).toLocaleString()}</span></div>
-      <div class="flex justify-between"><span class="text-sm text-gray-600 dark:text-gray-400">Pagado:</span><span class="text-sm font-medium text-green-600 dark:text-green-400">C$${(parseFloat(venta.pagado) || 0).toLocaleString()}</span></div>
-      <div class="flex justify-between border-t border-green-200 dark:border-green-800 pt-2"><span class="text-sm font-medium text-gray-700 dark:text-gray-300">Saldo:</span><span class="text-sm font-bold text-orange-600 dark:text-orange-400">C$${(parseFloat(venta.saldo) || 0).toLocaleString()}</span></div>
+      <div class="flex justify-between">
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Cliente:</span>
+        <span class="text-sm font-bold text-gray-800 dark:text-white">${venta.cliente}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-sm text-gray-600 dark:text-gray-400">Total:</span>
+        <span class="text-sm font-medium text-gray-800 dark:text-white">C$${(parseFloat(venta.precioTotal) || 0).toLocaleString()}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-sm text-gray-600 dark:text-gray-400">Pagado:</span>
+        <span class="text-sm font-medium text-green-600 dark:text-green-400">C$${(parseFloat(venta.pagado) || 0).toLocaleString()}</span>
+      </div>
+      <div class="flex justify-between border-t border-green-200 dark:border-green-800 pt-2">
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Saldo:</span>
+        <span class="text-sm font-bold text-orange-600 dark:text-orange-400">C$${(parseFloat(venta.saldo) || 0).toLocaleString()}</span>
+      </div>
     </div>
   `;
   infoDiv.classList.remove('hidden');
@@ -1853,7 +2055,6 @@ function editarCobro(cobroId) {
   document.getElementById('cobroMonto').value = cobro.monto;
   document.getElementById('cobroMetodo').value = cobro.metodo;
   document.getElementById('cobroNotas').value = cobro.notas || '';
-  
   seleccionarVentaCobro(cobro.ventaId);
   document.getElementById('btnEliminarCobro').classList.remove('hidden');
 }
@@ -1877,6 +2078,7 @@ function guardarCobro() {
   if (editId) {
     const cobro = cobros.find(c => c.id === editId);
     if (cobro) {
+      // Restar el monto anterior
       venta.pagado = Math.max(0, (parseFloat(venta.pagado) || 0) - (parseFloat(cobro.monto) || 0));
       
       if (monto > venta.saldo + (parseFloat(cobro.monto) || 0)) {
@@ -1942,7 +2144,7 @@ function renderCobros() {
   const container = document.getElementById('listaCobros');
   
   if (cobros.length === 0) {
-    container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-4 italic">No hay cobros</p>';
+    container.innerHTML = '<p class="text-gray-500 text-center py-4">No hay cobros</p>';
     return;
   }
   
@@ -1956,7 +2158,7 @@ function renderCobros() {
           <div>
             <p class="font-bold text-gray-800 dark:text-white">${venta?.cliente || 'Cliente'}</p>
             <p class="text-xs text-gray-500 dark:text-gray-400">${formatFecha(cobro.fecha)} | ${cobro.metodo}</p>
-            ${cobro.notas ? `<p class="text-xs text-gray-500 dark:text-gray-400">${cobro.notas}</p>` : ''}
+            ${cobro.notas ? `<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">${cobro.notas}</p>` : ''}
           </div>
           <p class="text-lg font-bold text-green-600 dark:text-green-400">C$${(parseFloat(cobro.monto) || 0).toLocaleString()}</p>
         </div>

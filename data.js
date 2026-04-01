@@ -37,37 +37,6 @@ const initialLotes = [
       { nombre: "Televisor 32 pulg LG", cantidad: 2, precioCarmen: 8500, vendido: false },
       { nombre: "Refrigeradora 10 pies MABE", cantidad: 1, precioCarmen: 12400, vendido: false }
     ]
-  },
-  {
-    id: "L03",
-    fechaRecepcion: "2026-03-04",
-    fechaLimite: "2026-05-04",
-    totalInicial: 41160,
-    abonado: 0,
-    saldoPendiente: 41160,
-    estado: "PENDIENTE",
-    productos: [
-      { nombre: "Cama Unipersonal Buen Sueño CAPRI", cantidad: 2, precioCarmen: 4800, vendido: false },
-      { nombre: "Cama Matrimonial DUROFOAM", cantidad: 1, precioCarmen: 9300, vendido: false },
-      { nombre: "Cama Queen Wonder INDUFOAM", cantidad: 1, precioCarmen: 10760, vendido: false },
-      { nombre: "Sofá Color Gris MONTERREY", cantidad: 1, precioCarmen: 11500, vendido: false }
-    ]
-  },
-  {
-    id: "L04",
-    fechaRecepcion: "2026-03-07",
-    fechaLimite: "2026-05-07",
-    totalInicial: 47460,
-    abonado: 0,
-    saldoPendiente: 47460,
-    estado: "PENDIENTE",
-    productos: [
-      { nombre: "Cama Unipersonal FRESCOFOAM", cantidad: 1, precioCarmen: 7420, vendido: false },
-      { nombre: "Cama Queen WONDER", cantidad: 1, precioCarmen: 10760, vendido: false },
-      { nombre: "Cama Matrimonial ORTHOADVANCE", cantidad: 1, precioCarmen: 11900, vendido: false },
-      { nombre: "Lavadora Semiautomática MABE 18kg", cantidad: 1, precioCarmen: 8030, vendido: false },
-      { nombre: "Lavadora Semiautomática MABE 22kg", cantidad: 1, precioCarmen: 9350, vendido: false }
-    ]
   }
 ];
 
@@ -86,23 +55,6 @@ const initialVentas = [
     meses: 12,
     cuotaMensual: 2731.67,
     pagado: 610,
-    estado: "PENDIENTE",
-    proximaFechaCobro: "2026-04-10"
-  },
-  {
-    id: "V002",
-    cliente: "Cristhel Janiuska Ramirez",
-    telefono: "",
-    fecha: "2026-02-10",
-    productos: [
-      { nombre: "Cocina MABE", cantidad: 1, precioCarmen: 16000, precioVenta: 20000 }
-    ],
-    precioTotal: 54300,
-    prima: 10000,
-    saldo: 44300,
-    meses: 12,
-    cuotaMensual: 3691.67,
-    pagado: 10000,
     estado: "PENDIENTE",
     proximaFechaCobro: "2026-04-10"
   }
