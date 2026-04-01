@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#4f46e5">
+  <meta name="theme-color" content="#ec4899">
   <meta name="description" content="Sistema de gestión de lotes, compras, ventas y finanzas">
-  <title>Mi Control de Negocio - Carmen</title>
+  <title>Electrodomésticos y Variedades Karen</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="https://via.placeholder.com/192.png/4f46e5/ffffff?text=CC">
-  <link rel="apple-touch-icon" href="https://via.placeholder.com/192.png/4f46e5/ffffff?text=CC">
+  <link rel="icon" type="image/png" href="https://via.placeholder.com/192.png/ec4899/ffffff?text=EVK">
+  <link rel="apple-touch-icon" href="https://via.placeholder.com/192.png/ec4899/ffffff?text=EVK">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -19,13 +19,13 @@
   <header class="bg-white dark:bg-slate-800 shadow-lg sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-3">
       <div class="flex justify-between items-center">
-        <h1 class="text-xl font-bold text-indigo-600 dark:text-indigo-400">Mi Control</h1>
+        <h1 class="text-xl font-bold text-pink-600 dark:text-pink-400">ELECTRODOMÉSTICOS Y VARIEDADES KAREN</h1>
         <div class="flex items-center gap-3">
           <div id="syncStatus" class="flex items-center gap-2 text-sm">
             <span class="w-2 h-2 rounded-full bg-gray-400"></span>
             <span class="text-gray-600 dark:text-gray-400">Verificando...</span>
           </div>
-          <button onclick="sincronizarAhora()" class="p-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/50" title="Sincronizar">
+          <button onclick="sincronizarAhora()" class="p-2 bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 rounded-xl hover:bg-pink-200 dark:hover:bg-pink-900/50" title="Sincronizar">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
@@ -63,7 +63,7 @@
 
   <!-- Resumen -->
   <section class="max-w-7xl mx-auto px-4 py-4">
-    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-4 text-white shadow-xl">
+    <div class="bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl p-4 text-white shadow-xl">
       <h2 class="text-lg font-bold mb-3">Resumen General</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div class="bg-white/20 backdrop-blur rounded-xl p-3">
@@ -132,7 +132,7 @@
         <option value="pendientes">Pendientes</option>
         <option value="pagados">Pagados (Historial)</option>
       </select>
-      <button onclick="showForm('lote')" class="px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700">
+      <button onclick="showForm('lote')" class="px-4 py-2 bg-pink-600 text-white rounded-xl font-medium hover:bg-pink-700">
         + Nuevo Lote
       </button>
     </div>
@@ -172,7 +172,7 @@
   <!-- FINANZAS -->
   <section id="sectionFinanzas" class="max-w-7xl mx-auto px-4 pb-20 hidden">
     <div class="flex gap-2 mb-4">
-      <button onclick="showForm('abono')" class="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700">
+      <button onclick="showForm('abono')" class="flex-1 px-4 py-3 bg-pink-600 text-white rounded-xl font-medium hover:bg-pink-700">
         + Abonar a Carmen
       </button>
       <button onclick="showForm('cobro')" class="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700">
@@ -181,7 +181,7 @@
     </div>
     <div class="grid md:grid-cols-2 gap-4">
       <div>
-        <h3 class="font-bold text-lg mb-3 text-indigo-600 dark:text-indigo-400">Abonos a Carmen</h3>
+        <h3 class="font-bold text-lg mb-3 text-pink-600 dark:text-pink-400">Abonos a Carmen</h3>
         <div id="listaAbonos" class="space-y-2"></div>
       </div>
       <div>
@@ -217,7 +217,7 @@
         <div>
           <div class="flex justify-between items-center mb-2">
             <label class="block text-sm font-medium">Productos del Lote</label>
-            <button type="button" onclick="agregarProductoLote()" class="text-indigo-600 dark:text-indigo-400 text-sm font-medium">+ Agregar Producto</button>
+            <button type="button" onclick="agregarProductoLote()" class="text-pink-600 dark:text-pink-400 text-sm font-medium">+ Agregar Producto</button>
           </div>
           <div id="productosLoteContainer" class="space-y-2 max-h-64 overflow-y-auto"></div>
           <p class="text-right text-sm font-bold mt-2">Total del Lote: <span id="previewTotalLote">C$0.00</span></p>
@@ -231,7 +231,7 @@
         </div>
       </div>
       <div class="flex gap-3 mt-6">
-        <button onclick="guardarLote()" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700">Guardar</button>
+        <button onclick="guardarLote()" class="flex-1 bg-pink-600 text-white py-3 rounded-xl font-medium hover:bg-pink-700">Guardar</button>
         <button onclick="eliminarLote()" id="btnEliminarLote" class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 hidden">🗑️</button>
         <button onclick="hideForms()" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cancelar</button>
       </div>
@@ -302,7 +302,7 @@
         <div>
           <label class="block text-sm font-medium mb-2">Productos Vendidos</label>
           <div class="flex gap-2 mb-2">
-            <button type="button" onclick="mostrarSelectorProductos('lotes')" class="flex-1 py-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl text-sm font-medium">Lotes Carmen</button>
+            <button type="button" onclick="mostrarSelectorProductos('lotes')" class="flex-1 py-2 bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 rounded-xl text-sm font-medium">Lotes Carmen</button>
             <button type="button" onclick="mostrarSelectorProductos('compras')" class="flex-1 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl text-sm font-medium">Mis Compras</button>
           </div>
           <button type="button" onclick="agregarProductoVentaManual()" class="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-600 dark:text-gray-400 text-sm font-medium">+ Agregar Producto Manual</button>
@@ -336,7 +336,7 @@
             </div>
             <div>
               <p class="text-xs text-gray-600 dark:text-gray-400">Cuota Mensual</p>
-              <p class="font-bold text-indigo-700 dark:text-indigo-400" id="previewCuotaVenta">C$0.00</p>
+              <p class="font-bold text-pink-700 dark:text-pink-400" id="previewCuotaVenta">C$0.00</p>
             </div>
           </div>
         </div>
@@ -379,7 +379,7 @@
             <option value="">Seleccione un lote...</option>
           </select>
         </div>
-        <div id="infoLoteAbono" class="hidden bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl"></div>
+        <div id="infoLoteAbono" class="hidden bg-pink-50 dark:bg-pink-900/20 p-3 rounded-xl"></div>
         <div>
           <label class="block text-sm font-medium mb-1">Fecha del Abono</label>
           <input type="date" id="abonoFecha" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white">
@@ -402,7 +402,7 @@
         </div>
       </div>
       <div class="flex gap-3 mt-6">
-        <button onclick="guardarAbono()" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700">Registrar Abono</button>
+        <button onclick="guardarAbono()" class="flex-1 bg-pink-600 text-white py-3 rounded-xl font-medium hover:bg-pink-700">Registrar Abono</button>
         <button onclick="eliminarAbono()" id="btnEliminarAbono" class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 hidden">🗑️</button>
         <button onclick="hideForms()" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cancelar</button>
       </div>
@@ -459,7 +459,7 @@
           <h4 class="font-bold text-sm mb-2">Opción 1: Google Apps Script (Gratis e Ilimitado)</h4>
           <ol class="text-xs space-y-1 text-gray-700 dark:text-gray-300">
             <li>1. Crea una hoja de Google Sheets</li>
-            <li>2. Extensiones &gt; Apps Script</li>
+            <li>2. Extensiones > Apps Script</li>
             <li>3. Pega el código del archivo <code class="bg-gray-200 dark:bg-slate-700 px-1 rounded">apps-script.gs</code></li>
             <li>4. Despliega como Web App (acceso: Cualquiera)</li>
             <li>5. Copia la URL y pégala aquí</li>
@@ -478,7 +478,7 @@
         </div>
       </div>
       <div class="flex gap-3 mt-6">
-        <button onclick="guardarConfigSync()" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700">Guardar y Conectar</button>
+        <button onclick="guardarConfigSync()" class="flex-1 bg-pink-600 text-white py-3 rounded-xl font-medium hover:bg-pink-700">Guardar y Conectar</button>
         <button onclick="cerrarModal('modalConfigSync')" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cancelar</button>
       </div>
     </div>
@@ -524,6 +524,38 @@
     </div>
   </div>
 
+  <!-- Modal Detalle Abono -->
+  <div id="modalDetalleAbono" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+      <h3 id="tituloDetalleAbono" class="text-xl font-bold mb-4">Detalle Abono</h3>
+      <div id="contenidoDetalleAbono"></div>
+      <div class="flex gap-3 mt-6">
+        <button onclick="generarPDFAbono(abonoSeleccionadoId)" class="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600">📄 PDF</button>
+        <button onclick="enviarWhatsAppAbono(abonoSeleccionadoId)" class="flex-1 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400 py-3 rounded-xl font-medium hover:bg-pink-200 dark:hover:bg-pink-900/50">💬 WhatsApp</button>
+      </div>
+      <div class="flex gap-3 mt-3">
+        <button onclick="editarAbonoDesdeModal()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700">✏️ Editar</button>
+        <button onclick="cerrarModal('modalDetalleAbono')" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle Cobro -->
+  <div id="modalDetalleCobro" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+      <h3 id="tituloDetalleCobro" class="text-xl font-bold mb-4">Detalle Cobro</h3>
+      <div id="contenidoDetalleCobro"></div>
+      <div class="flex gap-3 mt-6">
+        <button onclick="generarPDFCobro(cobroSeleccionadoId)" class="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600">📄 PDF</button>
+        <button onclick="enviarWhatsAppCobro(cobroSeleccionadoId)" class="flex-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 py-3 rounded-xl font-medium hover:bg-green-200 dark:hover:bg-green-900/50">💬 WhatsApp</button>
+      </div>
+      <div class="flex gap-3 mt-3">
+        <button onclick="editarCobroDesdeModal()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700">✏️ Editar</button>
+        <button onclick="cerrarModal('modalDetalleCobro')" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Importar -->
   <div id="modalImportar" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full">
@@ -533,7 +565,7 @@
       </div>
       <input type="file" id="importFile" accept=".json" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white mb-4">
       <div class="flex gap-3">
-        <button onclick="procesarImportacion()" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700">Importar Datos</button>
+        <button onclick="procesarImportacion()" class="flex-1 bg-pink-600 text-white py-3 rounded-xl font-medium hover:bg-pink-700">Importar Datos</button>
         <button onclick="cerrarModal('modalImportar')" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cancelar</button>
       </div>
     </div>
@@ -544,7 +576,7 @@
     <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full">
       <h3 class="text-xl font-bold mb-4">📲 Sincronizar por QR</h3>
       <div class="space-y-4">
-        <button onclick="generarQRParaExportar()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700">
+        <button onclick="generarQRParaExportar()" class="w-full bg-pink-600 text-white py-3 rounded-xl font-medium hover:bg-pink-700">
           📤 Generar QR para Exportar
         </button>
         <button onclick="importarDesdeQR()" class="w-full bg-green-600 text-white py-3 rounded-xl font-medium hover:bg-green-700">

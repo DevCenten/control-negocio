@@ -1,41 +1,21 @@
 {
-  "name": "Mi Control - Carmen",
-  "short_name": "Control Carmen",
-  "description": "Sistema de gestión de lotes, compras, ventas y finanzas sincronizado",
+  "name": "Electrodomésticos y Variedades Karen",
+  "short_name": "EVK Control",
+  "description": "Sistema de gestión de lotes, compras, ventas y finanzas",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#1e293b",
-  "theme_color": "#4f46e5",
+  "theme_color": "#ec4899",
   "orientation": "portrait",
   "scope": "/",
   "icons": [
     {
-      "src": "https://via.placeholder.com/72.png/4f46e5/ffffff?text=CC",
-      "sizes": "72x72",
-      "type": "image/png"
-    },
-    {
-      "src": "https://via.placeholder.com/96.png/4f46e5/ffffff?text=CC",
-      "sizes": "96x96",
-      "type": "image/png"
-    },
-    {
-      "src": "https://via.placeholder.com/128.png/4f46e5/ffffff?text=CC",
-      "sizes": "128x128",
-      "type": "image/png"
-    },
-    {
-      "src": "https://via.placeholder.com/144.png/4f46e5/ffffff?text=CC",
-      "sizes": "144x144",
-      "type": "image/png"
-    },
-    {
-      "src": "https://via.placeholder.com/192.png/4f46e5/ffffff?text=CC",
+      "src": "https://via.placeholder.com/192.png/ec4899/ffffff?text=EVK",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://via.placeholder.com/512.png/4f46e5/ffffff?text=CC",
+      "src": "https://via.placeholder.com/512.png/ec4899/ffffff?text=EVK",
       "sizes": "512x512",
       "type": "image/png"
     }
