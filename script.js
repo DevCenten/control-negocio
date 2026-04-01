@@ -265,7 +265,7 @@ async function procesarRespuestaExitosa(resultado) {
 function updateSyncStatus(status) {
   const indicator = document.getElementById('syncStatus');
   const configs = {
-    online: { color: 'green', text: 'En línea' },
+    online: { color: 'pink', text: 'En línea' },
     offline: { color: 'red', text: 'Sin conexión' },
     syncing: { color: 'yellow', text: 'Sincronizando...', pulse: true },
     synced: { color: 'blue', text: 'Sincronizado' },
@@ -302,12 +302,15 @@ function procesarImportacion() {
     alert('Selecciona un archivo JSON');
     return;
   }
+  
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
       const datos = JSON.parse(e.target.result);
+      
       if (!confirm('¿Reemplazar TODOS los datos?')) return;
       
+      // Normalizar datos del backup
       lotes = (datos.lotes || []).map(normalizarLote);
       compras = (datos.compras || []).map(normalizarCompra);
       ventas = (datos.ventas || []).map(normalizarVenta);
@@ -330,9 +333,11 @@ function procesarImportacion() {
 function normalizarLote(l) {
   return {
     ...l,
+    id: (l.id || '').toString().trim(),
     totalInicial: parseFloat(l.totalInicial) || 0,
     abonado: parseFloat(l.abonado) || 0,
-    saldoPendiente: parseFloat(l.saldoPendiente) || 0
+    saldoPendiente: parseFloat(l.saldoPendiente) || 0,
+    estado: (l.estado || 'PENDIENTE').toString().trim()
   };
 }
 
@@ -343,18 +348,22 @@ function normalizarCompra(c) {
 function normalizarVenta(v) {
   return {
     ...v,
+    id: (v.id || '').toString().trim(),
     precioTotal: parseFloat(v.precioTotal) || 0,
     prima: parseFloat(v.prima) || 0,
     saldo: parseFloat(v.saldo) || 0,
     pagado: parseFloat(v.pagado) || 0,
     cuotaMensual: parseFloat(v.cuotaMensual) || 0,
-    meses: parseInt(v.meses) || 12
+    meses: parseInt(v.meses) || 12,
+    estado: (v.estado || 'PENDIENTE').toString().trim()
   };
 }
 
 function normalizarAbono(a) {
   return {
     ...a,
+    id: (a.id || '').toString().trim(),
+    loteId: (a.loteId || '').toString().trim(),
     monto: parseFloat(a.monto) || 0,
     saldoDespues: parseFloat(a.saldoDespues) || 0
   };
@@ -363,6 +372,8 @@ function normalizarAbono(a) {
 function normalizarCobro(c) {
   return {
     ...c,
+    id: (c.id || '').toString().trim(),
+    ventaId: (c.ventaId || '').toString().trim(),
     monto: parseFloat(c.monto) || 0
   };
 }
@@ -417,13 +428,12 @@ function showSection(section) {
   });
   document.getElementById(`section${section.charAt(0).toUpperCase() + section.slice(1)}`).classList.remove('hidden');
   
-  // Actualizar botones de navegación
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.classList.remove('bg-indigo-600', 'text-white');
+    btn.classList.remove('bg-pink-600', 'text-white');
     btn.classList.add('bg-white', 'dark:bg-slate-800');
     if (btn.dataset.section === section) {
       btn.classList.remove('bg-white', 'dark:bg-slate-800');
-      btn.classList.add('bg-indigo-600', 'text-white');
+      btn.classList.add('bg-pink-600', 'text-white');
     }
   });
   
@@ -450,7 +460,8 @@ function hideForms() {
   document.getElementById('formOverlay').classList.add('hidden');
   ['formLote', 'formCompra', 'formVenta', 'formAbono', 'formCobro',
    'selectorProductos', 'modalConfigSync', 'modalImportar', 'modalQRSync',
-   'modalDetalleLote', 'modalDetalleCompra', 'modalDetalleVenta'].forEach(id => {
+   'modalDetalleLote', 'modalDetalleCompra', 'modalDetalleVenta',
+   'modalDetalleAbono', 'modalDetalleCobro'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
   });
@@ -646,7 +657,7 @@ function eliminarCompra() {
   sincronizarAhora();
   hideForms();
   renderCompras();
-  showToast(`Compra ${compra.id} eliminado`);
+  showToast(`Compra ${compra.id} eliminada`);
 }
 
 function eliminarVenta() {
@@ -875,7 +886,7 @@ function renderLotes() {
   else if (filtro === 'pagados') lotesFiltrados = lotes.filter(l => l.estado === 'PAGADO');
   
   if (lotesFiltrados.length === 0) {
-    container.innerHTML = '<p class="text-center text-gray-500 py-8">No hay lotes</p>';
+    container.innerHTML = '<p class="text-gray-500 text-center py-8">No hay lotes</p>';
     return;
   }
   
@@ -921,7 +932,7 @@ function renderLotes() {
         </div>
         
         <div class="flex gap-2">
-          <button onclick="verDetalleLote('${lote.id}')" class="flex-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 py-2 rounded-xl text-sm font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/50">
+          <button onclick="verDetalleLote('${lote.id}')" class="flex-1 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400 py-2 rounded-xl text-sm font-medium hover:bg-pink-200 dark:hover:bg-pink-900/50">
             Ver Detalle
           </button>
           <button onclick="showForm('lote', '${lote.id}')" class="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-200 dark:hover:bg-blue-900/50" title="Editar">
@@ -957,20 +968,20 @@ function verDetalleLote(loteId) {
   
   const abonosLote = abonos.filter(a => a.loteId === loteId);
   const abonosHtml = abonosLote.length > 0 ? abonosLote.map(a => `
-    <div class="flex justify-between items-center p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-sm cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/40" onclick="editarAbono('${a.id}')">
+    <div class="flex justify-between items-center p-2 bg-pink-50 dark:bg-pink-900/20 rounded-lg text-sm cursor-pointer hover:bg-pink-100 dark:hover:bg-pink-900/40" onclick="verDetalleAbono('${a.id}')">
       <div>
-        <p class="font-medium text-indigo-800 dark:text-indigo-300">${formatFecha(a.fecha)}</p>
-        <p class="text-xs text-indigo-600 dark:text-indigo-400">${a.metodo} ${a.notas ? '- ' + a.notas : ''}</p>
+        <p class="font-medium text-pink-800 dark:text-pink-300">${formatFecha(a.fecha)}</p>
+        <p class="text-xs text-pink-600 dark:text-pink-400">${a.metodo} ${a.notas ? '- ' + a.notas : ''}</p>
       </div>
-      <p class="font-bold text-indigo-800 dark:text-indigo-300">C$${(parseFloat(a.monto) || 0).toLocaleString()}</p>
+      <p class="font-bold text-pink-800 dark:text-pink-300">C$${(parseFloat(a.monto) || 0).toLocaleString()}</p>
     </div>
   `).join('') : '<p class="text-gray-500 text-center">Sin abonos</p>';
   
   document.getElementById('contenidoDetalleLote').innerHTML = `
     <div class="grid grid-cols-2 gap-3 mb-4">
-      <div class="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl">
-        <p class="text-xs text-indigo-600 dark:text-indigo-400">Total Inicial</p>
-        <p class="text-lg font-bold text-indigo-800 dark:text-indigo-300">C$${(parseFloat(lote.totalInicial) || 0).toLocaleString()}</p>
+      <div class="bg-pink-50 dark:bg-pink-900/20 p-3 rounded-xl">
+        <p class="text-xs text-pink-600 dark:text-pink-400">Total Inicial</p>
+        <p class="text-lg font-bold text-pink-800 dark:text-pink-300">C$${(parseFloat(lote.totalInicial) || 0).toLocaleString()}</p>
       </div>
       <div class="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl">
         <p class="text-xs text-red-600 dark:text-red-400">Saldo Pendiente</p>
@@ -1115,7 +1126,7 @@ function renderCompras() {
   }
   
   if (comprasFiltradas.length === 0) {
-    container.innerHTML = '<p class="text-center text-gray-500 py-8">No hay compras</p>';
+    container.innerHTML = '<p class="text-gray-500 text-center py-8">No hay compras</p>';
     return;
   }
   
@@ -1532,7 +1543,7 @@ function renderVentas() {
   else if (filtro === 'pagados') ventasFiltradas = ventas.filter(v => v.estado === 'PAGADO');
   
   if (ventasFiltradas.length === 0) {
-    container.innerHTML = '<p class="text-center text-gray-500 py-8">No hay ventas</p>';
+    container.innerHTML = '<p class="text-gray-500 text-center py-8">No hay ventas</p>';
     return;
   }
   
@@ -1615,7 +1626,7 @@ function verDetalleVenta(ventaId) {
   
   const cobrosVenta = cobros.filter(c => c.ventaId === ventaId);
   const cobrosHtml = cobrosVenta.length > 0 ? cobrosVenta.map(c => `
-    <div class="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/20 rounded-lg text-sm cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/40" onclick="editarCobro('${c.id}')">
+    <div class="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/20 rounded-lg text-sm cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/40" onclick="verDetalleCobro('${c.id}')">
       <div>
         <p class="font-medium text-green-800 dark:text-green-300">${formatFecha(c.fecha)}</p>
         <p class="text-xs text-green-600 dark:text-green-400">${c.metodo} ${c.notas ? '- ' + c.notas : ''}</p>
@@ -1667,7 +1678,7 @@ function editarVentaDesdeModal() {
 }
 
 // ==========================================
-// PDF Y WHATSAPP
+// PDF Y WHATSAPP - VENTAS
 // ==========================================
 async function generarPDFVenta(ventaId) {
   const venta = ventas.find(v => v.id === ventaId);
@@ -1680,20 +1691,20 @@ async function generarPDFVenta(ventaId) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
-    // Encabezado
     doc.setFontSize(18);
-    doc.text('RECIBO DE VENTA', 105, 20, null, null, 'center');
-    doc.setFontSize(10);
-    doc.text('Mi Control - Carmen', 105, 28, null, null, 'center');
+    doc.setTextColor(236, 72, 153);
+    doc.text('ELECTRODOMÉSTICOS Y VARIEDADES KAREN', 105, 20, null, null, 'center');
     
-    // Información del cliente
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Recibo de Venta', 105, 28, null, null, 'center');
+    
     doc.setFontSize(12);
     doc.text(`ID: ${venta.id}`, 20, 45);
     doc.text(`Cliente: ${venta.cliente}`, 20, 55);
     doc.text(`Fecha: ${formatFecha(venta.fecha)}`, 20, 65);
     doc.text(`Teléfono: ${venta.telefono || 'N/A'}`, 20, 75);
     
-    // Productos
     doc.text('PRODUCTOS:', 20, 90);
     let y = 100;
     venta.productos.forEach((p, i) => {
@@ -1702,7 +1713,6 @@ async function generarPDFVenta(ventaId) {
       y += 8;
     });
     
-    // Totales
     y += 5;
     doc.line(20, y, 190, y);
     y += 10;
@@ -1713,13 +1723,12 @@ async function generarPDFVenta(ventaId) {
     doc.text(`Cuota Mensual: C$${(venta.cuotaMensual).toLocaleString()}`, 20, y+30);
     doc.text(`Meses: ${venta.meses}`, 20, y+40);
     
-    // Pie
     doc.setFontSize(10);
+    doc.setTextColor(236, 72, 153);
     doc.text('¡Gracias por su compra!', 105, y+60, null, null, 'center');
-    doc.text('Mi Control - Carmen', 105, y+68, null, null, 'center');
+    doc.text('ELECTRODOMÉSTICOS Y VARIEDADES KAREN', 105, y+68, null, null, 'center');
     
-    // Guardar
-    doc.save(`Recibo_${venta.id}_${venta.cliente.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`Recibo_Venta_${venta.id}_${venta.cliente.replace(/\s+/g, '_')}.pdf`);
     showToast('✅ PDF generado');
   } catch (error) {
     console.error('Error generando PDF:', error);
@@ -1734,7 +1743,8 @@ function enviarWhatsAppVenta(ventaId) {
     return;
   }
   
-  let mensaje = `📋 *RECIBO DE VENTA*\n\n`;
+  let mensaje = `🌸 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🌸\n\n`;
+  mensaje += `📋 *RECIBO DE VENTA*\n\n`;
   mensaje += `*ID:* ${venta.id}\n`;
   mensaje += `*Cliente:* ${venta.cliente}\n`;
   mensaje += `*Fecha:* ${formatFecha(venta.fecha)}\n\n`;
@@ -1749,8 +1759,8 @@ function enviarWhatsAppVenta(ventaId) {
   mensaje += `\n*PRIMA:* C$${(venta.prima).toLocaleString()}`;
   mensaje += `\n*SALDO:* C$${(venta.saldo).toLocaleString()}`;
   mensaje += `\n*CUOTA:* C$${(venta.cuotaMensual).toLocaleString()} x ${venta.meses} meses`;
-  mensaje += `\n\n¡Gracias por su compra! 🛒`;
-  mensaje += `\n\n_Mi Control - Carmen_`;
+  mensaje += `\n\n🌸 ¡Gracias por su compra! 🌸`;
+  mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
   
   const telefono = venta.telefono?.replace(/[^0-9]/g, '') || '';
   const url = telefono 
@@ -1762,55 +1772,310 @@ function enviarWhatsAppVenta(ventaId) {
 }
 
 // ==========================================
-// QR SYNC
+// PDF Y WHATSAPP - ABONOS
 // ==========================================
-function mostrarQRSync() {
-  document.getElementById('modalQRSync').classList.remove('hidden');
-  document.getElementById('formOverlay').classList.remove('hidden');
-  document.getElementById('qrContainer').innerHTML = '';
-  document.getElementById('qrInstrucciones').classList.add('hidden');
-}
-
-function generarQRParaExportar() {
-  const datos = { lotes, compras, ventas, abonos, cobros };
-  const datosComprimidos = btoa(encodeURIComponent(JSON.stringify(datos)));
-  
-  // Verificar tamaño (QR tiene límite de ~3000 caracteres)
-  if (datosComprimidos.length > 2500) {
-    showToast('⚠️ Datos muy grandes. Usa Exportar JSON en su lugar.');
+async function generarPDFAbono(abonoId) {
+  const abono = abonos.find(a => a.id === abonoId);
+  if (!abono) {
+    showToast('❌ Abono no encontrado');
     return;
   }
   
-  document.getElementById('qrContainer').innerHTML = '';
-  new QRCode(document.getElementById('qrContainer'), {
-    text: datosComprimidos,
-    width: 256,
-    height: 256,
-    colorDark: '#000000',
-    colorLight: '#ffffff',
-    correctLevel: QRCode.CorrectLevel.M
-  });
+  const lote = lotes.find(l => l.id === abono.loteId);
   
-  document.getElementById('qrInstrucciones').classList.remove('hidden');
-  showToast('📱 Escanea con el otro dispositivo');
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.setTextColor(236, 72, 153);
+    doc.text('ELECTRODOMÉSTICOS Y VARIEDADES KAREN', 105, 20, null, null, 'center');
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Recibo de Abono a Lote', 105, 28, null, null, 'center');
+    
+    doc.setFontSize(12);
+    doc.text(`ID Abono: ${abono.id}`, 20, 45);
+    doc.text(`Lote: ${abono.loteId}`, 20, 55);
+    doc.text(`Fecha: ${formatFecha(abono.fecha)}`, 20, 65);
+    doc.text(`Método: ${abono.metodo}`, 20, 75);
+    
+    doc.setFontSize(16);
+    doc.setTextColor(236, 72, 153);
+    doc.text(`MONTO ABONADO: C$${(parseFloat(abono.monto) || 0).toLocaleString()}`, 105, 95, null, null, 'center');
+    
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Total Lote: C$${(parseFloat(lote?.totalInicial) || 0).toLocaleString()}`, 20, 115);
+    doc.text(`Total Abonado: C$${(parseFloat(lote?.abonado) || 0).toLocaleString()}`, 20, 125);
+    doc.text(`Saldo Pendiente: C$${(parseFloat(lote?.saldoPendiente) || 0).toLocaleString()}`, 20, 135);
+    
+    if (abono.notas) {
+      doc.text(`Notas: ${abono.notas}`, 20, 150);
+    }
+    
+    doc.setFontSize(10);
+    doc.setTextColor(236, 72, 153);
+    doc.text('¡Gracias por su abono!', 105, 175, null, null, 'center');
+    doc.text('ELECTRODOMÉSTICOS Y VARIEDADES KAREN', 105, 183, null, null, 'center');
+    
+    doc.save(`Recibo_Abono_${abono.id}_Lote${abono.loteId}.pdf`);
+    showToast('✅ PDF de abono generado');
+  } catch (error) {
+    console.error('Error generando PDF:', error);
+    showToast('❌ Error al generar PDF');
+  }
 }
 
-function importarDesdeQR() {
-  // Crear input para escanear QR desde imagen
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+function enviarWhatsAppAbono(abonoId) {
+  const abono = abonos.find(a => a.id === abonoId);
+  if (!abono) {
+    showToast('❌ Abono no encontrado');
+    return;
+  }
+  
+  const lote = lotes.find(l => l.id === abono.loteId);
+  
+  let mensaje = `🌸 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🌸\n\n`;
+  mensaje += `📋 *RECIBO DE ABONO*\n\n`;
+  mensaje += `*ID Abono:* ${abono.id}\n`;
+  mensaje += `*Lote:* ${abono.loteId}\n`;
+  mensaje += `*Fecha:* ${formatFecha(abono.fecha)}\n`;
+  mensaje += `*Método:* ${abono.metodo}\n\n`;
+  mensaje += `💰 *MONTO ABONADO: C$${(parseFloat(abono.monto) || 0).toLocaleString()}*\n\n`;
+  mensaje += `*Estado del Lote:*\n`;
+  mensaje += `Total: C$${(parseFloat(lote?.totalInicial) || 0).toLocaleString()}\n`;
+  mensaje += `Abonado: C$${(parseFloat(lote?.abonado) || 0).toLocaleString()}\n`;
+  mensaje += `Saldo: C$${(parseFloat(lote?.saldoPendiente) || 0).toLocaleString()}\n`;
+  
+  if (abono.notas) {
+    mensaje += `\n*Notas:* ${abono.notas}`;
+  }
+  
+  mensaje += `\n\n🌸 ¡Gracias por su abono! 🌸`;
+  mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
+  
+  const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+  window.open(url, '_blank');
+  showToast('📱 Abriendo WhatsApp...');
+}
+
+// ==========================================
+// PDF Y WHATSAPP - COBROS
+// ==========================================
+async function generarPDFCobro(cobroId) {
+  const cobro = cobros.find(c => c.id === cobroId);
+  if (!cobro) {
+    showToast('❌ Cobro no encontrado');
+    return;
+  }
+  
+  const venta = ventas.find(v => v.id === cobro.ventaId);
+  
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
     
-    showToast('📷 Procesando imagen QR...');
+    doc.setFontSize(18);
+    doc.setTextColor(236, 72, 153);
+    doc.text('ELECTRODOMÉSTICOS Y VARIEDADES KAREN', 105, 20, null, null, 'center');
     
-    // Para lectura de QR necesitarías una librería como jsQR
-    // Por simplicidad, mostramos mensaje
-    showToast('⚠️ Para escanear QR, usa la cámara del otro dispositivo y la función "Generar QR para Exportar"');
-  };
-  input.click();
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Recibo de Cobro', 105, 28, null, null, 'center');
+    
+    doc.setFontSize(12);
+    doc.text(`ID Cobro: ${cobro.id}`, 20, 45);
+    doc.text(`Venta: ${cobro.ventaId}`, 20, 55);
+    doc.text(`Cliente: ${venta?.cliente || 'N/A'}`, 20, 65);
+    doc.text(`Fecha: ${formatFecha(cobro.fecha)}`, 20, 75);
+    doc.text(`Método: ${cobro.metodo}`, 20, 85);
+    
+    doc.setFontSize(16);
+    doc.setTextColor(34, 197, 94);
+    doc.text(`MONTO COBRADO: C$${(parseFloat(cobro.monto) || 0).toLocaleString()}`, 105, 105, null, null, 'center');
+    
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Total Venta: C$${(parseFloat(venta?.precioTotal) || 0).toLocaleString()}`, 20, 125);
+    doc.text(`Total Pagado: C$${(parseFloat(venta?.pagado) || 0).toLocaleString()}`, 20, 135);
+    doc.text(`Saldo Pendiente: C$${(parseFloat(venta?.saldo) || 0).toLocaleString()}`, 20, 145);
+    
+    if (cobro.notas) {
+      doc.text(`Notas: ${cobro.notas}`, 20, 160);
+    }
+    
+    doc.setFontSize(10);
+    doc.setTextColor(236, 72, 153);
+    doc.text('¡Gracias por su pago!', 105, 185, null, null, 'center');
+    doc.text('ELECTRODOMÉSTICOS Y VARIEDADES KAREN', 105, 193, null, null, 'center');
+    
+    doc.save(`Recibo_Cobro_${cobro.id}_Venta${cobro.ventaId}.pdf`);
+    showToast('✅ PDF de cobro generado');
+  } catch (error) {
+    console.error('Error generando PDF:', error);
+    showToast('❌ Error al generar PDF');
+  }
+}
+
+function enviarWhatsAppCobro(cobroId) {
+  const cobro = cobros.find(c => c.id === cobroId);
+  if (!cobro) {
+    showToast('❌ Cobro no encontrado');
+    return;
+  }
+  
+  const venta = ventas.find(v => v.id === cobro.ventaId);
+  
+  let mensaje = `🌸 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🌸\n\n`;
+  mensaje += `📋 *RECIBO DE COBRO*\n\n`;
+  mensaje += `*ID Cobro:* ${cobro.id}\n`;
+  mensaje += `*Venta:* ${cobro.ventaId}\n`;
+  mensaje += `*Cliente:* ${venta?.cliente || 'N/A'}\n`;
+  mensaje += `*Fecha:* ${formatFecha(cobro.fecha)}\n`;
+  mensaje += `*Método:* ${cobro.metodo}\n\n`;
+  mensaje += `💚 *MONTO COBRADO: C$${(parseFloat(cobro.monto) || 0).toLocaleString()}*\n\n`;
+  mensaje += `*Estado de la Cuenta:*\n`;
+  mensaje += `Total Venta: C$${(parseFloat(venta?.precioTotal) || 0).toLocaleString()}\n`;
+  mensaje += `Total Pagado: C$${(parseFloat(venta?.pagado) || 0).toLocaleString()}\n`;
+  mensaje += `Saldo Pendiente: C$${(parseFloat(venta?.saldo) || 0).toLocaleString()}\n`;
+  
+  if (cobro.notas) {
+    mensaje += `\n*Notas:* ${cobro.notas}`;
+  }
+  
+  mensaje += `\n\n🌸 ¡Gracias por su pago! 🌸`;
+  mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
+  
+  const telefono = venta?.telefono?.replace(/[^0-9]/g, '') || '';
+  const url = telefono 
+    ? `https://wa.me/505${telefono}?text=${encodeURIComponent(mensaje)}`
+    : `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+  
+  window.open(url, '_blank');
+  showToast('📱 Abriendo WhatsApp...');
+}
+
+// ==========================================
+// VER DETALLE - ABONOS Y COBROS
+// ==========================================
+function verDetalleAbono(abonoId) {
+  const abono = abonos.find(a => a.id === abonoId);
+  if (!abono) return;
+  
+  abonoSeleccionadoId = abonoId;
+  const lote = lotes.find(l => l.id === abono.loteId);
+  
+  document.getElementById('tituloDetalleAbono').textContent = `Abono ${abono.id}`;
+  
+  document.getElementById('contenidoDetalleAbono').innerHTML = `
+    <div class="space-y-3">
+      <div class="bg-pink-50 dark:bg-pink-900/20 p-3 rounded-xl">
+        <p class="text-sm text-pink-600 dark:text-pink-400">Lote</p>
+        <p class="font-bold text-gray-800 dark:text-white">${abono.loteId}</p>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-gray-50 dark:bg-slate-700 p-3 rounded-xl">
+          <p class="text-xs text-gray-500 dark:text-gray-400">Fecha</p>
+          <p class="font-medium text-gray-800 dark:text-white">${formatFecha(abono.fecha)}</p>
+        </div>
+        <div class="bg-gray-50 dark:bg-slate-700 p-3 rounded-xl">
+          <p class="text-xs text-gray-500 dark:text-gray-400">Método</p>
+          <p class="font-medium text-gray-800 dark:text-white">${abono.metodo}</p>
+        </div>
+      </div>
+      <div class="bg-pink-100 dark:bg-pink-900/40 p-4 rounded-xl text-center">
+        <p class="text-xs text-pink-600 dark:text-pink-400">Monto Abonado</p>
+        <p class="text-2xl font-bold text-pink-700 dark:text-pink-300">C$${(parseFloat(abono.monto) || 0).toLocaleString()}</p>
+      </div>
+      ${abono.notas ? `<div class="bg-gray-50 dark:bg-slate-700 p-3 rounded-xl"><p class="text-xs text-gray-500 dark:text-gray-400">Notas</p><p class="text-sm text-gray-800 dark:text-white">${abono.notas}</p></div>` : ''}
+      <div class="border-t pt-3">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Estado del Lote</p>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-600 dark:text-gray-400">Total:</span>
+            <span class="font-medium">C$${(parseFloat(lote?.totalInicial) || 0).toLocaleString()}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600 dark:text-gray-400">Abonado:</span>
+            <span class="font-medium text-green-600">C$${(parseFloat(lote?.abonado) || 0).toLocaleString()}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600 dark:text-gray-400">Saldo:</span>
+            <span class="font-medium text-red-600">C$${(parseFloat(lote?.saldoPendiente) || 0).toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('modalDetalleAbono').classList.remove('hidden');
+  document.getElementById('formOverlay').classList.remove('hidden');
+}
+
+function verDetalleCobro(cobroId) {
+  const cobro = cobros.find(c => c.id === cobroId);
+  if (!cobro) return;
+  
+  cobroSeleccionadoId = cobroId;
+  const venta = ventas.find(v => v.id === cobro.ventaId);
+  
+  document.getElementById('tituloDetalleCobro').textContent = `Cobro ${cobro.id}`;
+  
+  document.getElementById('contenidoDetalleCobro').innerHTML = `
+    <div class="space-y-3">
+      <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl">
+        <p class="text-sm text-green-600 dark:text-green-400">Cliente</p>
+        <p class="font-bold text-gray-800 dark:text-white">${venta?.cliente || 'N/A'}</p>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-gray-50 dark:bg-slate-700 p-3 rounded-xl">
+          <p class="text-xs text-gray-500 dark:text-gray-400">Venta</p>
+          <p class="font-medium text-gray-800 dark:text-white">${cobro.ventaId}</p>
+        </div>
+        <div class="bg-gray-50 dark:bg-slate-700 p-3 rounded-xl">
+          <p class="text-xs text-gray-500 dark:text-gray-400">Fecha</p>
+          <p class="font-medium text-gray-800 dark:text-white">${formatFecha(cobro.fecha)}</p>
+        </div>
+      </div>
+      <div class="bg-green-100 dark:bg-green-900/40 p-4 rounded-xl text-center">
+        <p class="text-xs text-green-600 dark:text-green-400">Monto Cobrado</p>
+        <p class="text-2xl font-bold text-green-700 dark:text-green-300">C$${(parseFloat(cobro.monto) || 0).toLocaleString()}</p>
+      </div>
+      ${cobro.notas ? `<div class="bg-gray-50 dark:bg-slate-700 p-3 rounded-xl"><p class="text-xs text-gray-500 dark:text-gray-400">Notas</p><p class="text-sm text-gray-800 dark:text-white">${cobro.notas}</p></div>` : ''}
+      <div class="border-t pt-3">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Estado de la Venta</p>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-600 dark:text-gray-400">Total:</span>
+            <span class="font-medium">C$${(parseFloat(venta?.precioTotal) || 0).toLocaleString()}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600 dark:text-gray-400">Pagado:</span>
+            <span class="font-medium text-green-600">C$${(parseFloat(venta?.pagado) || 0).toLocaleString()}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600 dark:text-gray-400">Saldo:</span>
+            <span class="font-medium text-orange-600">C$${(parseFloat(venta?.saldo) || 0).toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('modalDetalleCobro').classList.remove('hidden');
+  document.getElementById('formOverlay').classList.remove('hidden');
+}
+
+function editarAbonoDesdeModal() {
+  cerrarModal('modalDetalleAbono');
+  showForm('abono', abonoSeleccionadoId);
+}
+
+function editarCobroDesdeModal() {
+  cerrarModal('modalDetalleCobro');
+  showForm('cobro', cobroSeleccionadoId);
 }
 
 // ==========================================
@@ -1839,13 +2104,13 @@ function mostrarInfoLoteAbono() {
       <div class="space-y-2">
         <div class="flex justify-between">
           <span class="text-sm text-gray-600 dark:text-gray-400">Total:</span>
-          <span class="font-bold text-indigo-800 dark:text-indigo-300">C$${(parseFloat(lote.totalInicial) || 0).toLocaleString()}</span>
+          <span class="font-bold text-pink-800 dark:text-pink-300">C$${(parseFloat(lote.totalInicial) || 0).toLocaleString()}</span>
         </div>
         <div class="flex justify-between">
           <span class="text-sm text-gray-600 dark:text-gray-400">Abonado:</span>
           <span class="font-bold text-green-600 dark:text-green-400">C$${(parseFloat(lote.abonado) || 0).toLocaleString()}</span>
         </div>
-        <div class="flex justify-between border-t border-indigo-200 dark:border-indigo-800 pt-2">
+        <div class="flex justify-between border-t border-pink-200 dark:border-pink-800 pt-2">
           <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Saldo:</span>
           <span class="font-bold text-red-600 dark:text-red-400">C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()}</span>
         </div>
@@ -1892,7 +2157,6 @@ function guardarAbono() {
   if (editId) {
     const abono = abonos.find(a => a.id === editId);
     if (abono) {
-      // Restar el monto anterior
       lote.abonado = Math.max(0, (parseFloat(lote.abonado) || 0) - (parseFloat(abono.monto) || 0));
       
       if (monto > lote.saldoPendiente + (parseFloat(abono.monto) || 0)) {
@@ -1952,23 +2216,20 @@ function guardarAbono() {
 
 function renderAbonos() {
   const container = document.getElementById('listaAbonos');
-  
   if (abonos.length === 0) {
     container.innerHTML = '<p class="text-gray-500 text-center py-4">No hay abonos</p>';
     return;
   }
-  
   const abonosOrdenados = [...abonos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-  
   container.innerHTML = abonosOrdenados.map(abono => `
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-3 border border-indigo-200 dark:border-indigo-800 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20" onclick="editarAbono('${abono.id}')">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-3 border border-pink-200 dark:border-pink-800 cursor-pointer hover:bg-pink-50 dark:hover:bg-pink-900/20" onclick="verDetalleAbono('${abono.id}')">
       <div class="flex justify-between items-start">
         <div>
           <p class="font-bold text-gray-800 dark:text-white">${abono.loteId}</p>
           <p class="text-xs text-gray-500 dark:text-gray-400">${formatFecha(abono.fecha)} | ${abono.metodo}</p>
           ${abono.notas ? `<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">${abono.notas}</p>` : ''}
         </div>
-        <p class="text-lg font-bold text-indigo-600 dark:text-indigo-400">C$${(parseFloat(abono.monto) || 0).toLocaleString()}</p>
+        <p class="text-lg font-bold text-pink-600 dark:text-pink-400">C$${(parseFloat(abono.monto) || 0).toLocaleString()}</p>
       </div>
     </div>
   `).join('');
@@ -2078,7 +2339,6 @@ function guardarCobro() {
   if (editId) {
     const cobro = cobros.find(c => c.id === editId);
     if (cobro) {
-      // Restar el monto anterior
       venta.pagado = Math.max(0, (parseFloat(venta.pagado) || 0) - (parseFloat(cobro.monto) || 0));
       
       if (monto > venta.saldo + (parseFloat(cobro.monto) || 0)) {
@@ -2142,18 +2402,15 @@ function guardarCobro() {
 
 function renderCobros() {
   const container = document.getElementById('listaCobros');
-  
   if (cobros.length === 0) {
     container.innerHTML = '<p class="text-gray-500 text-center py-4">No hay cobros</p>';
     return;
   }
-  
   const cobrosOrdenados = [...cobros].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-  
   container.innerHTML = cobrosOrdenados.map(cobro => {
     const venta = ventas.find(v => v.id === cobro.ventaId);
     return `
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-3 border border-green-200 dark:border-green-800 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20" onclick="editarCobro('${cobro.id}')">
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-3 border border-green-200 dark:border-green-800 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20" onclick="verDetalleCobro('${cobro.id}')">
         <div class="flex justify-between items-start">
           <div>
             <p class="font-bold text-gray-800 dark:text-white">${venta?.cliente || 'Cliente'}</p>
@@ -2165,6 +2422,53 @@ function renderCobros() {
       </div>
     `;
   }).join('');
+}
+
+// ==========================================
+// QR SYNC
+// ==========================================
+function mostrarQRSync() {
+  document.getElementById('modalQRSync').classList.remove('hidden');
+  document.getElementById('formOverlay').classList.remove('hidden');
+  document.getElementById('qrContainer').innerHTML = '';
+  document.getElementById('qrInstrucciones').classList.add('hidden');
+}
+
+function generarQRParaExportar() {
+  const datos = { lotes, compras, ventas, abonos, cobros };
+  const datosComprimidos = btoa(encodeURIComponent(JSON.stringify(datos)));
+  
+  if (datosComprimidos.length > 2500) {
+    showToast('⚠️ Datos muy grandes. Usa Exportar JSON en su lugar.');
+    return;
+  }
+  
+  document.getElementById('qrContainer').innerHTML = '';
+  new QRCode(document.getElementById('qrContainer'), {
+    text: datosComprimidos,
+    width: 256,
+    height: 256,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+  
+  document.getElementById('qrInstrucciones').classList.remove('hidden');
+  showToast('📱 Escanea con el otro dispositivo');
+}
+
+function importarDesdeQR() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    showToast('📷 Procesando imagen QR...');
+    showToast('⚠️ Para escanear QR, usa la cámara del otro dispositivo y la función "Generar QR para Exportar"');
+  };
+  input.click();
 }
 
 // ==========================================
