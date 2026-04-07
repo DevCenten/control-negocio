@@ -36,6 +36,9 @@ let productosSeleccionados = [];
 // INICIALIZACIÓN
 // ==========================================
 window.onload = function() {
+  // Normalizar datos al cargar
+  normalizarTodosLosDatos();
+  
   window.addEventListener('online', () => {
     CONFIG.isOnline = true;
     updateSyncStatus('online');
@@ -64,6 +67,123 @@ function generarDeviceId() {
   const id = 'device_' + Math.random().toString(36).substr(2, 9);
   localStorage.setItem('deviceId', id);
   return id;
+}
+
+// ==========================================
+// NORMALIZACIÓN DE DATOS (CRÍTICO)
+// ==========================================
+function normalizarTodosLosDatos() {
+  lotes = lotes.map(normalizarLote);
+  compras = compras.map(normalizarCompra);
+  ventas = ventas.map(normalizarVenta);
+  abonos = abonos.map(normalizarAbono);
+  cobros = cobros.map(normalizarCobro);
+  saveLocalData();
+}
+
+function limpiarTexto(texto) {
+  if (typeof texto !== 'string') return texto;
+  return texto.trim();
+}
+
+function limpiarNumero(valor) {
+  if (typeof valor === 'number') return valor;
+  if (typeof valor === 'string') {
+    const num = parseFloat(valor.trim());
+    return isNaN(num) ? 0 : num;
+  }
+  return 0;
+}
+
+function normalizarLote(l) {
+  return {
+    ...l,
+    id: limpiarTexto(l.id || ''),
+    fechaRecepcion: limpiarTexto(l.fechaRecepcion || ''),
+    fechaLimite: limpiarTexto(l.fechaLimite || ''),
+    totalInicial: limpiarNumero(l.totalInicial),
+    abonado: limpiarNumero(l.abonado),
+    saldoPendiente: limpiarNumero(l.saldoPendiente),
+    estado: limpiarTexto(l.estado || 'PENDIENTE'),
+    productos: (l.productos || []).map(p => ({
+      nombre: limpiarTexto(p.nombre || ''),
+      cantidad: parseInt(p.cantidad) || 1,
+      precioCarmen: limpiarNumero(p.precioCarmen),
+      vendido: p.vendido || false
+    })),
+    lastModified: l.lastModified || Date.now()
+  };
+}
+
+function normalizarCompra(c) {
+  return {
+    ...c,
+    id: limpiarTexto(c.id || ''),
+    fecha: limpiarTexto(c.fecha || ''),
+    proveedor: limpiarTexto(c.proveedor || ''),
+    productos: (c.productos || []).map(p => ({
+      nombre: limpiarTexto(p.nombre || ''),
+      cantidad: parseInt(p.cantidad) || 1,
+      precioCompra: limpiarNumero(p.precioCompra),
+      vendido: p.vendido || false
+    })),
+    lastModified: c.lastModified || Date.now()
+  };
+}
+
+function normalizarVenta(v) {
+  return {
+    ...v,
+    id: limpiarTexto(v.id || ''),
+    cliente: limpiarTexto(v.cliente || ''),
+    telefono: limpiarTexto(v.telefono || ''),
+    fecha: limpiarTexto(v.fecha || ''),
+    precioTotal: limpiarNumero(v.precioTotal),
+    prima: limpiarNumero(v.prima),
+    saldo: limpiarNumero(v.saldo),
+    pagado: limpiarNumero(v.pagado),
+    cuotaMensual: limpiarNumero(v.cuotaMensual),
+    meses: parseInt(v.meses) || 12,
+    estado: limpiarTexto(v.estado || 'PENDIENTE'),
+    proximaFechaCobro: limpiarTexto(v.proximaFechaCobro || ''),
+    productos: (v.productos || []).map(p => ({
+      nombre: limpiarTexto(p.nombre || ''),
+      cantidad: parseInt(p.cantidad) || 1,
+      precioCarmen: limpiarNumero(p.precioCarmen),
+      precioCompra: limpiarNumero(p.precioCompra),
+      precioVenta: limpiarNumero(p.precioVenta),
+      sourceType: limpiarTexto(p.sourceType || 'manual'),
+      sourceId: p.sourceId ? limpiarTexto(p.sourceId) : null
+    })),
+    lastModified: v.lastModified || Date.now()
+  };
+}
+
+function normalizarAbono(a) {
+  return {
+    ...a,
+    id: limpiarTexto(a.id || ''),
+    loteId: limpiarTexto(a.loteId || ''),
+    fecha: limpiarTexto(a.fecha || ''),
+    monto: limpiarNumero(a.monto),
+    metodo: limpiarTexto(a.metodo || ''),
+    notas: limpiarTexto(a.notas || ''),
+    saldoDespues: limpiarNumero(a.saldoDespues),
+    lastModified: a.lastModified || Date.now()
+  };
+}
+
+function normalizarCobro(c) {
+  return {
+    ...c,
+    id: limpiarTexto(c.id || ''),
+    ventaId: limpiarTexto(c.ventaId || ''),
+    fecha: limpiarTexto(c.fecha || ''),
+    monto: limpiarNumero(c.monto),
+    metodo: limpiarTexto(c.metodo || ''),
+    notas: limpiarTexto(c.notas || ''),
+    lastModified: c.lastModified || Date.now()
+  };
 }
 
 // ==========================================
@@ -246,11 +366,11 @@ async function procesarRespuestaExitosa(resultado) {
   };
   
   if (resultado.data) {
-    if (resultado.data.lotes) lotes = parseProductos(resultado.data.lotes);
-    if (resultado.data.compras) compras = parseProductos(resultado.data.compras);
-    if (resultado.data.ventas) ventas = parseProductos(resultado.data.ventas);
-    if (resultado.data.abonos) abonos = resultado.data.abonos || [];
-    if (resultado.data.cobros) cobros = resultado.data.cobros || [];
+    if (resultado.data.lotes) lotes = parseProductos(resultado.data.lotes).map(normalizarLote);
+    if (resultado.data.compras) compras = parseProductos(resultado.data.compras).map(normalizarCompra);
+    if (resultado.data.ventas) ventas = parseProductos(resultado.data.ventas).map(normalizarVenta);
+    if (resultado.data.abonos) abonos = (resultado.data.abonos || []).map(normalizarAbono);
+    if (resultado.data.cobros) cobros = (resultado.data.cobros || []).map(normalizarCobro);
     saveLocalData();
     renderCurrentSection();
     updateResumen();
@@ -265,7 +385,7 @@ async function procesarRespuestaExitosa(resultado) {
 function updateSyncStatus(status) {
   const indicator = document.getElementById('syncStatus');
   const configs = {
-    online: { color: 'pink', text: 'En línea' },
+    online: { color: 'green', text: 'En línea' },
     offline: { color: 'red', text: 'Sin conexión' },
     syncing: { color: 'yellow', text: 'Sincronizando...', pulse: true },
     synced: { color: 'blue', text: 'Sincronizado' },
@@ -327,54 +447,6 @@ function procesarImportacion() {
   reader.readAsText(file);
 }
 
-function normalizarLote(l) {
-  return {
-    ...l,
-    id: (l.id || '').toString().trim(),
-    totalInicial: parseFloat(l.totalInicial) || 0,
-    abonado: parseFloat(l.abonado) || 0,
-    saldoPendiente: parseFloat(l.saldoPendiente) || 0,
-    estado: (l.estado || 'PENDIENTE').toString().trim()
-  };
-}
-
-function normalizarCompra(c) {
-  return c;
-}
-
-function normalizarVenta(v) {
-  return {
-    ...v,
-    id: (v.id || '').toString().trim(),
-    precioTotal: parseFloat(v.precioTotal) || 0,
-    prima: parseFloat(v.prima) || 0,
-    saldo: parseFloat(v.saldo) || 0,
-    pagado: parseFloat(v.pagado) || 0,
-    cuotaMensual: parseFloat(v.cuotaMensual) || 0,
-    meses: parseInt(v.meses) || 12,
-    estado: (v.estado || 'PENDIENTE').toString().trim()
-  };
-}
-
-function normalizarAbono(a) {
-  return {
-    ...a,
-    id: (a.id || '').toString().trim(),
-    loteId: (a.loteId || '').toString().trim(),
-    monto: parseFloat(a.monto) || 0,
-    saldoDespues: parseFloat(a.saldoDespues) || 0
-  };
-}
-
-function normalizarCobro(c) {
-  return {
-    ...c,
-    id: (c.id || '').toString().trim(),
-    ventaId: (c.ventaId || '').toString().trim(),
-    monto: parseFloat(c.monto) || 0
-  };
-}
-
 // ==========================================
 // DATOS LOCALES
 // ==========================================
@@ -387,33 +459,95 @@ function saveLocalData() {
   updateResumen();
 }
 
+// ==========================================
+// RESUMEN - FUNCIÓN CRÍTICA CORREGIDA
+// ==========================================
 function updateResumen() {
-  const deudaCarmen = lotes.reduce((sum, l) => sum + (parseFloat(l.saldoPendiente) || 0), 0);
-  const totalCompras = compras.reduce((sum, c) => {
-    const stock = c.productos?.filter(p => !p.vendido).reduce((s, p) =>
-      s + ((parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1)), 0) || 0;
-    return sum + stock;
-  }, 0);
-  const clientesDeben = ventas.reduce((sum, v) => sum + (parseFloat(v.saldo) || 0), 0);
-  const gananciaEstimada = ventas.reduce((sum, v) => {
-    const costo = v.productos?.reduce((c, p) => {
-      const precioCosto = parseFloat(p.precioCarmen) || parseFloat(p.precioCompra) || 0;
-      return c + (precioCosto * (parseInt(p.cantidad) || 1));
-    }, 0) || 0;
-    return sum + ((parseFloat(v.precioTotal) || 0) - costo);
-  }, 0);
+  try {
+    // Deuda con Carmen (suma de saldos pendientes de lotes)
+    const deudaCarmen = lotes.reduce((sum, l) => {
+      const saldo = parseFloat(l.saldoPendiente) || 0;
+      return sum + saldo;
+    }, 0);
+    
+    // Mis Compras (valor del stock en compras)
+    const totalCompras = compras.reduce((sum, c) => {
+      const stock = (c.productos || []).filter(p => !p.vendido).reduce((s, p) => {
+        const precio = parseFloat(p.precioCompra) || 0;
+        const cant = parseInt(p.cantidad) || 1;
+        return s + (precio * cant);
+      }, 0);
+      return sum + stock;
+    }, 0);
+    
+    // Clientes me deben (suma de saldos de ventas pendientes)
+    const clientesDeben = ventas.reduce((sum, v) => {
+      const saldo = parseFloat(v.saldo) || 0;
+      return sum + saldo;
+    }, 0);
+    
+    // Ganancia Estimada (precio venta - costo)
+    const gananciaEstimada = ventas.reduce((sum, v) => {
+      const totalVenta = parseFloat(v.precioTotal) || 0;
+      const costo = (v.productos || []).reduce((c, p) => {
+        const precioCosto = parseFloat(p.precioCarmen) || parseFloat(p.precioCompra) || 0;
+        const cant = parseInt(p.cantidad) || 1;
+        return c + (precioCosto * cant);
+      }, 0);
+      return sum + (totalVenta - costo);
+    }, 0);
+    
+    // Actualizar DOM
+    document.getElementById('deudaCarmen').textContent = `C$${deudaCarmen.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
+    document.getElementById('totalCompras').textContent = `C$${totalCompras.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
+    document.getElementById('clientesDeben').textContent = `C$${clientesDeben.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
+    document.getElementById('gananciaEstimada').textContent = `C$${gananciaEstimada.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
+    document.getElementById('countLotes').textContent = lotes.filter(l => l.estado === 'PENDIENTE').length;
+    document.getElementById('countCompras').textContent = compras.length;
+    document.getElementById('countVentas').textContent = ventas.filter(v => v.estado === 'PENDIENTE').length;
+    
+    const totalStock = [...lotes, ...compras].reduce((sum, item) =>
+      sum + ((item.productos || []).filter(p => !p.vendido).length || 0), 0);
+    document.getElementById('countStock').textContent = totalStock;
+    
+    console.log('✅ Resumen actualizado:', { deudaCarmen, totalCompras, clientesDeben, gananciaEstimada });
+  } catch (error) {
+    console.error('❌ Error en updateResumen:', error);
+  }
+}
+
+// ==========================================
+// FUNCIÓN DE DIAGNÓSTICO (PARA VERIFICAR DATOS)
+// ==========================================
+function diagnosticarDatos() {
+  console.log('=== DIAGNÓSTICO DE DATOS ===');
+  console.log('Lotes:', lotes.length);
+  console.log('Ventas:', ventas.length);
+  console.log('Abonos:', abonos.length);
+  console.log('Cobros:', cobros.length);
   
-  document.getElementById('deudaCarmen').textContent = `C$${deudaCarmen.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
-  document.getElementById('totalCompras').textContent = `C$${totalCompras.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
-  document.getElementById('clientesDeben').textContent = `C$${clientesDeben.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
-  document.getElementById('gananciaEstimada').textContent = `C$${gananciaEstimada.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
-  document.getElementById('countLotes').textContent = lotes.filter(l => l.estado === 'PENDIENTE').length;
-  document.getElementById('countCompras').textContent = compras.length;
-  document.getElementById('countVentas').textContent = ventas.filter(v => v.estado === 'PENDIENTE').length;
+  console.log('\n--- Muestras de Datos ---');
+  if (lotes.length > 0) {
+    console.log('Primer Lote:', lotes[0]);
+  }
+  if (ventas.length > 0) {
+    console.log('Primera Venta:', ventas[0]);
+  }
   
-  const totalStock = [...lotes, ...compras].reduce((sum, item) =>
-    sum + (item.productos?.filter(p => !p.vendido).length || 0), 0);
-  document.getElementById('countStock').textContent = totalStock;
+  console.log('\n--- Cálculos Individuales ---');
+  lotes.forEach((l, i) => {
+    if (i < 3) {
+      console.log(`Lote ${l.id}: saldoPendiente=${l.saldoPendiente} (tipo: ${typeof l.saldoPendiente})`);
+    }
+  });
+  
+  ventas.forEach((v, i) => {
+    if (i < 3) {
+      console.log(`Venta ${v.id}: saldo=${v.saldo} (tipo: ${typeof v.saldo})`);
+    }
+  });
+  
+  return { lotes: lotes.length, ventas: ventas.length, abonos: abonos.length, cobros: cobros.length };
 }
 
 // ==========================================
@@ -471,7 +605,7 @@ function cerrarModal(modalId) {
 }
 
 // ==========================================
-// ELIMINAR ABONOS Y COBROS - FUNCIONES CRÍTICAS
+// ELIMINAR ABONOS Y COBROS
 // ==========================================
 function eliminarAbono() {
   if (!abonoSeleccionadoId) {
@@ -544,7 +678,7 @@ function eliminarCobro() {
 }
 
 // ==========================================
-// VER DETALLE - ABONOS Y COBROS (CON BOTÓN ELIMINAR)
+// VER DETALLE - ABONOS Y COBROS
 // ==========================================
 function verDetalleAbono(abonoId) {
   const abono = abonos.find(a => a.id === abonoId);
@@ -768,7 +902,7 @@ function enviarWhatsAppVenta(ventaId) {
     return;
   }
   
-  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
+  let mensaje = `🌸 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🌸\n\n`;
   mensaje += `📋 *RECIBO DE VENTA*\n\n`;
   mensaje += `*ID:* ${venta.id}\n`;
   mensaje += `*Cliente:* ${venta.cliente}\n`;
@@ -784,7 +918,7 @@ function enviarWhatsAppVenta(ventaId) {
   mensaje += `\n*PRIMA:* C$${(venta.prima).toLocaleString()}`;
   mensaje += `\n*SALDO:* C$${(venta.saldo).toLocaleString()}`;
   mensaje += `\n*CUOTA:* C$${(venta.cuotaMensual).toLocaleString()} x ${venta.meses} meses`;
-  mensaje += `\n\n💖 ¡Gracias por su compra! 💖`;
+  mensaje += `\n\n🌸 ¡Gracias por su compra! 🌸`;
   mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
   
   const telefono = venta.telefono?.replace(/[^0-9]/g, '') || '';
@@ -862,7 +996,7 @@ function enviarWhatsAppAbono(abonoId) {
   
   const lote = lotes.find(l => l.id === abono.loteId);
   
-  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
+  let mensaje = `🌸 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🌸\n\n`;
   mensaje += `📋 *RECIBO DE ABONO*\n\n`;
   mensaje += `*ID Abono:* ${abono.id}\n`;
   mensaje += `*Lote:* ${abono.loteId}\n`;
@@ -878,7 +1012,7 @@ function enviarWhatsAppAbono(abonoId) {
     mensaje += `\n*Notas:* ${abono.notas}`;
   }
   
-  mensaje += `\n\n💖 ¡Gracias por su crédito! 💖`;
+  mensaje += `\n\n🌸 ¡Gracias por su abono! 🌸`;
   mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
   
   const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
@@ -953,7 +1087,7 @@ function enviarWhatsAppCobro(cobroId) {
   
   const venta = ventas.find(v => v.id === cobro.ventaId);
   
-  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
+  let mensaje = `🌸 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🌸\n\n`;
   mensaje += `📋 *RECIBO DE COBRO*\n\n`;
   mensaje += `*ID Cobro:* ${cobro.id}\n`;
   mensaje += `*Venta:* ${cobro.ventaId}\n`;
@@ -970,7 +1104,7 @@ function enviarWhatsAppCobro(cobroId) {
     mensaje += `\n*Notas:* ${cobro.notas}`;
   }
   
-  mensaje += `\n\n💖 ¡Gracias por su pago! 💖`;
+  mensaje += `\n\n🌸 ¡Gracias por su pago! 🌸`;
   mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
   
   const telefono = venta?.telefono?.replace(/[^0-9]/g, '') || '';
