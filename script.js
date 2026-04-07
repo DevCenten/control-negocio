@@ -768,7 +768,7 @@ function enviarWhatsAppVenta(ventaId) {
     return;
   }
   
-  let mensaje = `🌸 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🌸\n\n`;
+  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
   mensaje += `📋 *RECIBO DE VENTA*\n\n`;
   mensaje += `*ID:* ${venta.id}\n`;
   mensaje += `*Cliente:* ${venta.cliente}\n`;
@@ -784,7 +784,7 @@ function enviarWhatsAppVenta(ventaId) {
   mensaje += `\n*PRIMA:* C$${(venta.prima).toLocaleString()}`;
   mensaje += `\n*SALDO:* C$${(venta.saldo).toLocaleString()}`;
   mensaje += `\n*CUOTA:* C$${(venta.cuotaMensual).toLocaleString()} x ${venta.meses} meses`;
-  mensaje += `\n\n🌸 ¡Gracias por su compra! 🌸`;
+  mensaje += `\n\n💖 ¡Gracias por su compra! 💖`;
   mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
   
   const telefono = venta.telefono?.replace(/[^0-9]/g, '') || '';
@@ -862,7 +862,7 @@ function enviarWhatsAppAbono(abonoId) {
   
   const lote = lotes.find(l => l.id === abono.loteId);
   
-  let mensaje = `🌸 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🌸\n\n`;
+  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
   mensaje += `📋 *RECIBO DE ABONO*\n\n`;
   mensaje += `*ID Abono:* ${abono.id}\n`;
   mensaje += `*Lote:* ${abono.loteId}\n`;
@@ -878,7 +878,7 @@ function enviarWhatsAppAbono(abonoId) {
     mensaje += `\n*Notas:* ${abono.notas}`;
   }
   
-  mensaje += `\n\n🌸 ¡Gracias por su abono! 🌸`;
+  mensaje += `\n\n💖 ¡Gracias por su crédito! 💖`;
   mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
   
   const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
@@ -953,7 +953,7 @@ function enviarWhatsAppCobro(cobroId) {
   
   const venta = ventas.find(v => v.id === cobro.ventaId);
   
-  let mensaje = `🌸 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🌸\n\n`;
+  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
   mensaje += `📋 *RECIBO DE COBRO*\n\n`;
   mensaje += `*ID Cobro:* ${cobro.id}\n`;
   mensaje += `*Venta:* ${cobro.ventaId}\n`;
@@ -970,7 +970,7 @@ function enviarWhatsAppCobro(cobroId) {
     mensaje += `\n*Notas:* ${cobro.notas}`;
   }
   
-  mensaje += `\n\n🌸 ¡Gracias por su pago! 🌸`;
+  mensaje += `\n\n💖 ¡Gracias por su pago! 💖`;
   mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
   
   const telefono = venta?.telefono?.replace(/[^0-9]/g, '') || '';
