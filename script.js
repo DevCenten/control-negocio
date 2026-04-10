@@ -1882,7 +1882,7 @@ function enviarWhatsAppVenta(ventaId) {
     return;
   }
   
-  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
+  let mensaje = `🦋*ELECTRODOMÉSTICOS Y VARIEDADES KAREN*🦋\n\n`;
   mensaje += `📋 *RECIBO DE VENTA*\n\n`;
   mensaje += `*ID:* ${venta.id}\n`;
   mensaje += `*Cliente:* ${venta.cliente}\n`;
@@ -1898,7 +1898,7 @@ function enviarWhatsAppVenta(ventaId) {
   mensaje += `\n*PRIMA:* C$${(venta.prima).toLocaleString()}`;
   mensaje += `\n*SALDO:* C$${(venta.saldo).toLocaleString()}`;
   mensaje += `\n*CUOTA:* C$${(venta.cuotaMensual).toLocaleString()} x ${venta.meses} meses`;
-  mensaje += `\n\n❤️ ¡Gracias por su compra! ❤️`;
+  mensaje += `\n\n🌹¡Gracias por su compra!🌹`;
   mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
   
   const telefono = venta.telefono?.replace(/[^0-9]/g, '') || '';
@@ -1976,7 +1976,7 @@ function enviarWhatsAppAbono(abonoId) {
   
   const lote = lotes.find(l => l.id === abono.loteId);
   
-  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
+  let mensaje = `🦋*ELECTRODOMÉSTICOS Y VARIEDADES KAREN*🦋\n\n`;
   mensaje += `📋 *RECIBO DE ABONO*\n\n`;
   mensaje += `*ID Abono:* ${abono.id}\n`;
   mensaje += `*Lote:* ${abono.loteId}\n`;
@@ -1992,7 +1992,7 @@ function enviarWhatsAppAbono(abonoId) {
     mensaje += `\n*Notas:* ${abono.notas}`;
   }
   
-  mensaje += `\n\n🌹 ¡Gracias por darme crédito! 🌹`;
+  mensaje += `\n\n❤️¡Gracias por darme crédito!❤️`;
   mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
   
   const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
