@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#ec4899">
   <meta name="description" content="Sistema de gestión de lotes, compras, ventas y finanzas">
-  <title>Electrodomésticos y Variedades Karen</title>
+  <title>Electrodomésticos y Variedades Karen 🦋</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="https://via.placeholder.com/192.png/ec4899/ffffff?text=EVK">
   <link rel="apple-touch-icon" href="https://via.placeholder.com/192.png/ec4899/ffffff?text=EVK">
@@ -19,8 +19,8 @@
   <header class="bg-white dark:bg-slate-800 shadow-lg sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-3">
       <div class="flex justify-between items-center">
-        <h1 class="text-xl font-bold text-pink-600 dark:text-pink-400">ELECTRODOMÉSTICOS Y VARIEDADES KAREN</h1>
-        <div class="flex items-center gap-3">
+        <h1 class="text-lg font-bold text-pink-600 dark:text-pink-400">ELECTRODOMÉSTICOS Y VARIEDADES KAREN</h1>
+        <div class="flex items-center gap-2 flex-wrap justify-end">
           <div id="syncStatus" class="flex items-center gap-2 text-sm">
             <span class="w-2 h-2 rounded-full bg-gray-400"></span>
             <span class="text-gray-600 dark:text-gray-400">Verificando...</span>
@@ -36,17 +36,17 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
             </svg>
           </button>
-          <button onclick="exportarDatos()" class="p-2 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600" title="Exportar">
+          <button onclick="exportarDatos()" class="p-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-xl hover:bg-green-200 dark:hover:bg-green-900/50" title="Exportar Backup">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
             </svg>
           </button>
-          <button onclick="mostrarImportar()" class="p-2 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600" title="Importar">
+          <button onclick="mostrarImportar()" class="p-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-xl hover:bg-yellow-200 dark:hover:bg-yellow-900/50" title="Importar Backup">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
             </svg>
           </button>
-          <button onclick="mostrarQRSync()" class="p-2 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600" title="QR Sync">
+          <button onclick="mostrarQRSync()" class="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-200 dark:hover:bg-blue-900/50" title="QR Sync">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
             </svg>
@@ -60,6 +60,40 @@
   <div id="syncIndicator" class="hidden fixed top-16 left-0 right-0 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 py-2 text-center text-sm z-30">
     🔄 Sincronizando...
   </div>
+
+  <!-- Buscador Global -->
+  <section class="max-w-7xl mx-auto px-4 py-3">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-3">
+      <div class="flex gap-2">
+        <div class="relative flex-1">
+          <input type="text" id="buscadorGlobal" oninput="buscarClienteGlobal()" placeholder="🔍 Buscar cliente por nombre..." class="w-full p-3 pl-10 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white">
+          <svg class="w-5 h-5 absolute left-3 top-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </div>
+        <button onclick="limpiarBusqueda()" class="px-4 py-2 bg-gray-200 dark:bg-slate-700 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-slate-600">
+          Limpiar
+        </button>
+      </div>
+      <div id="resultadosBusquedaGlobal" class="hidden mt-3 space-y-2 max-h-64 overflow-y-auto"></div>
+    </div>
+  </section>
+
+  <!-- Recordatorios de Cobro -->
+  <section class="max-w-7xl mx-auto px-4 py-2">
+    <div class="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-4 text-white shadow-xl">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-bold flex items-center gap-2">
+          🔔 Recordatorios de Cobro
+          <span id="countRecordatorios" class="bg-white text-orange-600 px-2 py-0.5 rounded-full text-sm">0</span>
+        </h2>
+        <button onclick="toggleRecordatorios()" class="text-sm bg-white/20 px-3 py-1 rounded-lg hover:bg-white/30">
+          Ver/Ocultar
+        </button>
+      </div>
+      <div id="listaRecordatorios" class="hidden space-y-2 max-h-48 overflow-y-auto"></div>
+    </div>
+  </section>
 
   <!-- Resumen -->
   <section class="max-w-7xl mx-auto px-4 py-4">
@@ -126,7 +160,7 @@
   
   <!-- LOTES -->
   <section id="sectionLotes" class="max-w-7xl mx-auto px-4 pb-20">
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
       <select id="filtroLotes" onchange="renderLotes()" class="p-2 bg-white dark:bg-slate-800 rounded-xl border border-gray-300 dark:border-gray-600">
         <option value="todos">Todos</option>
         <option value="pendientes">Pendientes</option>
@@ -141,7 +175,7 @@
 
   <!-- COMPRAS -->
   <section id="sectionCompras" class="max-w-7xl mx-auto px-4 pb-20 hidden">
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
       <select id="filtroCompras" onchange="renderCompras()" class="p-2 bg-white dark:bg-slate-800 rounded-xl border border-gray-300 dark:border-gray-600">
         <option value="todos">Todos</option>
         <option value="stock">En Stock</option>
@@ -156,7 +190,7 @@
 
   <!-- VENTAS -->
   <section id="sectionVentas" class="max-w-7xl mx-auto px-4 pb-20 hidden">
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
       <select id="filtroVentas" onchange="renderVentas()" class="p-2 bg-white dark:bg-slate-800 rounded-xl border border-gray-300 dark:border-gray-600">
         <option value="todos">Todos</option>
         <option value="pendientes">Pendientes</option>
@@ -171,21 +205,27 @@
 
   <!-- FINANZAS -->
   <section id="sectionFinanzas" class="max-w-7xl mx-auto px-4 pb-20 hidden">
-    <div class="flex gap-2 mb-4">
-      <button onclick="showForm('abono')" class="flex-1 px-4 py-3 bg-pink-600 text-white rounded-xl font-medium hover:bg-pink-700">
-        + Abonar a Carmen
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <button onclick="showForm('abono')" class="px-4 py-3 bg-pink-600 text-white rounded-xl font-medium hover:bg-pink-700 flex items-center justify-center gap-2">
+        <span>+</span> Abonar a Carmen
       </button>
-      <button onclick="showForm('cobro')" class="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700">
-        + Cobrar Cliente
+      <button onclick="showForm('cobro')" class="px-4 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 flex items-center justify-center gap-2">
+        <span>+</span> Cobrar Cliente
       </button>
     </div>
     <div class="grid md:grid-cols-2 gap-4">
       <div>
-        <h3 class="font-bold text-lg mb-3 text-pink-600 dark:text-pink-400">Abonos a Carmen</h3>
+        <h3 class="font-bold text-lg mb-3 text-pink-600 dark:text-pink-400 flex justify-between items-center">
+          Abonos a Carmen
+          <span id="countAbonos" class="text-sm bg-pink-100 dark:bg-pink-900/30 px-2 py-1 rounded-full">0</span>
+        </h3>
         <div id="listaAbonos" class="space-y-2"></div>
       </div>
       <div>
-        <h3 class="font-bold text-lg mb-3 text-green-600 dark:text-green-400">Cobros a Clientes</h3>
+        <h3 class="font-bold text-lg mb-3 text-green-600 dark:text-green-400 flex justify-between items-center">
+          Cobros a Clientes
+          <span id="countCobros" class="text-sm bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">0</span>
+        </h3>
         <div id="listaCobros" class="space-y-2"></div>
       </div>
     </div>
@@ -230,9 +270,9 @@
           <p class="text-xs text-yellow-700 dark:text-yellow-400 mt-1">El lote volverá a estado PENDIENTE</p>
         </div>
       </div>
-      <div class="flex gap-3 mt-6">
+      <div class="flex gap-3 mt-6 flex-wrap">
         <button onclick="guardarLote()" class="flex-1 bg-pink-600 text-white py-3 rounded-xl font-medium hover:bg-pink-700">Guardar</button>
-        <button onclick="eliminarLote()" id="btnEliminarLote" class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 hidden">🗑️</button>
+        <button onclick="eliminarLote()" id="btnEliminarLote" class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 hidden">🗑️ Eliminar</button>
         <button onclick="hideForms()" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cancelar</button>
       </div>
     </div>
@@ -267,9 +307,9 @@
           <p class="text-right text-sm font-bold mt-2">Total Compra: <span id="previewTotalCompra">C$0.00</span></p>
         </div>
       </div>
-      <div class="flex gap-3 mt-6">
+      <div class="flex gap-3 mt-6 flex-wrap">
         <button onclick="guardarCompra()" class="flex-1 bg-purple-600 text-white py-3 rounded-xl font-medium hover:bg-purple-700">Guardar</button>
-        <button onclick="eliminarCompra()" id="btnEliminarCompra" class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 hidden">🗑️</button>
+        <button onclick="eliminarCompra()" id="btnEliminarCompra" class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 hidden">🗑️ Eliminar</button>
         <button onclick="hideForms()" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cancelar</button>
       </div>
     </div>
@@ -347,9 +387,9 @@
           </label>
         </div>
       </div>
-      <div class="flex gap-3 mt-6">
+      <div class="flex gap-3 mt-6 flex-wrap">
         <button onclick="guardarVenta()" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-medium hover:bg-green-700">Guardar Venta</button>
-        <button onclick="eliminarVenta()" id="btnEliminarVenta" class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 hidden">🗑️</button>
+        <button onclick="eliminarVenta()" id="btnEliminarVenta" class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 hidden">🗑️ Eliminar</button>
         <button onclick="hideForms()" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cancelar</button>
       </div>
     </div>
@@ -401,9 +441,9 @@
           <textarea id="abonoNotas" rows="2" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white" placeholder="Notas adicionales..."></textarea>
         </div>
       </div>
-      <div class="flex gap-3 mt-6">
-        <button onclick="guardarAbono()" class="flex-1 bg-pink-600 text-white py-3 rounded-xl font-medium hover:bg-pink-700">Registrar Abono</button>
-        <button onclick="eliminarAbono()" id="btnEliminarAbono" class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 hidden">🗑️</button>
+      <div class="flex gap-3 mt-6 flex-wrap">
+        <button onclick="guardarAbono()" class="flex-1 bg-pink-600 text-white py-3 rounded-xl font-medium hover:bg-pink-700">Guardar Abono</button>
+        <button onclick="eliminarAbono()" id="btnEliminarAbono" class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 hidden">🗑️ Eliminar</button>
         <button onclick="hideForms()" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cancelar</button>
       </div>
     </div>
@@ -442,9 +482,9 @@
           <textarea id="cobroNotas" rows="2" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white" placeholder="Notas adicionales..."></textarea>
         </div>
       </div>
-      <div class="flex gap-3 mt-6">
-        <button onclick="guardarCobro()" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-medium hover:bg-green-700">Registrar Cobro</button>
-        <button onclick="eliminarCobro()" id="btnEliminarCobro" class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 hidden">🗑️</button>
+      <div class="flex gap-3 mt-6 flex-wrap">
+        <button onclick="guardarCobro()" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-medium hover:bg-green-700">Guardar Cobro</button>
+        <button onclick="eliminarCobro()" id="btnEliminarCobro" class="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 hidden">🗑️ Eliminar</button>
         <button onclick="hideForms()" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cancelar</button>
       </div>
     </div>
@@ -489,7 +529,7 @@
     <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
       <h3 id="tituloDetalleLote" class="text-xl font-bold mb-4">Detalle Lote</h3>
       <div id="contenidoDetalleLote"></div>
-      <div class="flex gap-3 mt-6">
+      <div class="flex gap-3 mt-6 flex-wrap">
         <button onclick="editarLoteDesdeModal()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700">✏️ Editar</button>
         <button onclick="cerrarModal('modalDetalleLote')" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cerrar</button>
       </div>
@@ -501,7 +541,7 @@
     <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
       <h3 id="tituloDetalleCompra" class="text-xl font-bold mb-4">Detalle Compra</h3>
       <div id="contenidoDetalleCompra"></div>
-      <div class="flex gap-3 mt-6">
+      <div class="flex gap-3 mt-6 flex-wrap">
         <button onclick="editarCompraDesdeModal()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700">✏️ Editar</button>
         <button onclick="cerrarModal('modalDetalleCompra')" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cerrar</button>
       </div>
@@ -513,48 +553,57 @@
     <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
       <h3 id="tituloDetalleVenta" class="text-xl font-bold mb-4">Detalle Venta</h3>
       <div id="contenidoDetalleVenta"></div>
-      <div class="flex gap-3 mt-6">
-        <button onclick="generarPDFVenta(ventaSeleccionadaId)" class="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600">📄 PDF</button>
-        <button onclick="enviarWhatsAppVenta(ventaSeleccionadaId)" class="flex-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 py-3 rounded-xl font-medium hover:bg-green-200 dark:hover:bg-green-900/50">💬 WhatsApp</button>
+      <div class="flex gap-2 mt-4 flex-wrap">
+        <button onclick="generarPDFVenta(ventaSeleccionadaId)" class="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 py-2 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600 text-sm">📄 PDF</button>
+        <button onclick="enviarWhatsAppVenta(ventaSeleccionadaId)" class="flex-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 py-2 rounded-xl font-medium hover:bg-green-200 dark:hover:bg-green-900/50 text-sm">💬 WhatsApp</button>
       </div>
-      <div class="flex gap-3 mt-3">
-        <button onclick="editarVentaDesdeModal()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700">✏️ Editar</button>
-        <button onclick="cerrarModal('modalDetalleVenta')" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cerrar</button>
+      <div class="flex gap-2 mt-2 flex-wrap">
+        <button onclick="editarVentaDesdeModal()" class="flex-1 bg-blue-600 text-white py-2 rounded-xl font-medium hover:bg-blue-700 text-sm">✏️ Editar Venta</button>
+        <button onclick="registrarCobroDesdeVenta()" class="flex-1 bg-green-600 text-white py-2 rounded-xl font-medium hover:bg-green-700 text-sm">💰 Registrar Cobro</button>
+      </div>
+      <div class="mt-2">
+        <button onclick="cerrarModal('modalDetalleVenta')" class="w-full bg-gray-200 dark:bg-slate-700 py-2 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600 text-sm">Cerrar</button>
       </div>
     </div>
   </div>
 
-<!-- Modal Detalle Abono -->
-<div id="modalDetalleAbono" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-  <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-    <h3 id="tituloDetalleAbono" class="text-xl font-bold mb-4">Detalle Abono</h3>
-    <div id="contenidoDetalleAbono"></div>
-    <div class="flex gap-3 mt-6">
-      <button onclick="generarPDFAbono(abonoSeleccionadoId)" class="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600">📄 PDF</button>
-      <button onclick="enviarWhatsAppAbono(abonoSeleccionadoId)" class="flex-1 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400 py-3 rounded-xl font-medium hover:bg-pink-200 dark:hover:bg-pink-900/50">💬 WhatsApp</button>
-    </div>
-    <div class="flex gap-3 mt-3">
-      <button onclick="eliminarAbono()" class="flex-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 py-3 rounded-xl font-medium hover:bg-red-200 dark:hover:bg-red-900/50">🗑️ Eliminar</button>
-      <button onclick="cerrarModal('modalDetalleAbono')" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cerrar</button>
+  <!-- Modal Detalle Abono -->
+  <div id="modalDetalleAbono" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+      <h3 id="tituloDetalleAbono" class="text-xl font-bold mb-4">Detalle Abono</h3>
+      <div id="contenidoDetalleAbono"></div>
+      <div class="flex gap-2 mt-4 flex-wrap">
+        <button onclick="generarPDFAbono(abonoSeleccionadoId)" class="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 py-2 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600 text-sm">📄 PDF</button>
+        <button onclick="enviarWhatsAppAbono(abonoSeleccionadoId)" class="flex-1 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400 py-2 rounded-xl font-medium hover:bg-pink-200 dark:hover:bg-pink-900/50 text-sm">💬 WhatsApp</button>
+      </div>
+      <div class="flex gap-2 mt-2 flex-wrap">
+        <button onclick="editarAbonoDesdeModal()" class="flex-1 bg-blue-600 text-white py-2 rounded-xl font-medium hover:bg-blue-700 text-sm">✏️ Editar</button>
+        <button onclick="eliminarAbono()" class="flex-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 py-2 rounded-xl font-medium hover:bg-red-200 dark:hover:bg-red-900/50 text-sm">🗑️ Eliminar</button>
+      </div>
+      <div class="mt-2">
+        <button onclick="cerrarModal('modalDetalleAbono')" class="w-full bg-gray-200 dark:bg-slate-700 py-2 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600 text-sm">Cerrar</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Modal Detalle Cobro -->
-<div id="modalDetalleCobro" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-  <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-    <h3 id="tituloDetalleCobro" class="text-xl font-bold mb-4">Detalle Cobro</h3>
-    <div id="contenidoDetalleCobro"></div>
-    <div class="flex gap-3 mt-6">
-      <button onclick="generarPDFCobro(cobroSeleccionadoId)" class="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600">📄 PDF</button>
-      <button onclick="enviarWhatsAppCobro(cobroSeleccionadoId)" class="flex-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 py-3 rounded-xl font-medium hover:bg-green-200 dark:hover:bg-green-900/50">💬 WhatsApp</button>
-    </div>
-    <div class="flex gap-3 mt-3">
-      <button onclick="eliminarCobro()" class="flex-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 py-3 rounded-xl font-medium hover:bg-red-200 dark:hover:bg-red-900/50">🗑️ Eliminar</button>
-      <button onclick="cerrarModal('modalDetalleCobro')" class="flex-1 bg-gray-200 dark:bg-slate-700 py-3 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600">Cerrar</button>
+  <!-- Modal Detalle Cobro -->
+  <div id="modalDetalleCobro" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+      <h3 id="tituloDetalleCobro" class="text-xl font-bold mb-4">Detalle Cobro</h3>
+      <div id="contenidoDetalleCobro"></div>
+      <div class="flex gap-2 mt-4 flex-wrap">
+        <button onclick="generarPDFCobro(cobroSeleccionadoId)" class="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 py-2 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-slate-600 text-sm">📄 PDF</button>
+        <button onclick="enviarWhatsAppCobro(cobroSeleccionadoId)" class="flex-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 py-2 rounded-xl font-medium hover:bg-green-200 dark:hover:bg-green-900/50 text-sm">💬 WhatsApp</button>
+      </div>
+      <div class="flex gap-2 mt-2 flex-wrap">
+        <button onclick="editarCobroDesdeModal()" class="flex-1 bg-blue-600 text-white py-2 rounded-xl font-medium hover:bg-blue-700 text-sm">✏️ Editar</button>
+        <button onclick="eliminarCobro()" class="flex-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 py-2 rounded-xl font-medium hover:bg-red-200 dark:hover:bg-red-900/50 text-sm">🗑️ Eliminar</button>
+      </div>
+      <div class="mt-2">
+        <button onclick="cerrarModal('modalDetalleCobro')" class="w-full bg-gray-200 dark:bg-slate-700 py-2 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600 text-sm">Cerrar</button>
+      </div>
     </div>
   </div>
-</div>
 
   <!-- Modal Importar -->
   <div id="modalImportar" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">

@@ -14,12 +14,12 @@ const CONFIG = {
   deviceId: localStorage.getItem('deviceId') || generarDeviceId()
 };
 
-// Datos locales
-let lotes = JSON.parse(localStorage.getItem('lotes')) || [];
-let compras = JSON.parse(localStorage.getItem('compras')) || [];
-let ventas = JSON.parse(localStorage.getItem('ventas')) || [];
-let abonos = JSON.parse(localStorage.getItem('abonos')) || [];
-let cobros = JSON.parse(localStorage.getItem('cobros')) || [];
+// Datos locales - Cargar desde localStorage o usar datos iniciales del backup
+let lotes = [];
+let compras = [];
+let ventas = [];
+let abonos = [];
+let cobros = [];
 
 // Variables temporales
 let productosLoteTemp = [];
@@ -33,9 +33,33 @@ let cobroSeleccionadoId = null;
 let productosSeleccionados = [];
 
 // ==========================================
-// INICIALIZACIÓN
+// INICIALIZACIÓN CON DATOS DEL BACKUP
 // ==========================================
 window.onload = function() {
+  // Cargar datos desde localStorage o usar datos del backup si no hay datos guardados
+  const lotesGuardados = localStorage.getItem('lotes');
+  const comprasGuardadas = localStorage.getItem('compras');
+  const ventasGuardadas = localStorage.getItem('ventas');
+  const abonosGuardados = localStorage.getItem('abonos');
+  const cobrosGuardados = localStorage.getItem('cobros');
+
+  if (lotesGuardados) {
+    lotes = JSON.parse(lotesGuardados);
+    compras = JSON.parse(comprasGuardadas || '[]');
+    ventas = JSON.parse(ventasGuardadas || '[]');
+    abonos = JSON.parse(abonosGuardados || '[]');
+    cobros = JSON.parse(cobrosGuardados || '[]');
+  } else {
+    // Primera carga - usar datos del backup (data.js)
+    console.log('Cargando datos iniciales del backup...');
+    lotes = JSON.parse(JSON.stringify(initialLotes || []));
+    ventas = JSON.parse(JSON.stringify(initialVentas || []));
+    compras = [];
+    abonos = [];
+    cobros = [];
+    saveLocalData();
+  }
+
   window.addEventListener('online', () => {
     CONFIG.isOnline = true;
     updateSyncStatus('online');
@@ -52,6 +76,7 @@ window.onload = function() {
   updateSyncStatus(CONFIG.isOnline ? (CONFIG.syncUrl ? 'synced' : 'online') : 'offline');
   showSection('lotes');
   updateResumen();
+  renderRecordatorios();
   
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js')
@@ -64,6 +89,135 @@ function generarDeviceId() {
   const id = 'device_' + Math.random().toString(36).substr(2, 9);
   localStorage.setItem('deviceId', id);
   return id;
+}
+
+// ==========================================
+// BÚSQUEDA GLOBAL DE CLIENTES
+// ==========================================
+function buscarClienteGlobal() {
+  const busqueda = document.getElementById('buscadorGlobal').value.trim().toUpperCase();
+  const resultadosDiv = document.getElementById('resultadosBusquedaGlobal');
+  
+  if (busqueda.length < 2) {
+    resultadosDiv.classList.add('hidden');
+    return;
+  }
+  
+  // Buscar en ventas por nombre de cliente o ID
+  const resultados = ventas.filter(v => 
+    v.cliente.toUpperCase().includes(busqueda) || 
+    v.id.toUpperCase().includes(busqueda)
+  );
+  
+  if (resultados.length === 0) {
+    resultadosDiv.innerHTML = '<p class="text-gray-500 text-center py-2">No se encontraron clientes</p>';
+    resultadosDiv.classList.remove('hidden');
+    return;
+  }
+  
+  resultadosDiv.innerHTML = resultados.map(v => {
+    const diasRestantes = Math.ceil((new Date(v.proximaFechaCobro) - new Date()) / (1000 * 60 * 60 * 24));
+    const alertaClass = diasRestantes < 0 ? 'bg-red-100 dark:bg-red-900/20 border-red-300' : 
+                       diasRestantes <= 7 ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-300' : 
+                       'bg-gray-50 dark:bg-slate-700 border-gray-200';
+    
+    return `
+      <div class="p-3 ${alertaClass} rounded-xl border cursor-pointer hover:shadow-md transition-shadow" onclick="verDetalleVenta('${v.id}'); limpiarBusqueda();">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="font-bold text-gray-800 dark:text-white">${v.cliente}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">${v.id} | ${v.telefono || 'Sin teléfono'}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs ${v.estado === 'PENDIENTE' ? 'text-orange-600 font-bold' : 'text-green-600'}">${v.estado}</p>
+            <p class="text-sm font-bold text-gray-800 dark:text-white">C$${(parseFloat(v.saldo) || 0).toLocaleString()}</p>
+          </div>
+        </div>
+        <div class="mt-2 flex justify-between text-xs">
+          <span class="${diasRestantes < 0 ? 'text-red-600 font-bold' : 'text-gray-500 dark:text-gray-400'}">
+            Próximo: ${formatFecha(v.proximaFechaCobro)} ${diasRestantes < 0 ? '(Vencido)' : ''}
+          </span>
+          <span class="text-gray-500 dark:text-gray-400">Cuota: C$${(parseFloat(v.cuotaMensual) || 0).toLocaleString()}</span>
+        </div>
+        <div class="mt-2 flex gap-2">
+          <button onclick="event.stopPropagation(); registrarCobroRapido('${v.id}')" class="flex-1 py-1 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700">
+            + Cobro
+          </button>
+          <button onclick="event.stopPropagation(); verDetalleVenta('${v.id}')" class="flex-1 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50">
+            Ver
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  resultadosDiv.classList.remove('hidden');
+}
+
+function limpiarBusqueda() {
+  document.getElementById('buscadorGlobal').value = '';
+  document.getElementById('resultadosBusquedaGlobal').classList.add('hidden');
+}
+
+function registrarCobroRapido(ventaId) {
+  limpiarBusqueda();
+  showForm('cobro');
+  setTimeout(() => {
+    seleccionarVentaCobroDirecto(ventaId);
+  }, 100);
+}
+
+// ==========================================
+// RECORDATORIOS DE COBRO
+// ==========================================
+function toggleRecordatorios() {
+  const lista = document.getElementById('listaRecordatorios');
+  lista.classList.toggle('hidden');
+}
+
+function renderRecordatorios() {
+  const hoy = new Date();
+  const proximosDias = 7; // Próximos 7 días
+  
+  const recordatorios = ventas
+    .filter(v => v.estado === 'PENDIENTE')
+    .map(v => {
+      const proximoCobro = new Date(v.proximaFechaCobro);
+      const diasRestantes = Math.ceil((proximoCobro - hoy) / (1000 * 60 * 60 * 24));
+      return { ...v, diasRestantes };
+    })
+    .filter(v => v.diasRestantes <= proximosDias)
+    .sort((a, b) => a.diasRestantes - b.diasRestantes);
+  
+  document.getElementById('countRecordatorios').textContent = recordatorios.length;
+  
+  const container = document.getElementById('listaRecordatorios');
+  
+  if (recordatorios.length === 0) {
+    container.innerHTML = '<p class="text-center text-sm opacity-80">No hay cobros próximos</p>';
+    return;
+  }
+  
+  container.innerHTML = recordatorios.map(v => {
+    const alertaClass = v.diasRestantes < 0 ? 'bg-red-600' : 
+                       v.diasRestantes === 0 ? 'bg-yellow-500' : 'bg-white/20';
+    const textoAlerta = v.diasRestantes < 0 ? `Vencido ${Math.abs(v.diasRestantes)} días` :
+                        v.diasRestantes === 0 ? '¡Hoy!' : 
+                        `En ${v.diasRestantes} días`;
+    
+    return `
+      <div class="flex items-center justify-between p-2 ${alertaClass} rounded-lg cursor-pointer hover:bg-white/30" onclick="verDetalleVenta('${v.id}')">
+        <div class="flex-1">
+          <p class="font-bold text-sm">${v.cliente}</p>
+          <p class="text-xs opacity-90">Cuota: C$${(parseFloat(v.cuotaMensual) || 0).toLocaleString()}</p>
+        </div>
+        <div class="text-right">
+          <p class="text-xs font-bold">${textoAlerta}</p>
+          <p class="text-xs">Saldo: C$${(parseFloat(v.saldo) || 0).toLocaleString()}</p>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 // ==========================================
@@ -254,6 +408,7 @@ async function procesarRespuestaExitosa(resultado) {
     saveLocalData();
     renderCurrentSection();
     updateResumen();
+    renderRecordatorios();
   }
   
   CONFIG.lastSync = new Date().toISOString();
@@ -308,7 +463,13 @@ function procesarImportacion() {
     try {
       const datos = JSON.parse(e.target.result);
       
-      if (!confirm('¿Reemplazar TODOS los datos?')) return;
+      if (!confirm('¿Reemplazar TODOS los datos? Asegúrate de haber exportado una copia primero.')) return;
+      
+      // Validar que el archivo tenga la estructura correcta
+      if (!datos.lotes || !Array.isArray(datos.lotes)) {
+        alert('El archivo no tiene el formato correcto. Faltan lotes.');
+        return;
+      }
       
       // Normalizar datos del backup
       lotes = (datos.lotes || []).map(normalizarLote);
@@ -320,10 +481,12 @@ function procesarImportacion() {
       saveLocalData();
       renderCurrentSection();
       updateResumen();
+      renderRecordatorios();
       cerrarModal('modalImportar');
-      showToast('✅ Datos importados');
+      showToast('✅ Datos importados correctamente');
     } catch (error) {
-      alert('Error: ' + error.message);
+      alert('Error al importar: ' + error.message);
+      console.error(error);
     }
   };
   reader.readAsText(file);
@@ -337,12 +500,17 @@ function normalizarLote(l) {
     totalInicial: parseFloat(l.totalInicial) || 0,
     abonado: parseFloat(l.abonado) || 0,
     saldoPendiente: parseFloat(l.saldoPendiente) || 0,
-    estado: (l.estado || 'PENDIENTE').toString().trim()
+    estado: (l.estado || 'PENDIENTE').toString().trim(),
+    lastModified: l.lastModified || Date.now()
   };
 }
 
 function normalizarCompra(c) {
-  return c;
+  return {
+    ...c,
+    id: (c.id || '').toString().trim(),
+    lastModified: c.lastModified || Date.now()
+  };
 }
 
 function normalizarVenta(v) {
@@ -355,7 +523,8 @@ function normalizarVenta(v) {
     pagado: parseFloat(v.pagado) || 0,
     cuotaMensual: parseFloat(v.cuotaMensual) || 0,
     meses: parseInt(v.meses) || 12,
-    estado: (v.estado || 'PENDIENTE').toString().trim()
+    estado: (v.estado || 'PENDIENTE').toString().trim(),
+    lastModified: v.lastModified || Date.now()
   };
 }
 
@@ -365,7 +534,8 @@ function normalizarAbono(a) {
     id: (a.id || '').toString().trim(),
     loteId: (a.loteId || '').toString().trim(),
     monto: parseFloat(a.monto) || 0,
-    saldoDespues: parseFloat(a.saldoDespues) || 0
+    saldoDespues: parseFloat(a.saldoDespues) || 0,
+    lastModified: a.lastModified || Date.now()
   };
 }
 
@@ -374,7 +544,8 @@ function normalizarCobro(c) {
     ...c,
     id: (c.id || '').toString().trim(),
     ventaId: (c.ventaId || '').toString().trim(),
-    monto: parseFloat(c.monto) || 0
+    monto: parseFloat(c.monto) || 0,
+    lastModified: c.lastModified || Date.now()
   };
 }
 
@@ -382,12 +553,18 @@ function normalizarCobro(c) {
 // DATOS LOCALES
 // ==========================================
 function saveLocalData() {
-  localStorage.setItem('lotes', JSON.stringify(lotes));
-  localStorage.setItem('compras', JSON.stringify(compras));
-  localStorage.setItem('ventas', JSON.stringify(ventas));
-  localStorage.setItem('abonos', JSON.stringify(abonos));
-  localStorage.setItem('cobros', JSON.stringify(cobros));
-  updateResumen();
+  try {
+    localStorage.setItem('lotes', JSON.stringify(lotes));
+    localStorage.setItem('compras', JSON.stringify(compras));
+    localStorage.setItem('ventas', JSON.stringify(ventas));
+    localStorage.setItem('abonos', JSON.stringify(abonos));
+    localStorage.setItem('cobros', JSON.stringify(cobros));
+    updateResumen();
+    renderRecordatorios();
+  } catch (e) {
+    console.error('Error guardando en localStorage:', e);
+    showToast('❌ Error al guardar datos. Espacio lleno?');
+  }
 }
 
 function updateResumen() {
@@ -417,6 +594,10 @@ function updateResumen() {
   const totalStock = [...lotes, ...compras].reduce((sum, item) =>
     sum + (item.productos?.filter(p => !p.vendido).length || 0), 0);
   document.getElementById('countStock').textContent = totalStock;
+  
+  // Actualizar contadores en finanzas
+  document.getElementById('countAbonos').textContent = abonos.length;
+  document.getElementById('countCobros').textContent = cobros.length;
 }
 
 // ==========================================
@@ -633,7 +814,7 @@ function eliminarLote() {
   if (!loteSeleccionadoId) return;
   const lote = lotes.find(l => l.id === loteSeleccionadoId);
   if (!lote) return;
-  if (!confirm(`¿Eliminar lote ${lote.id} permanentemente?`)) return;
+  if (!confirm(`¿Eliminar lote ${lote.id} permanentemente?\n\n⚠️ Esto también eliminará todos los abonos asociados a este lote.`)) return;
   
   abonos = abonos.filter(a => a.loteId !== loteSeleccionadoId);
   lotes = lotes.filter(l => l.id !== loteSeleccionadoId);
@@ -664,7 +845,7 @@ function eliminarVenta() {
   if (!ventaSeleccionadaId) return;
   const venta = ventas.find(v => v.id === ventaSeleccionadaId);
   if (!venta) return;
-  if (!confirm(`¿Eliminar venta ${venta.id} permanentemente?`)) return;
+  if (!confirm(`¿Eliminar venta ${venta.id} permanentemente?\n\n⚠️ Esto también eliminará todos los cobros asociados a esta venta y liberará los productos en stock.`)) return;
   
   cobros = cobros.filter(c => c.ventaId !== ventaSeleccionadaId);
   
@@ -690,59 +871,8 @@ function eliminarVenta() {
   sincronizarAhora();
   hideForms();
   renderVentas();
+  renderRecordatorios();
   showToast(`Venta ${venta.id} eliminada`);
-}
-
-function eliminarAbono() {
-  if (!abonoSeleccionadoId) return;
-  const abono = abonos.find(a => a.id === abonoSeleccionadoId);
-  if (!abono) return;
-  if (!confirm(`¿Eliminar abono de C$${(parseFloat(abono.monto) || 0).toLocaleString()}?`)) return;
-  
-  const lote = lotes.find(l => l.id === abono.loteId);
-  if (lote) {
-    lote.abonado = Math.max(0, (parseFloat(lote.abonado) || 0) - (parseFloat(abono.monto) || 0));
-    lote.saldoPendiente = (parseFloat(lote.totalInicial) || 0) - (parseFloat(lote.abonado) || 0);
-    if (lote.saldoPendiente > 0) {
-      lote.estado = 'PENDIENTE';
-      delete lote.fechaPagoTotal;
-    }
-    lote.lastModified = Date.now();
-  }
-  
-  abonos = abonos.filter(a => a.id !== abonoSeleccionadoId);
-  
-  saveLocalData();
-  sincronizarAhora();
-  hideForms();
-  renderAbonos();
-  showToast('Abono eliminado');
-}
-
-function eliminarCobro() {
-  if (!cobroSeleccionadoId) return;
-  const cobro = cobros.find(c => c.id === cobroSeleccionadoId);
-  if (!cobro) return;
-  if (!confirm(`¿Eliminar cobro de C$${(parseFloat(cobro.monto) || 0).toLocaleString()}?`)) return;
-  
-  const venta = ventas.find(v => v.id === cobro.ventaId);
-  if (venta) {
-    venta.pagado = Math.max(0, (parseFloat(venta.pagado) || 0) - (parseFloat(cobro.monto) || 0));
-    venta.saldo = (parseFloat(venta.precioTotal) || 0) - (parseFloat(venta.pagado) || 0);
-    if (venta.saldo > 0) {
-      venta.estado = 'PENDIENTE';
-      delete venta.fechaPagoTotal;
-    }
-    venta.lastModified = Date.now();
-  }
-  
-  cobros = cobros.filter(c => c.id !== cobroSeleccionadoId);
-  
-  saveLocalData();
-  sincronizarAhora();
-  hideForms();
-  renderCobros();
-  showToast('Cobro eliminado');
 }
 
 // ==========================================
@@ -1532,6 +1662,7 @@ function guardarVenta() {
   sincronizarAhora();
   hideForms();
   renderVentas();
+  renderRecordatorios();
 }
 
 function renderVentas() {
@@ -1633,7 +1764,7 @@ function verDetalleVenta(ventaId) {
       </div>
       <p class="font-bold text-green-800 dark:text-green-300">C$${(parseFloat(c.monto) || 0).toLocaleString()}</p>
     </div>
-  `).join('') : '<p class="text-gray-500 text-center">Sin cobros</p>';
+  `).join('') : '<p class="text-gray-500 text-center">Sin cobros registrados</p>';
   
   document.getElementById('contenidoDetalleVenta').innerHTML = `
     <div class="grid grid-cols-2 gap-3 mb-4">
@@ -1675,6 +1806,14 @@ function verDetalleVenta(ventaId) {
 function editarVentaDesdeModal() {
   cerrarModal('modalDetalleVenta');
   showForm('venta', ventaSeleccionadaId);
+}
+
+function registrarCobroDesdeVenta() {
+  cerrarModal('modalDetalleVenta');
+  showForm('cobro');
+  setTimeout(() => {
+    seleccionarVentaCobroDirecto(ventaSeleccionadaId);
+  }, 100);
 }
 
 // ==========================================
@@ -1743,7 +1882,7 @@ function enviarWhatsAppVenta(ventaId) {
     return;
   }
   
-  let mensaje = `🌸 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🌸\n\n`;
+  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
   mensaje += `📋 *RECIBO DE VENTA*\n\n`;
   mensaje += `*ID:* ${venta.id}\n`;
   mensaje += `*Cliente:* ${venta.cliente}\n`;
@@ -1759,7 +1898,7 @@ function enviarWhatsAppVenta(ventaId) {
   mensaje += `\n*PRIMA:* C$${(venta.prima).toLocaleString()}`;
   mensaje += `\n*SALDO:* C$${(venta.saldo).toLocaleString()}`;
   mensaje += `\n*CUOTA:* C$${(venta.cuotaMensual).toLocaleString()} x ${venta.meses} meses`;
-  mensaje += `\n\n🌸 ¡Gracias por su compra! 🌸`;
+  mensaje += `\n\n❤️ ¡Gracias por su compra! ❤️`;
   mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
   
   const telefono = venta.telefono?.replace(/[^0-9]/g, '') || '';
@@ -1837,7 +1976,7 @@ function enviarWhatsAppAbono(abonoId) {
   
   const lote = lotes.find(l => l.id === abono.loteId);
   
-  let mensaje = `🌸 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🌸\n\n`;
+  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
   mensaje += `📋 *RECIBO DE ABONO*\n\n`;
   mensaje += `*ID Abono:* ${abono.id}\n`;
   mensaje += `*Lote:* ${abono.loteId}\n`;
@@ -1853,7 +1992,7 @@ function enviarWhatsAppAbono(abonoId) {
     mensaje += `\n*Notas:* ${abono.notas}`;
   }
   
-  mensaje += `\n\n🌸 ¡Gracias por su abono! 🌸`;
+  mensaje += `\n\n🌹 ¡Gracias por darme crédito! 🌹`;
   mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
   
   const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
@@ -1928,7 +2067,7 @@ function enviarWhatsAppCobro(cobroId) {
   
   const venta = ventas.find(v => v.id === cobro.ventaId);
   
-  let mensaje = `🌸 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🌸\n\n`;
+  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
   mensaje += `📋 *RECIBO DE COBRO*\n\n`;
   mensaje += `*ID Cobro:* ${cobro.id}\n`;
   mensaje += `*Venta:* ${cobro.ventaId}\n`;
@@ -1945,7 +2084,7 @@ function enviarWhatsAppCobro(cobroId) {
     mensaje += `\n*Notas:* ${cobro.notas}`;
   }
   
-  mensaje += `\n\n🌸 ¡Gracias por su pago! 🌸`;
+  mensaje += `\n\n🌹 ¡Gracias por su pago! 🌹`;
   mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
   
   const telefono = venta?.telefono?.replace(/[^0-9]/g, '') || '';
@@ -2070,16 +2209,16 @@ function verDetalleCobro(cobroId) {
 
 function editarAbonoDesdeModal() {
   cerrarModal('modalDetalleAbono');
-  showForm('abono', abonoSeleccionadoId);
+  editarAbono(abonoSeleccionadoId);
 }
 
 function editarCobroDesdeModal() {
   cerrarModal('modalDetalleCobro');
-  showForm('cobro', cobroSeleccionadoId);
+  editarCobro(cobroSeleccionadoId);
 }
 
 // ==========================================
-// ABONOS - CRUD COMPLETO
+// ABONOS - CRUD COMPLETO CON EDICIÓN INDIVIDUAL
 // ==========================================
 function cargarSelectLotes() {
   const select = document.getElementById('abonoLoteId');
@@ -2129,12 +2268,15 @@ function editarAbono(abonoId) {
   document.getElementById('formOverlay').classList.remove('hidden');
   document.getElementById('tituloFormAbono').textContent = 'Editar Abono';
   document.getElementById('abonoEditId').value = abonoId;
+  
+  cargarSelectLotes();
   document.getElementById('abonoLoteId').value = abono.loteId;
+  mostrarInfoLoteAbono();
+  
   document.getElementById('abonoFecha').value = abono.fecha;
   document.getElementById('abonoMonto').value = abono.monto;
   document.getElementById('abonoMetodo').value = abono.metodo;
   document.getElementById('abonoNotas').value = abono.notas || '';
-  mostrarInfoLoteAbono();
   document.getElementById('btnEliminarAbono').classList.remove('hidden');
 }
 
@@ -2155,33 +2297,47 @@ function guardarAbono() {
   if (!lote) return;
   
   if (editId) {
+    // EDITAR ABONO EXISTENTE
     const abono = abonos.find(a => a.id === editId);
     if (abono) {
+      // Revertir el abono anterior del lote
       lote.abonado = Math.max(0, (parseFloat(lote.abonado) || 0) - (parseFloat(abono.monto) || 0));
+      lote.saldoPendiente = (parseFloat(lote.totalInicial) || 0) - (parseFloat(lote.abonado) || 0);
       
-      if (monto > lote.saldoPendiente + (parseFloat(abono.monto) || 0)) {
-        alert(`El monto no puede superar el saldo disponible`);
+      // Validar nuevo monto
+      if (monto > lote.saldoPendiente) {
+        // Restaurar el abono anterior
+        lote.abonado = (parseFloat(lote.abonado) || 0) + (parseFloat(abono.monto) || 0);
+        lote.saldoPendiente = (parseFloat(lote.totalInicial) || 0) - (parseFloat(lote.abonado) || 0);
+        alert(`El monto no puede superar el saldo disponible (C$${lote.saldoPendiente.toLocaleString()})`);
         return;
       }
       
+      // Actualizar abono
       abono.loteId = loteId;
       abono.fecha = fecha;
       abono.monto = monto;
       abono.metodo = metodo;
       abono.notas = notas;
-      abono.saldoDespues = (parseFloat(lote.saldoPendiente) || 0) + (parseFloat(abono.monto) || 0) - monto;
+      abono.saldoDespues = (parseFloat(lote.saldoPendiente) || 0) - monto;
       abono.lastModified = Date.now();
       
+      // Aplicar nuevo abono al lote
       lote.abonado = (parseFloat(lote.abonado) || 0) + monto;
       lote.saldoPendiente = (parseFloat(lote.totalInicial) || 0) - (parseFloat(lote.abonado) || 0);
+      
       if (lote.saldoPendiente <= 0) {
         lote.estado = 'PAGADO';
         lote.fechaPagoTotal = fecha;
+      } else {
+        lote.estado = 'PENDIENTE';
+        delete lote.fechaPagoTotal;
       }
       lote.lastModified = Date.now();
-      showToast('Abono actualizado');
+      showToast('Abono actualizado correctamente');
     }
   } else {
+    // NUEVO ABONO
     if (monto > lote.saldoPendiente) {
       alert(`El monto no puede superar el saldo (C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()})`);
       return;
@@ -2214,10 +2370,39 @@ function guardarAbono() {
   renderAbonos();
 }
 
+function eliminarAbono() {
+  if (!abonoSeleccionadoId) return;
+  const abono = abonos.find(a => a.id === abonoSeleccionadoId);
+  if (!abono) return;
+  
+  if (!confirm(`¿Eliminar este abono de C$${(parseFloat(abono.monto) || 0).toLocaleString()}?\n\n⚠️ El saldo del lote ${abono.loteId} se actualizará automáticamente.`)) return;
+  
+  const lote = lotes.find(l => l.id === abono.loteId);
+  if (lote) {
+    // Revertir el abono del lote
+    lote.abonado = Math.max(0, (parseFloat(lote.abonado) || 0) - (parseFloat(abono.monto) || 0));
+    lote.saldoPendiente = (parseFloat(lote.totalInicial) || 0) - (parseFloat(lote.abonado) || 0);
+    if (lote.saldoPendiente > 0) {
+      lote.estado = 'PENDIENTE';
+      delete lote.fechaPagoTotal;
+    }
+    lote.lastModified = Date.now();
+  }
+  
+  // Eliminar SOLO este abono
+  abonos = abonos.filter(a => a.id !== abonoSeleccionadoId);
+  
+  saveLocalData();
+  sincronizarAhora();
+  hideForms();
+  renderAbonos();
+  showToast('Abono eliminado correctamente');
+}
+
 function renderAbonos() {
   const container = document.getElementById('listaAbonos');
   if (abonos.length === 0) {
-    container.innerHTML = '<p class="text-gray-500 text-center py-4">No hay abonos</p>';
+    container.innerHTML = '<p class="text-gray-500 text-center py-4">No hay abonos registrados</p>';
     return;
   }
   const abonosOrdenados = [...abonos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
@@ -2236,7 +2421,7 @@ function renderAbonos() {
 }
 
 // ==========================================
-// COBROS - CRUD COMPLETO
+// COBROS - CRUD COMPLETO CON EDICIÓN INDIVIDUAL
 // ==========================================
 function buscarVentaCobro() {
   const busqueda = document.getElementById('cobroBusqueda').value.trim().toUpperCase();
@@ -2253,7 +2438,7 @@ function buscarVentaCobro() {
   );
   
   if (resultados.length === 0) {
-    resultadosDiv.innerHTML = '<p class="text-gray-500 text-center py-2">No se encontraron ventas</p>';
+    resultadosDiv.innerHTML = '<p class="text-gray-500 text-center py-2">No se encontraron ventas pendientes</p>';
     resultadosDiv.classList.remove('hidden');
     return;
   }
@@ -2302,6 +2487,14 @@ function seleccionarVentaCobro(ventaId) {
   infoDiv.classList.remove('hidden');
 }
 
+function seleccionarVentaCobroDirecto(ventaId) {
+  document.getElementById('cobroBusqueda').value = ventaId;
+  buscarVentaCobro();
+  setTimeout(() => {
+    seleccionarVentaCobro(ventaId);
+  }, 100);
+}
+
 function editarCobro(cobroId) {
   const cobro = cobros.find(c => c.id === cobroId);
   if (!cobro) return;
@@ -2311,12 +2504,15 @@ function editarCobro(cobroId) {
   document.getElementById('formOverlay').classList.remove('hidden');
   document.getElementById('tituloFormCobro').textContent = 'Editar Cobro';
   document.getElementById('cobroEditId').value = cobroId;
-  document.getElementById('cobroVentaId').value = cobro.ventaId;
   document.getElementById('cobroFecha').value = cobro.fecha;
   document.getElementById('cobroMonto').value = cobro.monto;
   document.getElementById('cobroMetodo').value = cobro.metodo;
   document.getElementById('cobroNotas').value = cobro.notas || '';
+  
+  // Seleccionar venta
+  document.getElementById('cobroVentaId').value = cobro.ventaId;
   seleccionarVentaCobro(cobro.ventaId);
+  
   document.getElementById('btnEliminarCobro').classList.remove('hidden');
 }
 
@@ -2337,15 +2533,23 @@ function guardarCobro() {
   if (!venta) return;
   
   if (editId) {
+    // EDITAR COBRO EXISTENTE
     const cobro = cobros.find(c => c.id === editId);
     if (cobro) {
+      // Revertir el cobro anterior de la venta
       venta.pagado = Math.max(0, (parseFloat(venta.pagado) || 0) - (parseFloat(cobro.monto) || 0));
+      venta.saldo = (parseFloat(venta.precioTotal) || 0) - (parseFloat(venta.pagado) || 0);
       
-      if (monto > venta.saldo + (parseFloat(cobro.monto) || 0)) {
-        alert(`El monto no puede superar el saldo disponible`);
+      // Validar nuevo monto
+      if (monto > venta.saldo) {
+        // Restaurar el cobro anterior
+        venta.pagado = (parseFloat(venta.pagado) || 0) + (parseFloat(cobro.monto) || 0);
+        venta.saldo = (parseFloat(venta.precioTotal) || 0) - (parseFloat(venta.pagado) || 0);
+        alert(`El monto no puede superar el saldo disponible (C$${venta.saldo.toLocaleString()})`);
         return;
       }
       
+      // Actualizar cobro
       cobro.ventaId = ventaId;
       cobro.fecha = fecha;
       cobro.monto = monto;
@@ -2353,17 +2557,22 @@ function guardarCobro() {
       cobro.notas = notas;
       cobro.lastModified = Date.now();
       
+      // Aplicar nuevo cobro a la venta
       venta.pagado = (parseFloat(venta.pagado) || 0) + monto;
       venta.saldo = (parseFloat(venta.precioTotal) || 0) - (parseFloat(venta.pagado) || 0);
       
       if (venta.saldo <= 0) {
         venta.estado = 'PAGADO';
         venta.fechaPagoTotal = fecha;
+      } else {
+        venta.estado = 'PENDIENTE';
+        delete venta.fechaPagoTotal;
       }
       venta.lastModified = Date.now();
-      showToast('Cobro actualizado');
+      showToast('Cobro actualizado correctamente');
     }
   } else {
+    // NUEVO COBRO
     if (monto > venta.saldo) {
       alert(`El monto no puede superar el saldo (C$${(parseFloat(venta.saldo) || 0).toLocaleString()})`);
       return;
@@ -2382,6 +2591,7 @@ function guardarCobro() {
     venta.pagado = (parseFloat(venta.pagado) || 0) + monto;
     venta.saldo = (parseFloat(venta.saldo) || 0) - monto;
     
+    // Actualizar próxima fecha de cobro
     const proximaFecha = new Date(venta.proximaFechaCobro);
     proximaFecha.setMonth(proximaFecha.getMonth() + 1);
     venta.proximaFechaCobro = proximaFecha.toISOString().split('T')[0];
@@ -2398,12 +2608,43 @@ function guardarCobro() {
   sincronizarAhora();
   hideForms();
   renderCobros();
+  renderRecordatorios();
+}
+
+function eliminarCobro() {
+  if (!cobroSeleccionadoId) return;
+  const cobro = cobros.find(c => c.id === cobroSeleccionadoId);
+  if (!cobro) return;
+  
+  if (!confirm(`¿Eliminar este cobro de C$${(parseFloat(cobro.monto) || 0).toLocaleString()}?\n\n⚠️ El saldo de la venta se actualizará automáticamente.`)) return;
+  
+  const venta = ventas.find(v => v.id === cobro.ventaId);
+  if (venta) {
+    // Revertir el cobro de la venta
+    venta.pagado = Math.max(0, (parseFloat(venta.pagado) || 0) - (parseFloat(cobro.monto) || 0));
+    venta.saldo = (parseFloat(venta.precioTotal) || 0) - (parseFloat(venta.pagado) || 0);
+    if (venta.saldo > 0) {
+      venta.estado = 'PENDIENTE';
+      delete venta.fechaPagoTotal;
+    }
+    venta.lastModified = Date.now();
+  }
+  
+  // Eliminar SOLO este cobro
+  cobros = cobros.filter(c => c.id !== cobroSeleccionadoId);
+  
+  saveLocalData();
+  sincronizarAhora();
+  hideForms();
+  renderCobros();
+  renderRecordatorios();
+  showToast('Cobro eliminado correctamente');
 }
 
 function renderCobros() {
   const container = document.getElementById('listaCobros');
   if (cobros.length === 0) {
-    container.innerHTML = '<p class="text-gray-500 text-center py-4">No hay cobros</p>';
+    container.innerHTML = '<p class="text-gray-500 text-center py-4">No hay cobros registrados</p>';
     return;
   }
   const cobrosOrdenados = [...cobros].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
@@ -2465,8 +2706,7 @@ function importarDesdeQR() {
     const file = e.target.files[0];
     if (!file) return;
     
-    showToast('📷 Procesando imagen QR...');
-    showToast('⚠️ Para escanear QR, usa la cámara del otro dispositivo y la función "Generar QR para Exportar"');
+    showToast('📷 Para escanear QR, usa la cámara del otro dispositivo y la función "Generar QR para Exportar"');
   };
   input.click();
 }
