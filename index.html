@@ -21,6 +21,12 @@
       <div class="flex justify-between items-center">
         <h1 class="text-lg font-bold text-pink-600 dark:text-pink-400">ELECTRODOMÉSTICOS Y VARIEDADES KAREN🦋</h1>
         <div class="flex items-center gap-2 flex-wrap justify-end">
+          <!-- Theme Toggle Button -->
+          <button onclick="toggleTheme()" class="p-2 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600" title="Cambiar Tema">
+            <svg id="themeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+          </button>
           <div id="syncStatus" class="flex items-center gap-2 text-sm">
             <span class="w-2 h-2 rounded-full bg-gray-400"></span>
             <span class="text-gray-600 dark:text-gray-400">Verificando...</span>
@@ -354,14 +360,43 @@
             <input type="number" id="ventaPrima" value="0" min="0" step="0.01" onchange="calcularVenta()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white">
           </div>
           <div>
-            <label class="block text-sm font-medium mb-1">Meses de Crédito</label>
-            <select id="ventaMeses" onchange="calcularVenta()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white">
-              <option value="3">3 meses</option>
-              <option value="6">6 meses</option>
-              <option value="8">8 meses</option>
-              <option value="10">10 meses</option>
-              <option value="12" selected>12 meses</option>
+            <label class="block text-sm font-medium mb-1">Tipo de Pago</label>
+            <select id="ventaTipoPago" onchange="cambiarTipoPago()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white">
+              <option value="credito">Crédito</option>
+              <option value="cash">Cash/Contado</option>
             </select>
+          </div>
+        </div>
+        <div id="contenedorMeses">
+          <label class="block text-sm font-medium mb-1">Meses de Crédito</label>
+          <select id="ventaMeses" onchange="calcularVenta()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white">
+            <option value="1">1 mes</option>
+            <option value="2">2 meses</option>
+            <option value="3">3 meses</option>
+            <option value="4">4 meses</option>
+            <option value="5">5 meses</option>
+            <option value="6">6 meses</option>
+            <option value="7">7 meses</option>
+            <option value="8">8 meses</option>
+            <option value="9">9 meses</option>
+            <option value="10">10 meses</option>
+            <option value="11">11 meses</option>
+            <option value="12" selected>12 meses</option>
+          </select>
+        </div>
+        <!-- Nueva sección de frecuencia de pago -->
+        <div id="contenedorFrecuencia">
+          <label class="block text-sm font-medium mb-1">Frecuencia de Pago</label>
+          <select id="ventaFrecuencia" onchange="cambiarFrecuenciaPago()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white mb-2">
+            <option value="mensual">Mensual</option>
+            <option value="semanal">Semanal (cada 7 días)</option>
+            <option value="quincenal">Quincenal (cada 15 días)</option>
+            <option value="personalizado">Fechas específicas del mes</option>
+          </select>
+          <div id="contenedorFechasPersonalizadas" class="hidden">
+            <label class="block text-sm font-medium mb-1">Fechas de pago (días del mes)</label>
+            <input type="text" id="ventaFechasPersonalizadas" placeholder="Ej: 5,15,30" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white mb-1">
+            <p class="text-xs text-gray-500 dark:text-gray-400">Separa los días con comas. Ejemplo: 5,15,30 para pagar los días 5, 15 y 30 de cada mes</p>
           </div>
         </div>
         <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl">
@@ -375,7 +410,7 @@
               <p class="font-bold text-orange-700 dark:text-orange-400" id="previewSaldoVenta">C$0.00</p>
             </div>
             <div>
-              <p class="text-xs text-gray-600 dark:text-gray-400">Cuota Mensual</p>
+              <p class="text-xs text-gray-600 dark:text-gray-400" id="labelCuota">Cuota Mensual</p>
               <p class="font-bold text-pink-700 dark:text-pink-400" id="previewCuotaVenta">C$0.00</p>
             </div>
           </div>

@@ -36,6 +36,9 @@ let productosSeleccionados = [];
 // INICIALIZACIÓN CON DATOS DEL BACKUP
 // ==========================================
 window.onload = function() {
+  // Cargar tema guardado
+  cargarTema();
+  
   // Cargar datos desde localStorage o usar datos del backup si no hay datos guardados
   const lotesGuardados = localStorage.getItem('lotes');
   const comprasGuardadas = localStorage.getItem('compras');
@@ -92,6 +95,44 @@ function generarDeviceId() {
 }
 
 // ==========================================
+// THEME / TEMA CLARO-OSCURO
+// ==========================================
+function cargarTema() {
+  const temaGuardado = localStorage.getItem('tema') || 'light';
+  if (temaGuardado === 'dark') {
+    document.documentElement.classList.add('dark');
+    actualizarIconoTema(true);
+  } else {
+    document.documentElement.classList.remove('dark');
+    actualizarIconoTema(false);
+  }
+}
+
+function toggleTheme() {
+  const isDark = document.documentElement.classList.contains('dark');
+  if (isDark) {
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('tema', 'light');
+    actualizarIconoTema(false);
+  } else {
+    document.documentElement.classList.add('dark');
+    localStorage.setItem('tema', 'dark');
+    actualizarIconoTema(true);
+  }
+}
+
+function actualizarIconoTema(isDark) {
+  const icon = document.getElementById('themeIcon');
+  if (icon) {
+    if (isDark) {
+      icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>';
+    } else {
+      icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>';
+    }
+  }
+}
+
+// ==========================================
 // BÚSQUEDA GLOBAL DE CLIENTES
 // ==========================================
 function buscarClienteGlobal() {
@@ -116,10 +157,14 @@ function buscarClienteGlobal() {
   }
   
   resultadosDiv.innerHTML = resultados.map(v => {
-    const diasRestantes = Math.ceil((new Date(v.proximaFechaCobro) - new Date()) / (1000 * 60 * 60 * 24));
+    const diasRestantes = Math.ceil((calcularProximaFechaCobro(v) - new Date()) / (1000 * 60 * 60 * 24));
     const alertaClass = diasRestantes < 0 ? 'bg-red-100 dark:bg-red-900/20 border-red-300' : 
                        diasRestantes <= 7 ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-300' : 
                        'bg-gray-50 dark:bg-slate-700 border-gray-200';
+    
+    const frecuenciaText = v.frecuenciaPago === 'semanal' ? ' (Semanal)' : 
+                          v.frecuenciaPago === 'quincenal' ? ' (Quincenal)' : 
+                          v.frecuenciaPago === 'personalizado' ? ' (Personalizado)' : '';
     
     return `
       <div class="p-3 ${alertaClass} rounded-xl border cursor-pointer hover:shadow-md transition-shadow" onclick="verDetalleVenta('${v.id}'); limpiarBusqueda();">
@@ -135,7 +180,7 @@ function buscarClienteGlobal() {
         </div>
         <div class="mt-2 flex justify-between text-xs">
           <span class="${diasRestantes < 0 ? 'text-red-600 font-bold' : 'text-gray-500 dark:text-gray-400'}">
-            Próximo: ${formatFecha(v.proximaFechaCobro)} ${diasRestantes < 0 ? '(Vencido)' : ''}
+            Próximo: ${formatFecha(v.proximaFechaCobro)} ${diasRestantes < 0 ? '(Vencido)' : ''}${frecuenciaText}
           </span>
           <span class="text-gray-500 dark:text-gray-400">Cuota: C$${(parseFloat(v.cuotaMensual) || 0).toLocaleString()}</span>
         </div>
@@ -168,11 +213,16 @@ function registrarCobroRapido(ventaId) {
 }
 
 // ==========================================
-// RECORDATORIOS DE COBRO
+// RECORDATORIOS DE COBRO CON FRECUENCIA
 // ==========================================
 function toggleRecordatorios() {
   const lista = document.getElementById('listaRecordatorios');
   lista.classList.toggle('hidden');
+}
+
+function calcularProximaFechaCobro(venta) {
+  if (!venta.proximaFechaCobro) return new Date();
+  return new Date(venta.proximaFechaCobro);
 }
 
 function renderRecordatorios() {
@@ -182,9 +232,9 @@ function renderRecordatorios() {
   const recordatorios = ventas
     .filter(v => v.estado === 'PENDIENTE')
     .map(v => {
-      const proximoCobro = new Date(v.proximaFechaCobro);
+      const proximoCobro = calcularProximaFechaCobro(v);
       const diasRestantes = Math.ceil((proximoCobro - hoy) / (1000 * 60 * 60 * 24));
-      return { ...v, diasRestantes };
+      return { ...v, diasRestantes, proximoCobro };
     })
     .filter(v => v.diasRestantes <= proximosDias)
     .sort((a, b) => a.diasRestantes - b.diasRestantes);
@@ -205,11 +255,15 @@ function renderRecordatorios() {
                         v.diasRestantes === 0 ? '¡Hoy!' : 
                         `En ${v.diasRestantes} días`;
     
+    const frecuenciaLabel = v.frecuenciaPago === 'semanal' ? ' (Sem)' : 
+                           v.frecuenciaPago === 'quincenal' ? ' (Qnc)' : 
+                           v.frecuenciaPago === 'personalizado' ? ' (Per)' : '';
+    
     return `
       <div class="flex items-center justify-between p-2 ${alertaClass} rounded-lg cursor-pointer hover:bg-white/30" onclick="verDetalleVenta('${v.id}')">
         <div class="flex-1">
           <p class="font-bold text-sm">${v.cliente}</p>
-          <p class="text-xs opacity-90">Cuota: C$${(parseFloat(v.cuotaMensual) || 0).toLocaleString()}</p>
+          <p class="text-xs opacity-90">Cuota: C$${(parseFloat(v.cuotaMensual) || 0).toLocaleString()}${frecuenciaLabel}</p>
         </div>
         <div class="text-right">
           <p class="text-xs font-bold">${textoAlerta}</p>
@@ -322,7 +376,7 @@ async function sincronizarAhora() {
       cobros: cobros,
       deviceId: CONFIG.deviceId,
       lastModified: Date.now()
-    };
+    });
 
     try {
       const controller = new AbortController();
@@ -524,6 +578,8 @@ function normalizarVenta(v) {
     cuotaMensual: parseFloat(v.cuotaMensual) || 0,
     meses: parseInt(v.meses) || 12,
     estado: (v.estado || 'PENDIENTE').toString().trim(),
+    frecuenciaPago: v.frecuenciaPago || 'mensual',
+    fechasPersonalizadas: v.fechasPersonalizadas || [],
     lastModified: v.lastModified || Date.now()
   };
 }
@@ -755,10 +811,20 @@ function showForm(type, editId = null) {
       document.getElementById('ventaFecha').value = venta.fecha;
       document.getElementById('ventaPrima').value = venta.prima || 0;
       document.getElementById('ventaMeses').value = venta.meses || 12;
+      document.getElementById('ventaTipoPago').value = venta.tipoPago || 'credito';
+      document.getElementById('ventaFrecuencia').value = venta.frecuenciaPago || 'mensual';
       
       productosVentaTemp = JSON.parse(JSON.stringify(venta.productos || []));
       renderProductosVenta();
-      calcularVenta();
+      
+      // Mostrar/ocultar campos según tipo de pago
+      cambiarTipoPago();
+      
+      // Cargar fechas personalizadas si existen
+      if (venta.frecuenciaPago === 'personalizado' && venta.fechasPersonalizadas) {
+        document.getElementById('ventaFechasPersonalizadas').value = venta.fechasPersonalizadas.join(',');
+        document.getElementById('contenedorFechasPersonalizadas').classList.remove('hidden');
+      }
       
       const opcionesPagada = document.getElementById('opcionesVentaPagada');
       if (venta.estado === 'PAGADO') {
@@ -777,12 +843,19 @@ function showForm(type, editId = null) {
       document.getElementById('ventaId').disabled = false;
       document.getElementById('ventaFecha').valueAsDate = new Date();
       document.getElementById('ventaMeses').value = '12';
+      document.getElementById('ventaTipoPago').value = 'credito';
+      document.getElementById('ventaFrecuencia').value = 'mensual';
       productosVentaTemp = [];
       renderProductosVenta();
-      calcularVenta();
       document.getElementById('opcionesVentaPagada').classList.add('hidden');
       btnEliminar.classList.add('hidden');
       ventaSeleccionadaId = null;
+      
+      // Resetear visibilidad de campos
+      document.getElementById('contenedorMeses').classList.remove('hidden');
+      document.getElementById('contenedorFrecuencia').classList.remove('hidden');
+      document.getElementById('contenedorFechasPersonalizadas').classList.add('hidden');
+      document.getElementById('labelCuota').textContent = 'Cuota Mensual';
     }
   } else if (type === 'abono') {
     document.getElementById('formAbono').classList.remove('hidden');
@@ -808,6 +881,48 @@ function showForm(type, editId = null) {
     document.getElementById('resultadosBusquedaCobro').classList.add('hidden');
     document.getElementById('infoVentaCobro').classList.add('hidden');
   }
+}
+
+function cambiarTipoPago() {
+  const tipoPago = document.getElementById('ventaTipoPago').value;
+  const contenedorMeses = document.getElementById('contenedorMeses');
+  const contenedorFrecuencia = document.getElementById('contenedorFrecuencia');
+  const labelCuota = document.getElementById('labelCuota');
+  
+  if (tipoPago === 'cash') {
+    contenedorMeses.classList.add('hidden');
+    contenedorFrecuencia.classList.add('hidden');
+    document.getElementById('ventaPrima').value = document.getElementById('previewTotalVenta').textContent.replace(/[^0-9.]/g, '');
+    labelCuota.textContent = 'Pago Único';
+    calcularVenta();
+  } else {
+    contenedorMeses.classList.remove('hidden');
+    contenedorFrecuencia.classList.remove('hidden');
+    labelCuota.textContent = 'Cuota';
+    calcularVenta();
+  }
+}
+
+function cambiarFrecuenciaPago() {
+  const frecuencia = document.getElementById('ventaFrecuencia').value;
+  const contenedorFechas = document.getElementById('contenedorFechasPersonalizadas');
+  const labelCuota = document.getElementById('labelCuota');
+  
+  if (frecuencia === 'personalizado') {
+    contenedorFechas.classList.remove('hidden');
+  } else {
+    contenedorFechas.classList.add('hidden');
+  }
+  
+  if (frecuencia === 'semanal') {
+    labelCuota.textContent = 'Cuota Semanal';
+  } else if (frecuencia === 'quincenal') {
+    labelCuota.textContent = 'Cuota Quincenal';
+  } else {
+    labelCuota.textContent = 'Cuota Mensual';
+  }
+  
+  calcularVenta();
 }
 
 function eliminarLote() {
@@ -1343,7 +1458,7 @@ function editarCompraDesdeModal() {
 }
 
 // ==========================================
-// VENTAS - CRUD COMPLETO
+// VENTAS - CRUD COMPLETO CON FRECUENCIA
 // ==========================================
 function mostrarSelectorProductos(tipo) {
   document.getElementById('selectorProductos').classList.remove('hidden');
@@ -1509,6 +1624,15 @@ function calcularVenta() {
   const total = productosVentaTemp.reduce((sum, p) =>
     sum + ((parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1)), 0);
   const prima = parseFloat(document.getElementById('ventaPrima').value) || 0;
+  const tipoPago = document.getElementById('ventaTipoPago').value;
+  
+  if (tipoPago === 'cash') {
+    document.getElementById('previewTotalVenta').textContent = `C$${total.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
+    document.getElementById('previewSaldoVenta').textContent = `C$0.00`;
+    document.getElementById('previewCuotaVenta').textContent = `C$0.00`;
+    return;
+  }
+  
   const meses = parseInt(document.getElementById('ventaMeses').value) || 12;
   const saldo = Math.max(0, total - prima);
   const cuota = saldo > 0 && meses > 0 ? saldo / meses : 0;
@@ -1518,6 +1642,49 @@ function calcularVenta() {
   document.getElementById('previewCuotaVenta').textContent = `C$${cuota.toLocaleString('es-NI', {minimumFractionDigits: 2})}`;
 }
 
+function calcularProximaFecha(fechaBase, frecuencia, fechasPersonalizadas = []) {
+  const fecha = new Date(fechaBase);
+  const hoy = new Date();
+  
+  switch(frecuencia) {
+    case 'semanal':
+      fecha.setDate(fecha.getDate() + 7);
+      break;
+    case 'quincenal':
+      fecha.setDate(fecha.getDate() + 15);
+      break;
+    case 'personalizado':
+      if (fechasPersonalizadas.length > 0) {
+        const diaActual = fecha.getDate();
+        const mesActual = fecha.getMonth();
+        const añoActual = fecha.getFullYear();
+        
+        // Ordenar fechas
+        const fechasOrdenadas = [...fechasPersonalizadas].sort((a, b) => a - b);
+        
+        // Buscar la siguiente fecha
+        let siguienteFecha = fechasOrdenadas.find(d => d > diaActual);
+        
+        if (siguienteFecha) {
+          fecha.setDate(siguienteFecha);
+        } else {
+          // Ir al primer día del mes siguiente
+          fecha.setMonth(mesActual + 1);
+          fecha.setDate(fechasOrdenadas[0]);
+        }
+      } else {
+        fecha.setMonth(fecha.getMonth() + 1);
+      }
+      break;
+    case 'mensual':
+    default:
+      fecha.setMonth(fecha.getMonth() + 1);
+      break;
+  }
+  
+  return fecha;
+}
+
 function guardarVenta() {
   const editId = document.getElementById('ventaEditId').value;
   const id = document.getElementById('ventaId').value.trim().toUpperCase();
@@ -1525,7 +1692,10 @@ function guardarVenta() {
   const telefono = document.getElementById('ventaTelefono').value.trim();
   const fecha = document.getElementById('ventaFecha').value;
   const prima = parseFloat(document.getElementById('ventaPrima').value) || 0;
+  const tipoPago = document.getElementById('ventaTipoPago').value;
   const meses = parseInt(document.getElementById('ventaMeses').value) || 12;
+  const frecuencia = document.getElementById('ventaFrecuencia').value;
+  const fechasPersonalizadasStr = document.getElementById('ventaFechasPersonalizadas').value;
   
   if (!id || !cliente || !fecha) {
     alert('Completa los campos obligatorios');
@@ -1541,9 +1711,15 @@ function guardarVenta() {
   const precioTotal = productosValidos.reduce((sum, p) =>
     sum + (parseFloat(p.precioVenta) * parseInt(p.cantidad)), 0);
   
-  if (prima > precioTotal) {
+  if (tipoPago === 'credito' && prima > precioTotal) {
     alert('La prima no puede ser mayor que el total');
     return;
+  }
+  
+  // Procesar fechas personalizadas
+  let fechasPersonalizadas = [];
+  if (frecuencia === 'personalizado' && fechasPersonalizadasStr) {
+    fechasPersonalizadas = fechasPersonalizadasStr.split(',').map(f => parseInt(f.trim())).filter(f => !isNaN(f) && f >= 1 && f <= 31);
   }
   
   if (editId) {
@@ -1583,6 +1759,22 @@ function guardarVenta() {
     }
   });
   
+  let saldo, cuotaMensual, estado, proximaFecha;
+  
+  if (tipoPago === 'cash') {
+    saldo = 0;
+    cuotaMensual = 0;
+    estado = 'PAGADO';
+    proximaFecha = fecha;
+  } else {
+    saldo = precioTotal - prima;
+    cuotaMensual = saldo > 0 && meses > 0 ? saldo / meses : 0;
+    estado = saldo <= 0 ? 'PAGADO' : 'PENDIENTE';
+    const fechaBase = new Date(fecha);
+    const fechaProx = calcularProximaFecha(fechaBase, frecuencia, fechasPersonalizadas);
+    proximaFecha = fechaProx.toISOString().split('T')[0];
+  }
+  
   if (editId) {
     const venta = ventas.find(v => v.id === editId);
     if (venta) {
@@ -1590,10 +1782,6 @@ function guardarVenta() {
       
       if (reactivar && venta.estado === 'PAGADO') {
         const nuevoId = id + '_EXT';
-        const saldo = precioTotal - prima;
-        const cuotaMensual = saldo > 0 && meses > 0 ? saldo / meses : 0;
-        const proximaFecha = new Date(fecha);
-        proximaFecha.setMonth(proximaFecha.getMonth() + 1);
         
         ventas.push({
           id: nuevoId,
@@ -1607,8 +1795,11 @@ function guardarVenta() {
           meses,
           cuotaMensual,
           pagado: prima,
-          estado: saldo <= 0 ? 'PAGADO' : 'PENDIENTE',
-          proximaFechaCobro: proximaFecha.toISOString().split('T')[0],
+          estado,
+          proximaFechaCobro: proximaFecha,
+          tipoPago,
+          frecuenciaPago: frecuencia,
+          fechasPersonalizadas,
           ventaOriginal: editId,
           lastModified: Date.now()
         });
@@ -1621,9 +1812,13 @@ function guardarVenta() {
         venta.precioTotal = precioTotal;
         venta.prima = prima;
         venta.meses = meses;
-        venta.saldo = precioTotal - venta.pagado;
-        venta.cuotaMensual = venta.saldo > 0 && meses > 0 ? venta.saldo / meses : 0;
-        if (venta.saldo <= 0) venta.estado = 'PAGADO';
+        venta.tipoPago = tipoPago;
+        venta.frecuenciaPago = frecuencia;
+        venta.fechasPersonalizadas = fechasPersonalizadas;
+        venta.saldo = tipoPago === 'cash' ? 0 : (precioTotal - venta.pagado);
+        venta.cuotaMensual = cuotaMensual;
+        venta.estado = tipoPago === 'cash' ? 'PAGADO' : (venta.saldo <= 0 ? 'PAGADO' : 'PENDIENTE');
+        venta.proximaFechaCobro = proximaFecha;
         venta.lastModified = Date.now();
         showToast('Venta actualizada');
       }
@@ -1633,11 +1828,6 @@ function guardarVenta() {
       alert('Ya existe una venta con este ID');
       return;
     }
-    
-    const saldo = precioTotal - prima;
-    const cuotaMensual = saldo > 0 && meses > 0 ? saldo / meses : 0;
-    const proximaFecha = new Date(fecha);
-    proximaFecha.setMonth(proximaFecha.getMonth() + 1);
     
     ventas.push({
       id,
@@ -1651,8 +1841,11 @@ function guardarVenta() {
       meses,
       cuotaMensual,
       pagado: prima,
-      estado: saldo <= 0 ? 'PAGADO' : 'PENDIENTE',
-      proximaFechaCobro: proximaFecha.toISOString().split('T')[0],
+      estado,
+      proximaFechaCobro: proximaFecha,
+      tipoPago,
+      frecuenciaPago: frecuencia,
+      fechasPersonalizadas,
       lastModified: Date.now()
     });
     showToast('Venta registrada exitosamente');
@@ -1685,8 +1878,14 @@ function renderVentas() {
     const isPending = venta.estado === 'PENDIENTE';
     const progress = venta.precioTotal > 0 ?
       ((venta.precioTotal - venta.saldo) / venta.precioTotal * 100) : 0;
-    const proximoCobro = new Date(venta.proximaFechaCobro);
+    const proximoCobro = calcularProximaFechaCobro(venta);
     const diasRestantes = Math.ceil((proximoCobro - new Date()) / (1000 * 60 * 60 * 24));
+    
+    const frecuenciaLabel = venta.frecuenciaPago === 'semanal' ? ' • Semanal' : 
+                           venta.frecuenciaPago === 'quincenal' ? ' • Quincenal' : 
+                           venta.frecuenciaPago === 'personalizado' ? ' • Personalizado' : '';
+    
+    const tipoPagoLabel = venta.tipoPago === 'cash' ? ' 💵 Cash' : '';
     
     return `
       <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4 border ${isPending ? 'border-orange-200 dark:border-orange-800' : 'border-green-200 dark:border-green-800'}">
@@ -1696,10 +1895,11 @@ function renderVentas() {
               ${venta.cliente}
               ${!isPending ? '<span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">Pagado</span>' : ''}
               ${venta.ventaOriginal ? '<span class="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">Extensión</span>' : ''}
+              ${tipoPagoLabel ? `<span class="text-xs bg-gray-500 text-white px-2 py-0.5 rounded-full">${tipoPagoLabel}</span>` : ''}
             </h3>
             <p class="text-xs text-gray-500 dark:text-gray-400">${venta.id} | ${venta.telefono || 'Sin teléfono'}</p>
-            ${isPending ? `<p class="text-xs ${diasRestantes < 0 ? 'text-red-600 font-bold' : 'text-gray-500 dark:text-gray-400'}">
-              Próximo cobro: ${formatFecha(venta.proximaFechaCobro)} ${diasRestantes < 0 ? '(Atrasado)' : ''}
+            ${isPending && venta.tipoPago !== 'cash' ? `<p class="text-xs ${diasRestantes < 0 ? 'text-red-600 font-bold' : 'text-gray-500 dark:text-gray-400'}">
+              Próximo cobro: ${formatFecha(venta.proximaFechaCobro)} ${diasRestantes < 0 ? '(Atrasado)' : ''}${frecuenciaLabel}
             </p>` : ''}
           </div>
           <div class="text-right">
@@ -1755,6 +1955,13 @@ function verDetalleVenta(ventaId) {
     </div>
   `).join('') || '<p class="text-gray-500 text-center">Sin productos</p>';
   
+  const frecuenciaText = venta.frecuenciaPago === 'semanal' ? 'Semanal (cada 7 días)' : 
+                        venta.frecuenciaPago === 'quincenal' ? 'Quincenal (cada 15 días)' : 
+                        venta.frecuenciaPago === 'personalizado' ? 'Personalizado: días ' + (venta.fechasPersonalizadas?.join(', ') || '') : 
+                        'Mensual';
+  
+  const tipoPagoText = venta.tipoPago === 'cash' ? 'Cash/Contado' : 'Crédito';
+  
   const cobrosVenta = cobros.filter(c => c.ventaId === ventaId);
   const cobrosHtml = cobrosVenta.length > 0 ? cobrosVenta.map(c => `
     <div class="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/20 rounded-lg text-sm cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/40" onclick="verDetalleCobro('${c.id}')">
@@ -1781,10 +1988,14 @@ function verDetalleVenta(ventaId) {
     <div class="bg-gray-50 dark:bg-slate-700 p-3 rounded-xl mb-4">
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Información del Crédito</p>
       <div class="grid grid-cols-2 gap-2 text-sm">
+        <div><span class="text-gray-600 dark:text-gray-400">Tipo:</span> <span class="font-medium text-gray-800 dark:text-white">${tipoPagoText}</span></div>
+        <div><span class="text-gray-600 dark:text-gray-400">Frecuencia:</span> <span class="font-medium text-gray-800 dark:text-white">${frecuenciaText}</span></div>
+        ${venta.tipoPago !== 'cash' ? `
         <div><span class="text-gray-600 dark:text-gray-400">Meses:</span> <span class="font-medium text-gray-800 dark:text-white">${venta.meses}</span></div>
         <div><span class="text-gray-600 dark:text-gray-400">Cuota:</span> <span class="font-medium text-gray-800 dark:text-white">C$${(parseFloat(venta.cuotaMensual) || 0).toLocaleString()}</span></div>
+        ` : ''}
         <div><span class="text-gray-600 dark:text-gray-400">Prima:</span> <span class="font-medium text-gray-800 dark:text-white">C$${(parseFloat(venta.prima) || 0).toLocaleString()}</span></div>
-        <div><span class="text-gray-600 dark:text-gray-400">Próximo:</span> <span class="font-medium text-gray-800 dark:text-white">${formatFecha(venta.proximaFechaCobro)}</span></div>
+        ${venta.tipoPago !== 'cash' ? `<div><span class="text-gray-600 dark:text-gray-400">Próximo:</span> <span class="font-medium text-gray-800 dark:text-white">${formatFecha(venta.proximaFechaCobro)}</span></div>` : ''}
       </div>
     </div>
     
@@ -1817,8 +2028,87 @@ function registrarCobroDesdeVenta() {
 }
 
 // ==========================================
-// PDF Y WHATSAPP - VENTAS
+// PDF Y WHATSAPP - FORMATOS ESTANDARIZADOS
 // ==========================================
+function generarMensajeRecibo(datos, tipo) {
+  // Formato estandarizado para ambos (PDF y WhatsApp)
+  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
+  
+  if (tipo === 'venta') {
+    mensaje += `📋 *RECIBO DE VENTA*\n\n`;
+    mensaje += `*ID:* ${datos.id}\n`;
+    mensaje += `*Cliente:* ${datos.cliente}\n`;
+    mensaje += `*Fecha:* ${formatFecha(datos.fecha)}\n`;
+    mensaje += `*Teléfono:* ${datos.telefono || 'N/A'}\n\n`;
+    mensaje += `*PRODUCTOS:*\n`;
+    
+    datos.productos.forEach((p, i) => {
+      const subtotal = (parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1);
+      mensaje += `${i+1}. ${p.nombre} x${p.cantidad} - C$${subtotal.toLocaleString()}\n`;
+    });
+    
+    const tipoPagoText = datos.tipoPago === 'cash' ? 'Cash/Contado' : 'Crédito';
+    const frecuenciaText = datos.frecuenciaPago === 'semanal' ? 'Semanal' : 
+                          datos.frecuenciaPago === 'quincenal' ? 'Quincenal' : 
+                          datos.frecuenciaPago === 'personalizado' ? 'Personalizado' : 'Mensual';
+    
+    mensaje += `\n*TOTAL:* C$${(parseFloat(datos.precioTotal) || 0).toLocaleString()}`;
+    mensaje += `\n*TIPO DE PAGO:* ${tipoPagoText}`;
+    
+    if (datos.tipoPago !== 'cash') {
+      mensaje += `\n*PRIMA:* C$${(parseFloat(datos.prima) || 0).toLocaleString()}`;
+      mensaje += `\n*SALDO:* C$${(parseFloat(datos.saldo) || 0).toLocaleString()}`;
+      mensaje += `\n*CUOTA (${frecuenciaText}):* C$${(parseFloat(datos.cuotaMensual) || 0).toLocaleString()}`;
+      mensaje += `\n*MESES:* ${datos.meses}`;
+      if (datos.frecuenciaPago === 'personalizado' && datos.fechasPersonalizadas) {
+        mensaje += `\n*FECHAS DE PAGO:* ${datos.fechasPersonalizadas.join(', ')} de cada mes`;
+      }
+    }
+    
+    mensaje += `\n\n🌹 ¡Gracias por su compra! 🌹`;
+  } else if (tipo === 'abono') {
+    const lote = datos.lote || {};
+    mensaje += `📋 *RECIBO DE ABONO*\n\n`;
+    mensaje += `*ID Abono:* ${datos.id}\n`;
+    mensaje += `*Lote:* ${datos.loteId}\n`;
+    mensaje += `*Fecha:* ${formatFecha(datos.fecha)}\n`;
+    mensaje += `*Método:* ${datos.metodo}\n\n`;
+    mensaje += `💰 *MONTO ABONADO: C$${(parseFloat(datos.monto) || 0).toLocaleString()}*\n\n`;
+    mensaje += `*Estado del Lote:*\n`;
+    mensaje += `Total: C$${(parseFloat(lote.totalInicial) || 0).toLocaleString()}\n`;
+    mensaje += `Abonado: C$${(parseFloat(lote.abonado) || 0).toLocaleString()}\n`;
+    mensaje += `Saldo: C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()}\n`;
+    
+    if (datos.notas) {
+      mensaje += `\n*Notas:* ${datos.notas}`;
+    }
+    
+    mensaje += `\n\n❤️ ¡Gracias por darme crédito! ❤️`;
+  } else if (tipo === 'cobro') {
+    const venta = datos.venta || {};
+    mensaje += `📋 *RECIBO DE COBRO*\n\n`;
+    mensaje += `*ID Cobro:* ${datos.id}\n`;
+    mensaje += `*Venta:* ${datos.ventaId}\n`;
+    mensaje += `*Cliente:* ${venta.cliente || 'N/A'}\n`;
+    mensaje += `*Fecha:* ${formatFecha(datos.fecha)}\n`;
+    mensaje += `*Método:* ${datos.metodo}\n\n`;
+    mensaje += `💚 *MONTO COBRADO: C$${(parseFloat(datos.monto) || 0).toLocaleString()}*\n\n`;
+    mensaje += `*Estado de la Cuenta:*\n`;
+    mensaje += `Total Venta: C$${(parseFloat(venta.precioTotal) || 0).toLocaleString()}\n`;
+    mensaje += `Total Pagado: C$${(parseFloat(venta.pagado) || 0).toLocaleString()}\n`;
+    mensaje += `Saldo Pendiente: C$${(parseFloat(venta.saldo) || 0).toLocaleString()}\n`;
+    
+    if (datos.notas) {
+      mensaje += `\n*Notas:* ${datos.notas}`;
+    }
+    
+    mensaje += `\n\n🌹 ¡Gracias por su pago! 🌹`;
+  }
+  
+  mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
+  return mensaje;
+}
+
 async function generarPDFVenta(ventaId) {
   const venta = ventas.find(v => v.id === ventaId);
   if (!venta) {
@@ -1830,22 +2120,32 @@ async function generarPDFVenta(ventaId) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
+    // Configuración de colores según tema
+    const colorPrimario = [236, 72, 153]; // Rosa
+    const colorTexto = [0, 0, 0];
+    
     doc.setFontSize(18);
-    doc.setTextColor(236, 72, 153);
+    doc.setTextColor(...colorPrimario);
     doc.text('ELECTRODOMÉSTICOS Y VARIEDADES KAREN', 105, 20, null, null, 'center');
     
     doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(...colorTexto);
     doc.text('Recibo de Venta', 105, 28, null, null, 'center');
     
     doc.setFontSize(12);
-    doc.text(`ID: ${venta.id}`, 20, 45);
-    doc.text(`Cliente: ${venta.cliente}`, 20, 55);
-    doc.text(`Fecha: ${formatFecha(venta.fecha)}`, 20, 65);
-    doc.text(`Teléfono: ${venta.telefono || 'N/A'}`, 20, 75);
+    let y = 45;
+    doc.text(`ID: ${venta.id}`, 20, y);
+    y += 10;
+    doc.text(`Cliente: ${venta.cliente}`, 20, y);
+    y += 10;
+    doc.text(`Fecha: ${formatFecha(venta.fecha)}`, 20, y);
+    y += 10;
+    doc.text(`Teléfono: ${venta.telefono || 'N/A'}`, 20, y);
+    y += 15;
     
-    doc.text('PRODUCTOS:', 20, 90);
-    let y = 100;
+    doc.text('PRODUCTOS:', 20, y);
+    y += 10;
+    
     venta.productos.forEach((p, i) => {
       const subtotal = (parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1);
       doc.text(`${i+1}. ${p.nombre} x${p.cantidad} - C$${subtotal.toLocaleString()}`, 25, y);
@@ -1855,17 +2155,39 @@ async function generarPDFVenta(ventaId) {
     y += 5;
     doc.line(20, y, 190, y);
     y += 10;
-    doc.setFontSize(12);
-    doc.text(`Total: C$${(venta.precioTotal).toLocaleString()}`, 20, y);
-    doc.text(`Prima: C$${(venta.prima).toLocaleString()}`, 20, y+10);
-    doc.text(`Saldo: C$${(venta.saldo).toLocaleString()}`, 20, y+20);
-    doc.text(`Cuota Mensual: C$${(venta.cuotaMensual).toLocaleString()}`, 20, y+30);
-    doc.text(`Meses: ${venta.meses}`, 20, y+40);
     
+    const tipoPagoText = venta.tipoPago === 'cash' ? 'Cash/Contado' : 'Crédito';
+    doc.text(`Tipo de Pago: ${tipoPagoText}`, 20, y);
+    y += 10;
+    doc.text(`Total: C$${(venta.precioTotal).toLocaleString()}`, 20, y);
+    
+    if (venta.tipoPago !== 'cash') {
+      y += 10;
+      doc.text(`Prima: C$${(venta.prima).toLocaleString()}`, 20, y);
+      y += 10;
+      doc.text(`Saldo: C$${(venta.saldo).toLocaleString()}`, 20, y);
+      y += 10;
+      doc.text(`Cuota: C$${(venta.cuotaMensual).toLocaleString()}`, 20, y);
+      y += 10;
+      doc.text(`Meses: ${venta.meses}`, 20, y);
+      
+      const frecuenciaText = venta.frecuenciaPago === 'semanal' ? 'Semanal' : 
+                            venta.frecuenciaPago === 'quincenal' ? 'Quincenal' : 
+                            venta.frecuenciaPago === 'personalizado' ? 'Personalizado' : 'Mensual';
+      y += 10;
+      doc.text(`Frecuencia: ${frecuenciaText}`, 20, y);
+      
+      if (venta.frecuenciaPago === 'personalizado' && venta.fechasPersonalizadas) {
+        y += 10;
+        doc.text(`Fechas: ${venta.fechasPersonalizadas.join(', ')} de cada mes`, 20, y);
+      }
+    }
+    
+    y += 20;
     doc.setFontSize(10);
-    doc.setTextColor(236, 72, 153);
-    doc.text('¡Gracias por su compra!', 105, y+60, null, null, 'center');
-    doc.text('ELECTRODOMÉSTICOS Y VARIEDADES KAREN', 105, y+68, null, null, 'center');
+    doc.setTextColor(...colorPrimario);
+    doc.text('¡Gracias por su compra!', 105, y, null, null, 'center');
+    doc.text('ELECTRODOMÉSTICOS Y VARIEDADES KAREN', 105, y + 8, null, null, 'center');
     
     doc.save(`Recibo_Venta_${venta.id}_${venta.cliente.replace(/\s+/g, '_')}.pdf`);
     showToast('✅ PDF generado');
@@ -1882,24 +2204,7 @@ function enviarWhatsAppVenta(ventaId) {
     return;
   }
   
-  let mensaje = `🦋*ELECTRODOMÉSTICOS Y VARIEDADES KAREN*🦋\n\n`;
-  mensaje += `📋 *RECIBO DE VENTA*\n\n`;
-  mensaje += `*ID:* ${venta.id}\n`;
-  mensaje += `*Cliente:* ${venta.cliente}\n`;
-  mensaje += `*Fecha:* ${formatFecha(venta.fecha)}\n\n`;
-  mensaje += `*PRODUCTOS:*\n`;
-  
-  venta.productos.forEach((p, i) => {
-    const subtotal = (parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1);
-    mensaje += `${i+1}. ${p.nombre} x${p.cantidad} - C$${subtotal.toLocaleString()}\n`;
-  });
-  
-  mensaje += `\n*TOTAL:* C$${(venta.precioTotal).toLocaleString()}`;
-  mensaje += `\n*PRIMA:* C$${(venta.prima).toLocaleString()}`;
-  mensaje += `\n*SALDO:* C$${(venta.saldo).toLocaleString()}`;
-  mensaje += `\n*CUOTA:* C$${(venta.cuotaMensual).toLocaleString()} x ${venta.meses} meses`;
-  mensaje += `\n\n🌹¡Gracias por su compra!🌹`;
-  mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
+  const mensaje = generarMensajeRecibo(venta, 'venta');
   
   const telefono = venta.telefono?.replace(/[^0-9]/g, '') || '';
   const url = telefono 
@@ -1910,9 +2215,6 @@ function enviarWhatsAppVenta(ventaId) {
   showToast('📱 Abriendo WhatsApp...');
 }
 
-// ==========================================
-// PDF Y WHATSAPP - ABONOS
-// ==========================================
 async function generarPDFAbono(abonoId) {
   const abono = abonos.find(a => a.id === abonoId);
   if (!abono) {
@@ -1975,34 +2277,13 @@ function enviarWhatsAppAbono(abonoId) {
   }
   
   const lote = lotes.find(l => l.id === abono.loteId);
-  
-  let mensaje = `🦋*ELECTRODOMÉSTICOS Y VARIEDADES KAREN*🦋\n\n`;
-  mensaje += `📋 *RECIBO DE ABONO*\n\n`;
-  mensaje += `*ID Abono:* ${abono.id}\n`;
-  mensaje += `*Lote:* ${abono.loteId}\n`;
-  mensaje += `*Fecha:* ${formatFecha(abono.fecha)}\n`;
-  mensaje += `*Método:* ${abono.metodo}\n\n`;
-  mensaje += `💰 *MONTO ABONADO: C$${(parseFloat(abono.monto) || 0).toLocaleString()}*\n\n`;
-  mensaje += `*Estado del Lote:*\n`;
-  mensaje += `Total: C$${(parseFloat(lote?.totalInicial) || 0).toLocaleString()}\n`;
-  mensaje += `Abonado: C$${(parseFloat(lote?.abonado) || 0).toLocaleString()}\n`;
-  mensaje += `Saldo: C$${(parseFloat(lote?.saldoPendiente) || 0).toLocaleString()}\n`;
-  
-  if (abono.notas) {
-    mensaje += `\n*Notas:* ${abono.notas}`;
-  }
-  
-  mensaje += `\n\n❤️¡Gracias por darme crédito!❤️`;
-  mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
+  const mensaje = generarMensajeRecibo({...abono, lote}, 'abono');
   
   const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
   window.open(url, '_blank');
   showToast('📱 Abriendo WhatsApp...');
 }
 
-// ==========================================
-// PDF Y WHATSAPP - COBROS
-// ==========================================
 async function generarPDFCobro(cobroId) {
   const cobro = cobros.find(c => c.id === cobroId);
   if (!cobro) {
@@ -2066,26 +2347,7 @@ function enviarWhatsAppCobro(cobroId) {
   }
   
   const venta = ventas.find(v => v.id === cobro.ventaId);
-  
-  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
-  mensaje += `📋 *RECIBO DE COBRO*\n\n`;
-  mensaje += `*ID Cobro:* ${cobro.id}\n`;
-  mensaje += `*Venta:* ${cobro.ventaId}\n`;
-  mensaje += `*Cliente:* ${venta?.cliente || 'N/A'}\n`;
-  mensaje += `*Fecha:* ${formatFecha(cobro.fecha)}\n`;
-  mensaje += `*Método:* ${cobro.metodo}\n\n`;
-  mensaje += `💚 *MONTO COBRADO: C$${(parseFloat(cobro.monto) || 0).toLocaleString()}*\n\n`;
-  mensaje += `*Estado de la Cuenta:*\n`;
-  mensaje += `Total Venta: C$${(parseFloat(venta?.precioTotal) || 0).toLocaleString()}\n`;
-  mensaje += `Total Pagado: C$${(parseFloat(venta?.pagado) || 0).toLocaleString()}\n`;
-  mensaje += `Saldo Pendiente: C$${(parseFloat(venta?.saldo) || 0).toLocaleString()}\n`;
-  
-  if (cobro.notas) {
-    mensaje += `\n*Notas:* ${cobro.notas}`;
-  }
-  
-  mensaje += `\n\n🌹 ¡Gracias por su pago! 🌹`;
-  mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
+  const mensaje = generarMensajeRecibo({...cobro, venta}, 'cobro');
   
   const telefono = venta?.telefono?.replace(/[^0-9]/g, '') || '';
   const url = telefono 
@@ -2162,6 +2424,10 @@ function verDetalleCobro(cobroId) {
   
   document.getElementById('tituloDetalleCobro').textContent = `Cobro ${cobro.id}`;
   
+  const frecuenciaText = venta?.frecuenciaPago === 'semanal' ? 'Semanal' : 
+                        venta?.frecuenciaPago === 'quincenal' ? 'Quincenal' : 
+                        venta?.frecuenciaPago === 'personalizado' ? 'Personalizado' : 'Mensual';
+  
   document.getElementById('contenidoDetalleCobro').innerHTML = `
     <div class="space-y-3">
       <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl">
@@ -2198,6 +2464,12 @@ function verDetalleCobro(cobroId) {
             <span class="text-gray-600 dark:text-gray-400">Saldo:</span>
             <span class="font-medium text-orange-600">C$${(parseFloat(venta?.saldo) || 0).toLocaleString()}</span>
           </div>
+          ${venta?.tipoPago !== 'cash' ? `
+          <div class="flex justify-between">
+            <span class="text-gray-600 dark:text-gray-400">Frecuencia:</span>
+            <span class="font-medium">${frecuenciaText}</span>
+          </div>
+          ` : ''}
         </div>
       </div>
     </div>
@@ -2591,10 +2863,12 @@ function guardarCobro() {
     venta.pagado = (parseFloat(venta.pagado) || 0) + monto;
     venta.saldo = (parseFloat(venta.saldo) || 0) - monto;
     
-    // Actualizar próxima fecha de cobro
-    const proximaFecha = new Date(venta.proximaFechaCobro);
-    proximaFecha.setMonth(proximaFecha.getMonth() + 1);
-    venta.proximaFechaCobro = proximaFecha.toISOString().split('T')[0];
+    // Actualizar próxima fecha de cobro según frecuencia
+    if (venta.tipoPago !== 'cash' && venta.saldo > 0) {
+      const fechaBase = new Date(fecha);
+      const proximaFecha = calcularProximaFecha(fechaBase, venta.frecuenciaPago, venta.fechasPersonalizadas || []);
+      venta.proximaFechaCobro = proximaFecha.toISOString().split('T')[0];
+    }
     
     if (venta.saldo <= 0) {
       venta.estado = 'PAGADO';
