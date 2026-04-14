@@ -376,7 +376,7 @@ async function sincronizarAhora() {
       cobros: cobros,
       deviceId: CONFIG.deviceId,
       lastModified: Date.now()
-    });
+    };
 
     try {
       const controller = new AbortController();
