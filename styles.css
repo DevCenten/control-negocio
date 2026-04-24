@@ -20,7 +20,7 @@ section > div {
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #f1f1f1;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -32,6 +32,10 @@ section > div {
   background: #94a3b8;
 }
 
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
 .dark ::-webkit-scrollbar-thumb {
   background: #475569;
 }
@@ -40,17 +44,28 @@ section > div {
   background: #64748b;
 }
 
-input, select {
+input, select, textarea {
   transition: all 0.2s;
+  background-color: #ffffff;
+  border-color: #e2e8f0;
 }
 
-input:focus, select:focus {
+.dark input, .dark select, .dark textarea {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #ec4899;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.15);
 }
 
 button {
   transition: all 0.2s;
+  cursor: pointer;
 }
 
 button:active {
@@ -63,9 +78,36 @@ button:active {
 
 #toast {
   backdrop-filter: blur(10px);
-  background: rgba(31, 41, 55, 0.95);
+  background: rgba(15, 23, 42, 0.95);
+  color: white;
 }
 
+.dark #toast {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+/* Cards más claras y suaves */
+.bg-white {
+  background-color: #ffffff;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.dark .bg-white {
+  background-color: #0f172a;
+  border-color: #1e293b;
+}
+
+/* Mejoras en botones de navegación */
+.nav-btn {
+  transition: all 0.2s;
+}
+
+.nav-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* Responsive mejorado */
 @media (max-width: 640px) {
   .grid-cols-2 {
     grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -76,8 +118,17 @@ button:active {
   .grid-cols-4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  
+  .text-lg {
+    font-size: 1rem;
+  }
+  
+  .p-4 {
+    padding: 0.75rem;
+  }
 }
 
+/* Prevenir zoom en inputs en móviles */
 @media screen and (max-width: 768px) {
   input, select, textarea {
     font-size: 16px;
@@ -93,17 +144,57 @@ button:active {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Focus visible para accesibilidad */
 button:focus-visible,
 input:focus-visible,
-select:focus-visible {
+select:focus-visible,
+textarea:focus-visible {
   outline: 2px solid #ec4899;
   outline-offset: 2px;
 }
 
-.bg-white, .dark .bg-slate-800 {
-  transition: transform 0.2s, box-shadow 0.2s;
+/* Transiciones suaves */
+.bg-white, .dark .bg-slate-800,
+.bg-gray-50, .dark .bg-slate-700 {
+  transition: all 0.2s ease;
 }
 
-.bg-white:active, .dark .bg-slate-800:active {
-  transform: scale(0.99);
+/* Badges y etiquetas */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-success {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.dark .badge-success {
+  background-color: #14532d;
+  color: #bbf7d0;
+}
+
+.badge-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.dark .badge-warning {
+  background-color: #78350f;
+  color: #fde68a;
+}
+
+.badge-danger {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.dark .badge-danger {
+  background-color: #7f1d1d;
+  color: #fecaca;
 }

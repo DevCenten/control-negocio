@@ -36,7 +36,7 @@ let productosSeleccionados = [];
 // INICIALIZACIÓN CON DATOS DEL BACKUP
 // ==========================================
 window.onload = function() {
-  // Cargar tema guardado
+  // Cargar tema guardado (por defecto LIGHT - más claro)
   cargarTema();
   
   // Cargar datos desde localStorage o usar datos del backup si no hay datos guardados
@@ -63,6 +63,9 @@ window.onload = function() {
     saveLocalData();
   }
 
+  // Migración segura: normalizar todos los datos existentes
+  normalizarTodosDatos();
+
   window.addEventListener('online', () => {
     CONFIG.isOnline = true;
     updateSyncStatus('online');
@@ -88,6 +91,79 @@ window.onload = function() {
   }
 };
 
+function normalizarTodosDatos() {
+  // Normalizar lotes
+  lotes = lotes.map(l => ({
+    ...l,
+    id: (l.id || '').toString().trim(),
+    totalInicial: parseFloat(l.totalInicial) || 0,
+    abonado: parseFloat(l.abonado) || 0,
+    saldoPendiente: parseFloat(l.saldoPendiente) || 0,
+    estado: (l.estado || 'PENDIENTE').toString().trim(),
+    lastModified: l.lastModified || Date.now(),
+    productos: (l.productos || []).map(p => ({
+      ...p,
+      precioCarmen: parseFloat(p.precioCarmen) || 0,
+      cantidad: parseInt(p.cantidad) || 1
+    }))
+  }));
+  
+  // Normalizar compras
+  compras = compras.map(c => ({
+    ...c,
+    id: (c.id || '').toString().trim(),
+    productos: (c.productos || []).map(p => ({
+      ...p,
+      precioCompra: parseFloat(p.precioCompra) || 0,
+      cantidad: parseInt(p.cantidad) || 1
+    })),
+    lastModified: c.lastModified || Date.now()
+  }));
+  
+  // Normalizar ventas
+  ventas = ventas.map(v => ({
+    ...v,
+    id: (v.id || '').toString().trim(),
+    precioTotal: parseFloat(v.precioTotal) || 0,
+    prima: parseFloat(v.prima) || 0,
+    saldo: parseFloat(v.saldo) || 0,
+    pagado: parseFloat(v.pagado) || 0,
+    cuotaMensual: parseFloat(v.cuotaMensual) || 0,
+    meses: parseInt(v.meses) || 12,
+    estado: (v.estado || 'PENDIENTE').toString().trim(),
+    frecuenciaPago: v.frecuenciaPago || 'mensual',
+    fechasPersonalizadas: v.fechasPersonalizadas || [],
+    tipoPago: v.tipoPago || 'credito',
+    productos: (v.productos || []).map(p => ({
+      ...p,
+      precioVenta: parseFloat(p.precioVenta) || 0,
+      cantidad: parseInt(p.cantidad) || 1
+    })),
+    lastModified: v.lastModified || Date.now()
+  }));
+  
+  // Normalizar abonos
+  abonos = abonos.map(a => ({
+    ...a,
+    id: (a.id || '').toString().trim(),
+    loteId: (a.loteId || '').toString().trim(),
+    monto: parseFloat(a.monto) || 0,
+    saldoDespues: parseFloat(a.saldoDespues) || 0,
+    lastModified: a.lastModified || Date.now()
+  }));
+  
+  // Normalizar cobros
+  cobros = cobros.map(c => ({
+    ...c,
+    id: (c.id || '').toString().trim(),
+    ventaId: (c.ventaId || '').toString().trim(),
+    monto: parseFloat(c.monto) || 0,
+    lastModified: c.lastModified || Date.now()
+  }));
+  
+  saveLocalData();
+}
+
 function generarDeviceId() {
   const id = 'device_' + Math.random().toString(36).substr(2, 9);
   localStorage.setItem('deviceId', id);
@@ -95,10 +171,10 @@ function generarDeviceId() {
 }
 
 // ==========================================
-// THEME / TEMA CLARO-OSCURO
+// THEME / TEMA CLARO-OSCURO (por defecto CLARO)
 // ==========================================
 function cargarTema() {
-  const temaGuardado = localStorage.getItem('tema') || 'light';
+  const temaGuardado = localStorage.getItem('tema') || 'light'; // Por defecto light
   if (temaGuardado === 'dark') {
     document.documentElement.classList.add('dark');
     actualizarIconoTema(true);
@@ -130,6 +206,242 @@ function actualizarIconoTema(isDark) {
       icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>';
     }
   }
+}
+
+// ==========================================
+// FUNCIONES DE FORMATO CORREGIDAS
+// ==========================================
+function formatFecha(fechaStr) {
+  if (!fechaStr) return 'N/A';
+  // Manejar diferentes formatos de entrada
+  let fecha;
+  if (fechaStr.includes('T')) {
+    // Formato ISO
+    const [year, month, day] = fechaStr.split('T')[0].split('-');
+    fecha = new Date(year, month - 1, day);
+  } else if (fechaStr.includes('-')) {
+    const [year, month, day] = fechaStr.split('-');
+    fecha = new Date(year, month - 1, day);
+  } else {
+    fecha = new Date(fechaStr);
+  }
+  
+  if (isNaN(fecha.getTime())) return 'Fecha inválida';
+  
+  const day = fecha.getDate().toString().padStart(2, '0');
+  const month = (fecha.getMonth() + 1).toString().padStart(2, '0');
+  const year = fecha.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function formatFechaHora(fechaStr) {
+  if (!fechaStr) return 'N/A';
+  let fecha;
+  if (fechaStr.includes('T')) {
+    const [year, month, day] = fechaStr.split('T')[0].split('-');
+    fecha = new Date(year, month - 1, day);
+  } else if (fechaStr.includes('-')) {
+    const [year, month, day] = fechaStr.split('-');
+    fecha = new Date(year, month - 1, day);
+  } else {
+    fecha = new Date(fechaStr);
+  }
+  
+  if (isNaN(fecha.getTime())) return 'Fecha inválida';
+  
+  const day = fecha.getDate().toString().padStart(2, '0');
+  const month = (fecha.getMonth() + 1).toString().padStart(2, '0');
+  const year = fecha.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+// ==========================================
+// GENERAR PLAN DE PAGOS PARA WHATSAPP
+// ==========================================
+function generarPlanPagos(venta) {
+  if (venta.tipoPago === 'cash') return '💰 *Pago de contado*\n';
+  
+  let plan = '📅 *Plan de pagos:*\n';
+  const cuota = parseFloat(venta.cuotaMensual) || 0;
+  const saldoInicial = parseFloat(venta.saldo) || 0;
+  const fechaInicio = new Date(venta.fecha);
+  const frecuencia = venta.frecuenciaPago;
+  const fechasPersonalizadas = venta.fechasPersonalizadas || [];
+  const meses = parseInt(venta.meses) || 12;
+  
+  let fechaPago = new Date(fechaInicio);
+  let saldoRestante = saldoInicial;
+  
+  for (let i = 1; i <= meses && saldoRestante > 0.01; i++) {
+    // Calcular siguiente fecha de pago
+    switch(frecuencia) {
+      case 'semanal':
+        fechaPago = new Date(fechaPago);
+        fechaPago.setDate(fechaPago.getDate() + 7);
+        break;
+      case 'quincenal':
+        fechaPago = new Date(fechaPago);
+        fechaPago.setDate(fechaPago.getDate() + 15);
+        break;
+      case 'personalizado':
+        if (fechasPersonalizadas.length > 0) {
+          const diaActual = fechaPago.getDate();
+          const mesActual = fechaPago.getMonth();
+          const añoActual = fechaPago.getFullYear();
+          const fechasOrdenadas = [...fechasPersonalizadas].sort((a, b) => a - b);
+          let siguienteFecha = fechasOrdenadas.find(d => d > diaActual);
+          if (siguienteFecha) {
+            fechaPago = new Date(añoActual, mesActual, siguienteFecha);
+          } else {
+            fechaPago = new Date(añoActual, mesActual + 1, fechasOrdenadas[0]);
+          }
+        } else {
+          fechaPago = new Date(fechaPago);
+          fechaPago.setMonth(fechaPago.getMonth() + 1);
+        }
+        break;
+      default: // mensual
+        fechaPago = new Date(fechaPago);
+        fechaPago.setMonth(fechaPago.getMonth() + 1);
+        break;
+    }
+    
+    const montoPago = Math.min(cuota, saldoRestante);
+    plan += `   ${i}. ${formatFecha(fechaPago.toISOString().split('T')[0])}: C$${montoPago.toLocaleString()}\n`;
+    saldoRestante -= montoPago;
+  }
+  
+  return plan;
+}
+
+function obtenerHistorialCobros(ventaId) {
+  const cobrosVenta = cobros.filter(c => c.ventaId === ventaId).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+  if (cobrosVenta.length === 0) return '   No hay cobros registrados aún\n';
+  
+  let historial = '💰 *Historial de pagos realizados:*\n';
+  cobrosVenta.forEach((c, i) => {
+    historial += `   ${i+1}. ${formatFecha(c.fecha)}: C$${(parseFloat(c.monto) || 0).toLocaleString()} (${c.metodo})\n`;
+  });
+  return historial;
+}
+
+function obtenerHistorialAbonos(loteId) {
+  const abonosLote = abonos.filter(a => a.loteId === loteId).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+  if (abonosLote.length === 0) return '   No hay abonos registrados aún\n';
+  
+  let historial = '💰 *Historial de abonos realizados:*\n';
+  abonosLote.forEach((a, i) => {
+    historial += `   ${i+1}. ${formatFecha(a.fecha)}: C$${(parseFloat(a.monto) || 0).toLocaleString()} (${a.metodo})${a.notas ? ` - ${a.notas}` : ''}\n`;
+  });
+  return historial;
+}
+
+// ==========================================
+// MENSAJES WHATSAPP MEJORADOS
+// ==========================================
+function generarMensajeRecibo(datos, tipo) {
+  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
+  
+  if (tipo === 'venta') {
+    mensaje += `📋 *RECIBO DE VENTA*\n\n`;
+    mensaje += `*ID:* ${datos.id}\n`;
+    mensaje += `*Cliente:* ${datos.cliente}\n`;
+    mensaje += `*Fecha:* ${formatFecha(datos.fecha)}\n`;
+    mensaje += `*Teléfono:* ${datos.telefono || 'N/A'}\n\n`;
+    mensaje += `*PRODUCTOS:*\n`;
+    
+    datos.productos.forEach((p, i) => {
+      const subtotal = (parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1);
+      mensaje += `${i+1}. ${p.nombre} x${p.cantidad} - C$${subtotal.toLocaleString()}\n`;
+    });
+    
+    const tipoPagoText = datos.tipoPago === 'cash' ? 'Cash/Contado' : 'Crédito';
+    const frecuenciaText = datos.frecuenciaPago === 'semanal' ? 'Semanal' : 
+                          datos.frecuenciaPago === 'quincenal' ? 'Quincenal' : 
+                          datos.frecuenciaPago === 'personalizado' ? 'Personalizado' : 'Mensual';
+    
+    mensaje += `\n*TOTAL:* C$${(parseFloat(datos.precioTotal) || 0).toLocaleString()}`;
+    mensaje += `\n*TIPO DE PAGO:* ${tipoPagoText}`;
+    
+    if (datos.tipoPago !== 'cash') {
+      mensaje += `\n*PRIMA:* C$${(parseFloat(datos.prima) || 0).toLocaleString()}`;
+      mensaje += `\n*SALDO:* C$${(parseFloat(datos.saldo) || 0).toLocaleString()}`;
+      mensaje += `\n*CUOTA (${frecuenciaText}):* C$${(parseFloat(datos.cuotaMensual) || 0).toLocaleString()}`;
+      mensaje += `\n*MESES:* ${datos.meses}`;
+      if (datos.frecuenciaPago === 'personalizado' && datos.fechasPersonalizadas) {
+        mensaje += `\n*FECHAS DE PAGO:* ${datos.fechasPersonalizadas.join(', ')} de cada mes`;
+      }
+      mensaje += `\n\n${generarPlanPagos(datos)}`;
+    }
+    
+    // Agregar historial de cobros si existen
+    const historialCobros = obtenerHistorialCobros(datos.id);
+    if (historialCobros !== '   No hay cobros registrados aún\n') {
+      mensaje += `\n${historialCobros}`;
+    }
+    
+    mensaje += `\n🌹 ¡Gracias por su compra! 🌹`;
+    
+  } else if (tipo === 'abono') {
+    const lote = datos.lote || {};
+    mensaje += `📋 *RECIBO DE ABONO A LOTE*\n\n`;
+    mensaje += `*ID Abono:* ${datos.id}\n`;
+    mensaje += `*Lote:* ${datos.loteId}\n`;
+    mensaje += `*Fecha:* ${formatFecha(datos.fecha)}\n`;
+    mensaje += `*Método:* ${datos.metodo}\n\n`;
+    mensaje += `💰 *MONTO ABONADO: C$${(parseFloat(datos.monto) || 0).toLocaleString()}*\n\n`;
+    mensaje += `*Estado del Lote:*\n`;
+    mensaje += `   Total: C$${(parseFloat(lote.totalInicial) || 0).toLocaleString()}\n`;
+    mensaje += `   Abonado: C$${(parseFloat(lote.abonado) || 0).toLocaleString()}\n`;
+    mensaje += `   Saldo: C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()}\n`;
+    
+    // Agregar historial de abonos
+    const historialAbonos = obtenerHistorialAbonos(datos.loteId);
+    mensaje += `\n${historialAbonos}`;
+    
+    if (datos.notas) {
+      mensaje += `\n*Notas:* ${datos.notas}`;
+    }
+    
+    mensaje += `\n\n❤️ ¡Gracias por su abono! ❤️`;
+    
+  } else if (tipo === 'cobro') {
+    const venta = datos.venta || {};
+    mensaje += `📋 *RECIBO DE COBRO*\n\n`;
+    mensaje += `*ID Cobro:* ${datos.id}\n`;
+    mensaje += `*Venta:* ${datos.ventaId}\n`;
+    mensaje += `*Cliente:* ${venta.cliente || 'N/A'}\n`;
+    mensaje += `*Fecha:* ${formatFecha(datos.fecha)}\n`;
+    mensaje += `*Método:* ${datos.metodo}\n\n`;
+    mensaje += `💚 *MONTO COBRADO: C$${(parseFloat(datos.monto) || 0).toLocaleString()}*\n\n`;
+    mensaje += `*Estado de la Cuenta:*\n`;
+    mensaje += `   Total Venta: C$${(parseFloat(venta.precioTotal) || 0).toLocaleString()}\n`;
+    mensaje += `   Total Pagado: C$${(parseFloat(venta.pagado) || 0).toLocaleString()}\n`;
+    mensaje += `   Saldo Pendiente: C$${(parseFloat(venta.saldo) || 0).toLocaleString()}\n`;
+    
+    // Agregar historial de cobros actualizado
+    const historialCobros = obtenerHistorialCobros(datos.ventaId);
+    mensaje += `\n${historialCobros}`;
+    
+    if (venta.tipoPago !== 'cash' && venta.saldo > 0) {
+      const frecuenciaText = venta.frecuenciaPago === 'semanal' ? 'Semanal' : 
+                            venta.frecuenciaPago === 'quincenal' ? 'Quincenal' : 
+                            venta.frecuenciaPago === 'personalizado' ? 'Personalizado' : 'Mensual';
+      mensaje += `\n*Próxima cuota (${frecuenciaText}):* C$${(parseFloat(venta.cuotaMensual) || 0).toLocaleString()}`;
+      if (venta.proximaFechaCobro) {
+        mensaje += `\n*Fecha estimada:* ${formatFecha(venta.proximaFechaCobro)}`;
+      }
+    }
+    
+    if (datos.notas) {
+      mensaje += `\n\n*Notas:* ${datos.notas}`;
+    }
+    
+    mensaje += `\n\n🌹 ¡Gracias por su pago! 🌹`;
+  }
+  
+  mensaje += `\n\n_📞 Contáctanos: [Tu número de teléfono]_`;
+  return mensaje;
 }
 
 // ==========================================
@@ -486,17 +798,26 @@ function updateSyncStatus(status) {
 }
 
 // ==========================================
-// IMPORTAR/EXPORTAR DATOS
+// IMPORTAR/EXPORTAR DATOS MEJORADO
 // ==========================================
 function exportarDatos() {
-  const datos = { lotes, compras, ventas, abonos, cobros, exportDate: new Date().toISOString() };
+  const datos = { 
+    lotes, compras, ventas, abonos, cobros, 
+    exportDate: new Date().toISOString(),
+    version: '2.0'
+  };
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0] + '_' + new Date().toTimeString().slice(0, 8).replace(/:/g, '-');
   const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `backup-control-${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `backup-control-${timestamp}.json`;
   a.click();
-  showToast('✅ Datos exportados');
+  URL.revokeObjectURL(url);
+  showToast('✅ Backup exportado con timestamp');
+  
+  // También guardar copia en localStorage como backup automático
+  localStorage.setItem('backup_automatico', JSON.stringify(datos));
 }
 
 function mostrarImportar() {
@@ -517,7 +838,11 @@ function procesarImportacion() {
     try {
       const datos = JSON.parse(e.target.result);
       
-      if (!confirm('¿Reemplazar TODOS los datos? Asegúrate de haber exportado una copia primero.')) return;
+      if (!confirm('¿Reemplazar TODOS los datos? Asegúrate de haber exportado una copia primero.\n\n⚠️ Se hará un backup automático antes de importar.')) return;
+      
+      // Hacer backup automático antes de importar
+      const backupAutomatico = { lotes, compras, ventas, abonos, cobros, exportDate: new Date().toISOString() };
+      localStorage.setItem('backup_pre_importacion', JSON.stringify(backupAutomatico));
       
       // Validar que el archivo tenga la estructura correcta
       if (!datos.lotes || !Array.isArray(datos.lotes)) {
@@ -525,7 +850,6 @@ function procesarImportacion() {
         return;
       }
       
-      // Normalizar datos del backup
       lotes = (datos.lotes || []).map(normalizarLote);
       compras = (datos.compras || []).map(normalizarCompra);
       ventas = (datos.ventas || []).map(normalizarVenta);
@@ -537,7 +861,7 @@ function procesarImportacion() {
       updateResumen();
       renderRecordatorios();
       cerrarModal('modalImportar');
-      showToast('✅ Datos importados correctamente');
+      showToast('✅ Datos importados correctamente. Backup pre-importación guardado.');
     } catch (error) {
       alert('Error al importar: ' + error.message);
       console.error(error);
@@ -546,7 +870,6 @@ function procesarImportacion() {
   reader.readAsText(file);
 }
 
-// Normalización de datos (strings a números)
 function normalizarLote(l) {
   return {
     ...l,
@@ -603,6 +926,72 @@ function normalizarCobro(c) {
     monto: parseFloat(c.monto) || 0,
     lastModified: c.lastModified || Date.now()
   };
+}
+
+// ==========================================
+// QR SYNC FUNCIONAL
+// ==========================================
+function mostrarQRSync() {
+  document.getElementById('modalQRSync').classList.remove('hidden');
+  document.getElementById('formOverlay').classList.remove('hidden');
+  document.getElementById('qrContainer').innerHTML = '';
+  document.getElementById('qrInstrucciones').classList.add('hidden');
+}
+
+function generarQRParaExportar() {
+  const datos = { lotes, compras, ventas, abonos, cobros, exportDate: new Date().toISOString() };
+  // Comprimir datos para QR (limitar a 2000 caracteres)
+  const jsonStr = JSON.stringify(datos);
+  
+  if (jsonStr.length > 2000) {
+    showToast('⚠️ Datos muy grandes para QR. Usa Exportar JSON en su lugar.');
+    return;
+  }
+  
+  document.getElementById('qrContainer').innerHTML = '';
+  new QRCode(document.getElementById('qrContainer'), {
+    text: jsonStr,
+    width: 256,
+    height: 256,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+  
+  document.getElementById('qrInstrucciones').classList.remove('hidden');
+  showToast('📱 Escanea con el otro dispositivo usando "Importar desde QR"');
+}
+
+function importarDesdeQR() {
+  // Crear un textarea para pegar el texto escaneado
+  const jsonText = prompt('📲 Pega el texto que escaneaste del QR:\n\n(Si escaneaste con otra app, copia el texto y pégalo aquí)');
+  
+  if (!jsonText) return;
+  
+  try {
+    const datos = JSON.parse(jsonText);
+    
+    if (!confirm('¿Reemplazar TODOS los datos? Se hará un backup automático primero.')) return;
+    
+    // Backup automático
+    const backupAutomatico = { lotes, compras, ventas, abonos, cobros };
+    localStorage.setItem('backup_pre_qr', JSON.stringify(backupAutomatico));
+    
+    lotes = (datos.lotes || []).map(normalizarLote);
+    compras = (datos.compras || []).map(normalizarCompra);
+    ventas = (datos.ventas || []).map(normalizarVenta);
+    abonos = (datos.abonos || []).map(normalizarAbono);
+    cobros = (datos.cobros || []).map(normalizarCobro);
+    
+    saveLocalData();
+    renderCurrentSection();
+    updateResumen();
+    renderRecordatorios();
+    cerrarModal('modalQRSync');
+    showToast('✅ Datos importados desde QR correctamente');
+  } catch (error) {
+    alert('Error al leer los datos del QR: ' + error.message);
+  }
 }
 
 // ==========================================
@@ -817,10 +1206,8 @@ function showForm(type, editId = null) {
       productosVentaTemp = JSON.parse(JSON.stringify(venta.productos || []));
       renderProductosVenta();
       
-      // Mostrar/ocultar campos según tipo de pago
       cambiarTipoPago();
       
-      // Cargar fechas personalizadas si existen
       if (venta.frecuenciaPago === 'personalizado' && venta.fechasPersonalizadas) {
         document.getElementById('ventaFechasPersonalizadas').value = venta.fechasPersonalizadas.join(',');
         document.getElementById('contenedorFechasPersonalizadas').classList.remove('hidden');
@@ -851,7 +1238,6 @@ function showForm(type, editId = null) {
       btnEliminar.classList.add('hidden');
       ventaSeleccionadaId = null;
       
-      // Resetear visibilidad de campos
       document.getElementById('contenedorMeses').classList.remove('hidden');
       document.getElementById('contenedorFrecuencia').classList.remove('hidden');
       document.getElementById('contenedorFechasPersonalizadas').classList.add('hidden');
@@ -1659,16 +2045,12 @@ function calcularProximaFecha(fechaBase, frecuencia, fechasPersonalizadas = []) 
         const mesActual = fecha.getMonth();
         const añoActual = fecha.getFullYear();
         
-        // Ordenar fechas
         const fechasOrdenadas = [...fechasPersonalizadas].sort((a, b) => a - b);
-        
-        // Buscar la siguiente fecha
         let siguienteFecha = fechasOrdenadas.find(d => d > diaActual);
         
         if (siguienteFecha) {
           fecha.setDate(siguienteFecha);
         } else {
-          // Ir al primer día del mes siguiente
           fecha.setMonth(mesActual + 1);
           fecha.setDate(fechasOrdenadas[0]);
         }
@@ -1716,7 +2098,6 @@ function guardarVenta() {
     return;
   }
   
-  // Procesar fechas personalizadas
   let fechasPersonalizadas = [];
   if (frecuencia === 'personalizado' && fechasPersonalizadasStr) {
     fechasPersonalizadas = fechasPersonalizadasStr.split(',').map(f => parseInt(f.trim())).filter(f => !isNaN(f) && f >= 1 && f <= 31);
@@ -2028,87 +2409,8 @@ function registrarCobroDesdeVenta() {
 }
 
 // ==========================================
-// PDF Y WHATSAPP - FORMATOS ESTANDARIZADOS
+// PDF Y WHATSAPP - FUNCIONES ACTUALIZADAS (usando nuevo formato)
 // ==========================================
-function generarMensajeRecibo(datos, tipo) {
-  // Formato estandarizado para ambos (PDF y WhatsApp)
-  let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
-  
-  if (tipo === 'venta') {
-    mensaje += `📋 *RECIBO DE VENTA*\n\n`;
-    mensaje += `*ID:* ${datos.id}\n`;
-    mensaje += `*Cliente:* ${datos.cliente}\n`;
-    mensaje += `*Fecha:* ${formatFecha(datos.fecha)}\n`;
-    mensaje += `*Teléfono:* ${datos.telefono || 'N/A'}\n\n`;
-    mensaje += `*PRODUCTOS:*\n`;
-    
-    datos.productos.forEach((p, i) => {
-      const subtotal = (parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1);
-      mensaje += `${i+1}. ${p.nombre} x${p.cantidad} - C$${subtotal.toLocaleString()}\n`;
-    });
-    
-    const tipoPagoText = datos.tipoPago === 'cash' ? 'Cash/Contado' : 'Crédito';
-    const frecuenciaText = datos.frecuenciaPago === 'semanal' ? 'Semanal' : 
-                          datos.frecuenciaPago === 'quincenal' ? 'Quincenal' : 
-                          datos.frecuenciaPago === 'personalizado' ? 'Personalizado' : 'Mensual';
-    
-    mensaje += `\n*TOTAL:* C$${(parseFloat(datos.precioTotal) || 0).toLocaleString()}`;
-    mensaje += `\n*TIPO DE PAGO:* ${tipoPagoText}`;
-    
-    if (datos.tipoPago !== 'cash') {
-      mensaje += `\n*PRIMA:* C$${(parseFloat(datos.prima) || 0).toLocaleString()}`;
-      mensaje += `\n*SALDO:* C$${(parseFloat(datos.saldo) || 0).toLocaleString()}`;
-      mensaje += `\n*CUOTA (${frecuenciaText}):* C$${(parseFloat(datos.cuotaMensual) || 0).toLocaleString()}`;
-      mensaje += `\n*MESES:* ${datos.meses}`;
-      if (datos.frecuenciaPago === 'personalizado' && datos.fechasPersonalizadas) {
-        mensaje += `\n*FECHAS DE PAGO:* ${datos.fechasPersonalizadas.join(', ')} de cada mes`;
-      }
-    }
-    
-    mensaje += `\n\n🌹 ¡Gracias por su compra! 🌹`;
-  } else if (tipo === 'abono') {
-    const lote = datos.lote || {};
-    mensaje += `📋 *RECIBO DE ABONO*\n\n`;
-    mensaje += `*ID Abono:* ${datos.id}\n`;
-    mensaje += `*Lote:* ${datos.loteId}\n`;
-    mensaje += `*Fecha:* ${formatFecha(datos.fecha)}\n`;
-    mensaje += `*Método:* ${datos.metodo}\n\n`;
-    mensaje += `💰 *MONTO ABONADO: C$${(parseFloat(datos.monto) || 0).toLocaleString()}*\n\n`;
-    mensaje += `*Estado del Lote:*\n`;
-    mensaje += `Total: C$${(parseFloat(lote.totalInicial) || 0).toLocaleString()}\n`;
-    mensaje += `Abonado: C$${(parseFloat(lote.abonado) || 0).toLocaleString()}\n`;
-    mensaje += `Saldo: C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()}\n`;
-    
-    if (datos.notas) {
-      mensaje += `\n*Notas:* ${datos.notas}`;
-    }
-    
-    mensaje += `\n\n❤️ ¡Gracias por darme crédito! ❤️`;
-  } else if (tipo === 'cobro') {
-    const venta = datos.venta || {};
-    mensaje += `📋 *RECIBO DE COBRO*\n\n`;
-    mensaje += `*ID Cobro:* ${datos.id}\n`;
-    mensaje += `*Venta:* ${datos.ventaId}\n`;
-    mensaje += `*Cliente:* ${venta.cliente || 'N/A'}\n`;
-    mensaje += `*Fecha:* ${formatFecha(datos.fecha)}\n`;
-    mensaje += `*Método:* ${datos.metodo}\n\n`;
-    mensaje += `💚 *MONTO COBRADO: C$${(parseFloat(datos.monto) || 0).toLocaleString()}*\n\n`;
-    mensaje += `*Estado de la Cuenta:*\n`;
-    mensaje += `Total Venta: C$${(parseFloat(venta.precioTotal) || 0).toLocaleString()}\n`;
-    mensaje += `Total Pagado: C$${(parseFloat(venta.pagado) || 0).toLocaleString()}\n`;
-    mensaje += `Saldo Pendiente: C$${(parseFloat(venta.saldo) || 0).toLocaleString()}\n`;
-    
-    if (datos.notas) {
-      mensaje += `\n*Notas:* ${datos.notas}`;
-    }
-    
-    mensaje += `\n\n🌹 ¡Gracias por su pago! 🌹`;
-  }
-  
-  mensaje += `\n\n_ELECTRODOMÉSTICOS Y VARIEDADES KAREN_`;
-  return mensaje;
-}
-
 async function generarPDFVenta(ventaId) {
   const venta = ventas.find(v => v.id === ventaId);
   if (!venta) {
@@ -2120,8 +2422,7 @@ async function generarPDFVenta(ventaId) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
-    // Configuración de colores según tema
-    const colorPrimario = [236, 72, 153]; // Rosa
+    const colorPrimario = [236, 72, 153];
     const colorTexto = [0, 0, 0];
     
     doc.setFontSize(18);
@@ -2569,23 +2870,18 @@ function guardarAbono() {
   if (!lote) return;
   
   if (editId) {
-    // EDITAR ABONO EXISTENTE
     const abono = abonos.find(a => a.id === editId);
     if (abono) {
-      // Revertir el abono anterior del lote
       lote.abonado = Math.max(0, (parseFloat(lote.abonado) || 0) - (parseFloat(abono.monto) || 0));
       lote.saldoPendiente = (parseFloat(lote.totalInicial) || 0) - (parseFloat(lote.abonado) || 0);
       
-      // Validar nuevo monto
       if (monto > lote.saldoPendiente) {
-        // Restaurar el abono anterior
         lote.abonado = (parseFloat(lote.abonado) || 0) + (parseFloat(abono.monto) || 0);
         lote.saldoPendiente = (parseFloat(lote.totalInicial) || 0) - (parseFloat(lote.abonado) || 0);
         alert(`El monto no puede superar el saldo disponible (C$${lote.saldoPendiente.toLocaleString()})`);
         return;
       }
       
-      // Actualizar abono
       abono.loteId = loteId;
       abono.fecha = fecha;
       abono.monto = monto;
@@ -2594,7 +2890,6 @@ function guardarAbono() {
       abono.saldoDespues = (parseFloat(lote.saldoPendiente) || 0) - monto;
       abono.lastModified = Date.now();
       
-      // Aplicar nuevo abono al lote
       lote.abonado = (parseFloat(lote.abonado) || 0) + monto;
       lote.saldoPendiente = (parseFloat(lote.totalInicial) || 0) - (parseFloat(lote.abonado) || 0);
       
@@ -2609,7 +2904,6 @@ function guardarAbono() {
       showToast('Abono actualizado correctamente');
     }
   } else {
-    // NUEVO ABONO
     if (monto > lote.saldoPendiente) {
       alert(`El monto no puede superar el saldo (C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()})`);
       return;
@@ -2651,7 +2945,6 @@ function eliminarAbono() {
   
   const lote = lotes.find(l => l.id === abono.loteId);
   if (lote) {
-    // Revertir el abono del lote
     lote.abonado = Math.max(0, (parseFloat(lote.abonado) || 0) - (parseFloat(abono.monto) || 0));
     lote.saldoPendiente = (parseFloat(lote.totalInicial) || 0) - (parseFloat(lote.abonado) || 0);
     if (lote.saldoPendiente > 0) {
@@ -2661,7 +2954,6 @@ function eliminarAbono() {
     lote.lastModified = Date.now();
   }
   
-  // Eliminar SOLO este abono
   abonos = abonos.filter(a => a.id !== abonoSeleccionadoId);
   
   saveLocalData();
@@ -2781,7 +3073,6 @@ function editarCobro(cobroId) {
   document.getElementById('cobroMetodo').value = cobro.metodo;
   document.getElementById('cobroNotas').value = cobro.notas || '';
   
-  // Seleccionar venta
   document.getElementById('cobroVentaId').value = cobro.ventaId;
   seleccionarVentaCobro(cobro.ventaId);
   
@@ -2805,23 +3096,18 @@ function guardarCobro() {
   if (!venta) return;
   
   if (editId) {
-    // EDITAR COBRO EXISTENTE
     const cobro = cobros.find(c => c.id === editId);
     if (cobro) {
-      // Revertir el cobro anterior de la venta
       venta.pagado = Math.max(0, (parseFloat(venta.pagado) || 0) - (parseFloat(cobro.monto) || 0));
       venta.saldo = (parseFloat(venta.precioTotal) || 0) - (parseFloat(venta.pagado) || 0);
       
-      // Validar nuevo monto
       if (monto > venta.saldo) {
-        // Restaurar el cobro anterior
         venta.pagado = (parseFloat(venta.pagado) || 0) + (parseFloat(cobro.monto) || 0);
         venta.saldo = (parseFloat(venta.precioTotal) || 0) - (parseFloat(venta.pagado) || 0);
         alert(`El monto no puede superar el saldo disponible (C$${venta.saldo.toLocaleString()})`);
         return;
       }
       
-      // Actualizar cobro
       cobro.ventaId = ventaId;
       cobro.fecha = fecha;
       cobro.monto = monto;
@@ -2829,7 +3115,6 @@ function guardarCobro() {
       cobro.notas = notas;
       cobro.lastModified = Date.now();
       
-      // Aplicar nuevo cobro a la venta
       venta.pagado = (parseFloat(venta.pagado) || 0) + monto;
       venta.saldo = (parseFloat(venta.precioTotal) || 0) - (parseFloat(venta.pagado) || 0);
       
@@ -2844,7 +3129,6 @@ function guardarCobro() {
       showToast('Cobro actualizado correctamente');
     }
   } else {
-    // NUEVO COBRO
     if (monto > venta.saldo) {
       alert(`El monto no puede superar el saldo (C$${(parseFloat(venta.saldo) || 0).toLocaleString()})`);
       return;
@@ -2863,7 +3147,6 @@ function guardarCobro() {
     venta.pagado = (parseFloat(venta.pagado) || 0) + monto;
     venta.saldo = (parseFloat(venta.saldo) || 0) - monto;
     
-    // Actualizar próxima fecha de cobro según frecuencia
     if (venta.tipoPago !== 'cash' && venta.saldo > 0) {
       const fechaBase = new Date(fecha);
       const proximaFecha = calcularProximaFecha(fechaBase, venta.frecuenciaPago, venta.fechasPersonalizadas || []);
@@ -2894,7 +3177,6 @@ function eliminarCobro() {
   
   const venta = ventas.find(v => v.id === cobro.ventaId);
   if (venta) {
-    // Revertir el cobro de la venta
     venta.pagado = Math.max(0, (parseFloat(venta.pagado) || 0) - (parseFloat(cobro.monto) || 0));
     venta.saldo = (parseFloat(venta.precioTotal) || 0) - (parseFloat(venta.pagado) || 0);
     if (venta.saldo > 0) {
@@ -2904,7 +3186,6 @@ function eliminarCobro() {
     venta.lastModified = Date.now();
   }
   
-  // Eliminar SOLO este cobro
   cobros = cobros.filter(c => c.id !== cobroSeleccionadoId);
   
   saveLocalData();
@@ -2940,60 +3221,8 @@ function renderCobros() {
 }
 
 // ==========================================
-// QR SYNC
-// ==========================================
-function mostrarQRSync() {
-  document.getElementById('modalQRSync').classList.remove('hidden');
-  document.getElementById('formOverlay').classList.remove('hidden');
-  document.getElementById('qrContainer').innerHTML = '';
-  document.getElementById('qrInstrucciones').classList.add('hidden');
-}
-
-function generarQRParaExportar() {
-  const datos = { lotes, compras, ventas, abonos, cobros };
-  const datosComprimidos = btoa(encodeURIComponent(JSON.stringify(datos)));
-  
-  if (datosComprimidos.length > 2500) {
-    showToast('⚠️ Datos muy grandes. Usa Exportar JSON en su lugar.');
-    return;
-  }
-  
-  document.getElementById('qrContainer').innerHTML = '';
-  new QRCode(document.getElementById('qrContainer'), {
-    text: datosComprimidos,
-    width: 256,
-    height: 256,
-    colorDark: '#000000',
-    colorLight: '#ffffff',
-    correctLevel: QRCode.CorrectLevel.M
-  });
-  
-  document.getElementById('qrInstrucciones').classList.remove('hidden');
-  showToast('📱 Escanea con el otro dispositivo');
-}
-
-function importarDesdeQR() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    showToast('📷 Para escanear QR, usa la cámara del otro dispositivo y la función "Generar QR para Exportar"');
-  };
-  input.click();
-}
-
-// ==========================================
 // UTILIDADES
 // ==========================================
-function formatFecha(fechaStr) {
-  if (!fechaStr) return 'N/A';
-  const fecha = new Date(fechaStr);
-  return fecha.toLocaleDateString('es-NI', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
 function showToast(message) {
   const toast = document.getElementById('toast');
   document.getElementById('toastMessage').textContent = message;
