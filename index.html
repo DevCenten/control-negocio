@@ -144,19 +144,19 @@
     </div>
   </section>
 
-  <!-- Navegación -->
+  <!-- Navegación - Menú Horizontal Mejorado -->
   <nav class="max-w-7xl mx-auto px-4 mb-4">
-    <div class="flex gap-2 overflow-x-auto pb-2">
-      <button onclick="showSection('lotes')" class="nav-btn px-4 py-2 bg-white dark:bg-slate-800 rounded-xl font-medium whitespace-nowrap shadow" data-section="lotes">
+    <div class="nav-menu">
+      <button onclick="showSection('lotes')" class="nav-btn active" data-section="lotes">
         📦 Lotes
       </button>
-      <button onclick="showSection('compras')" class="nav-btn px-4 py-2 bg-white dark:bg-slate-800 rounded-xl font-medium whitespace-nowrap shadow" data-section="compras">
+      <button onclick="showSection('compras')" class="nav-btn" data-section="compras">
         🛒 Compras
       </button>
-      <button onclick="showSection('ventas')" class="nav-btn px-4 py-2 bg-white dark:bg-slate-800 rounded-xl font-medium whitespace-nowrap shadow" data-section="ventas">
+      <button onclick="showSection('ventas')" class="nav-btn" data-section="ventas">
         💰 Ventas
       </button>
-      <button onclick="showSection('finanzas')" class="nav-btn px-4 py-2 bg-white dark:bg-slate-800 rounded-xl font-medium whitespace-nowrap shadow" data-section="finanzas">
+      <button onclick="showSection('finanzas')" class="nav-btn" data-section="finanzas">
         💳 Finanzas
       </button>
     </div>
@@ -237,7 +237,7 @@
     </div>
   </section>
 
-  <!-- FORMULARIOS -->
+  <!-- FORMULARIOS (el resto del HTML se mantiene igual) -->
   <div id="formOverlay" class="hidden fixed inset-0 bg-black/50 z-50"></div>
 
   <!-- Form Lote -->
@@ -384,7 +384,6 @@
             <option value="12" selected>12 meses</option>
           </select>
         </div>
-        <!-- Nueva sección de frecuencia de pago -->
         <div id="contenedorFrecuencia">
           <label class="block text-sm font-medium mb-1">Frecuencia de Pago</label>
           <select id="ventaFrecuencia" onchange="cambiarFrecuenciaPago()" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-slate-700 dark:text-white mb-2">
@@ -410,7 +409,7 @@
               <p class="font-bold text-orange-700 dark:text-orange-400" id="previewSaldoVenta">C$0.00</p>
             </div>
             <div>
-              <p class="text-xs text-gray-600 dark:text-gray-400" id="labelCuota">Cuota Mensual</p>
+              <p class="text-xs text-gray-600 dark:text-gray-400" id="labelCuota">Cuota</p>
               <p class="font-bold text-pink-700 dark:text-pink-400" id="previewCuotaVenta">C$0.00</p>
             </div>
           </div>

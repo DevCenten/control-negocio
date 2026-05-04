@@ -10,10 +10,16 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes slideIn {
+  from { transform: translateX(-10px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
 section > div {
   animation: fadeIn 0.3s ease-out;
 }
 
+/* Scrollbar personalizada */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -21,6 +27,7 @@ section > div {
 
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -40,14 +47,26 @@ section > div {
   background: #475569;
 }
 
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+/* Base */
+body {
+  background-color: #f8fafc;
+  color: #1e293b;
 }
 
+.dark body {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+
+/* Inputs y formularios */
 input, select, textarea {
   transition: all 0.2s;
   background-color: #ffffff;
-  border-color: #e2e8f0;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  color: #1e293b;
 }
 
 .dark input, .dark select, .dark textarea {
@@ -63,103 +82,110 @@ input:focus, select:focus, textarea:focus {
   transform: translateY(-1px);
 }
 
+/* Botones */
 button {
   transition: all 0.2s;
   cursor: pointer;
 }
 
 button:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
-.fixed {
-  animation: fadeIn 0.2s ease-out;
+/* Tarjetas - tono suave */
+.card, .bg-white, .bg-gray-50 {
+  background-color: #ffffff;
+  border: 1px solid #f0f2f5;
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+.dark .card, .dark .bg-white, .dark .bg-gray-50 {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+
+/* MENÚ HORIZONTAL MEJORADO */
+.nav-menu {
+  display: flex;
+  gap: 0.5rem;
+  background: #ffffff;
+  padding: 0.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1rem;
+}
+
+.dark .nav-menu {
+  background: #1e293b;
+}
+
+.nav-btn {
+  flex: 1;
+  text-align: center;
+  padding: 0.625rem 0.5rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  background: transparent;
+  color: #64748b;
+  border: none;
+  cursor: pointer;
+}
+
+.dark .nav-btn {
+  color: #94a3b8;
+}
+
+.nav-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+  transform: translateY(-1px);
+}
+
+.dark .nav-btn:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.nav-btn.active {
+  background: #ec4899;
+  color: white;
+  box-shadow: 0 2px 4px rgba(236, 72, 153, 0.2);
+}
+
+.nav-btn.active:hover {
+  background: #db2777;
+  transform: translateY(-1px);
+}
+
+/* Toast */
 #toast {
   backdrop-filter: blur(10px);
   background: rgba(15, 23, 42, 0.95);
   color: white;
+  border-radius: 1rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
 }
 
 .dark #toast {
   background: rgba(0, 0, 0, 0.9);
 }
 
-/* Cards más claras y suaves */
-.bg-white {
-  background-color: #ffffff;
-  border: 1px solid #f1f5f9;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+/* Overlay */
+#formOverlay {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
 }
 
-.dark .bg-white {
-  background-color: #0f172a;
-  border-color: #1e293b;
+/* Animaciones */
+.fixed {
+  animation: fadeIn 0.2s ease-out;
 }
 
-/* Mejoras en botones de navegación */
-.nav-btn {
-  transition: all 0.2s;
-}
-
-.nav-btn:hover {
-  transform: translateY(-2px);
-}
-
-/* Responsive mejorado */
-@media (max-width: 640px) {
-  .grid-cols-2 {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-  }
-  .grid-cols-3 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .grid-cols-4 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  
-  .text-lg {
-    font-size: 1rem;
-  }
-  
-  .p-4 {
-    padding: 0.75rem;
-  }
-}
-
-/* Prevenir zoom en inputs en móviles */
-@media screen and (max-width: 768px) {
-  input, select, textarea {
-    font-size: 16px;
-  }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Focus visible para accesibilidad */
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid #ec4899;
-  outline-offset: 2px;
-}
-
-/* Transiciones suaves */
-.bg-white, .dark .bg-slate-800,
-.bg-gray-50, .dark .bg-slate-700 {
-  transition: all 0.2s ease;
-}
-
-/* Badges y etiquetas */
+/* Badges */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -197,4 +223,62 @@ textarea:focus-visible {
 .dark .badge-danger {
   background-color: #7f1d1d;
   color: #fecaca;
+}
+
+.badge-info {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.dark .badge-info {
+  background-color: #1e3a8a;
+  color: #bfdbfe;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .nav-btn {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+  .grid-cols-3, .grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  
+  .text-lg {
+    font-size: 1rem;
+  }
+  
+  .p-4 {
+    padding: 0.75rem;
+  }
+}
+
+/* Prevenir zoom en inputs móviles */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Focus visible accesibilidad */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #ec4899;
+  outline-offset: 2px;
 }

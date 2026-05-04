@@ -14,7 +14,7 @@ const CONFIG = {
   deviceId: localStorage.getItem('deviceId') || generarDeviceId()
 };
 
-// Datos locales - Cargar desde localStorage o usar datos iniciales del backup
+// Datos locales
 let lotes = [];
 let compras = [];
 let ventas = [];
@@ -33,13 +33,11 @@ let cobroSeleccionadoId = null;
 let productosSeleccionados = [];
 
 // ==========================================
-// INICIALIZACIÓN CON DATOS DEL BACKUP
+// INICIALIZACIÓN
 // ==========================================
 window.onload = function() {
-  // Cargar tema guardado (por defecto LIGHT - más claro)
   cargarTema();
   
-  // Cargar datos desde localStorage o usar datos del backup si no hay datos guardados
   const lotesGuardados = localStorage.getItem('lotes');
   const comprasGuardadas = localStorage.getItem('compras');
   const ventasGuardadas = localStorage.getItem('ventas');
@@ -53,8 +51,6 @@ window.onload = function() {
     abonos = JSON.parse(abonosGuardados || '[]');
     cobros = JSON.parse(cobrosGuardados || '[]');
   } else {
-    // Primera carga - usar datos del backup (data.js)
-    console.log('Cargando datos iniciales del backup...');
     lotes = JSON.parse(JSON.stringify(initialLotes || []));
     ventas = JSON.parse(JSON.stringify(initialVentas || []));
     compras = [];
@@ -63,7 +59,6 @@ window.onload = function() {
     saveLocalData();
   }
 
-  // Migración segura: normalizar todos los datos existentes
   normalizarTodosDatos();
 
   window.addEventListener('online', () => {
@@ -92,7 +87,6 @@ window.onload = function() {
 };
 
 function normalizarTodosDatos() {
-  // Normalizar lotes
   lotes = lotes.map(l => ({
     ...l,
     id: (l.id || '').toString().trim(),
@@ -108,7 +102,6 @@ function normalizarTodosDatos() {
     }))
   }));
   
-  // Normalizar compras
   compras = compras.map(c => ({
     ...c,
     id: (c.id || '').toString().trim(),
@@ -120,7 +113,6 @@ function normalizarTodosDatos() {
     lastModified: c.lastModified || Date.now()
   }));
   
-  // Normalizar ventas
   ventas = ventas.map(v => ({
     ...v,
     id: (v.id || '').toString().trim(),
@@ -142,7 +134,6 @@ function normalizarTodosDatos() {
     lastModified: v.lastModified || Date.now()
   }));
   
-  // Normalizar abonos
   abonos = abonos.map(a => ({
     ...a,
     id: (a.id || '').toString().trim(),
@@ -152,7 +143,6 @@ function normalizarTodosDatos() {
     lastModified: a.lastModified || Date.now()
   }));
   
-  // Normalizar cobros
   cobros = cobros.map(c => ({
     ...c,
     id: (c.id || '').toString().trim(),
@@ -171,10 +161,10 @@ function generarDeviceId() {
 }
 
 // ==========================================
-// THEME / TEMA CLARO-OSCURO (por defecto CLARO)
+// THEME
 // ==========================================
 function cargarTema() {
-  const temaGuardado = localStorage.getItem('tema') || 'light'; // Por defecto light
+  const temaGuardado = localStorage.getItem('tema') || 'light';
   if (temaGuardado === 'dark') {
     document.documentElement.classList.add('dark');
     actualizarIconoTema(true);
@@ -209,33 +199,10 @@ function actualizarIconoTema(isDark) {
 }
 
 // ==========================================
-// FUNCIONES DE FORMATO CORREGIDAS
+// FORMATO DE FECHAS CORREGIDO
 // ==========================================
 function formatFecha(fechaStr) {
   if (!fechaStr) return 'N/A';
-  // Manejar diferentes formatos de entrada
-  let fecha;
-  if (fechaStr.includes('T')) {
-    // Formato ISO
-    const [year, month, day] = fechaStr.split('T')[0].split('-');
-    fecha = new Date(year, month - 1, day);
-  } else if (fechaStr.includes('-')) {
-    const [year, month, day] = fechaStr.split('-');
-    fecha = new Date(year, month - 1, day);
-  } else {
-    fecha = new Date(fechaStr);
-  }
-  
-  if (isNaN(fecha.getTime())) return 'Fecha inválida';
-  
-  const day = fecha.getDate().toString().padStart(2, '0');
-  const month = (fecha.getMonth() + 1).toString().padStart(2, '0');
-  const year = fecha.getFullYear();
-  return `${day}/${month}/${year}`;
-}
-
-function formatFechaHora(fechaStr) {
-  if (!fechaStr) return 'N/A';
   let fecha;
   if (fechaStr.includes('T')) {
     const [year, month, day] = fechaStr.split('T')[0].split('-');
@@ -256,80 +223,13 @@ function formatFechaHora(fechaStr) {
 }
 
 // ==========================================
-// GENERAR PLAN DE PAGOS PARA WHATSAPP
+// HISTORIAL DE ABONOS PARA LOTES (SOLO WHATSAPP DE ABONOS)
 // ==========================================
-function generarPlanPagos(venta) {
-  if (venta.tipoPago === 'cash') return '💰 *Pago de contado*\n';
-  
-  let plan = '📅 *Plan de pagos:*\n';
-  const cuota = parseFloat(venta.cuotaMensual) || 0;
-  const saldoInicial = parseFloat(venta.saldo) || 0;
-  const fechaInicio = new Date(venta.fecha);
-  const frecuencia = venta.frecuenciaPago;
-  const fechasPersonalizadas = venta.fechasPersonalizadas || [];
-  const meses = parseInt(venta.meses) || 12;
-  
-  let fechaPago = new Date(fechaInicio);
-  let saldoRestante = saldoInicial;
-  
-  for (let i = 1; i <= meses && saldoRestante > 0.01; i++) {
-    // Calcular siguiente fecha de pago
-    switch(frecuencia) {
-      case 'semanal':
-        fechaPago = new Date(fechaPago);
-        fechaPago.setDate(fechaPago.getDate() + 7);
-        break;
-      case 'quincenal':
-        fechaPago = new Date(fechaPago);
-        fechaPago.setDate(fechaPago.getDate() + 15);
-        break;
-      case 'personalizado':
-        if (fechasPersonalizadas.length > 0) {
-          const diaActual = fechaPago.getDate();
-          const mesActual = fechaPago.getMonth();
-          const añoActual = fechaPago.getFullYear();
-          const fechasOrdenadas = [...fechasPersonalizadas].sort((a, b) => a - b);
-          let siguienteFecha = fechasOrdenadas.find(d => d > diaActual);
-          if (siguienteFecha) {
-            fechaPago = new Date(añoActual, mesActual, siguienteFecha);
-          } else {
-            fechaPago = new Date(añoActual, mesActual + 1, fechasOrdenadas[0]);
-          }
-        } else {
-          fechaPago = new Date(fechaPago);
-          fechaPago.setMonth(fechaPago.getMonth() + 1);
-        }
-        break;
-      default: // mensual
-        fechaPago = new Date(fechaPago);
-        fechaPago.setMonth(fechaPago.getMonth() + 1);
-        break;
-    }
-    
-    const montoPago = Math.min(cuota, saldoRestante);
-    plan += `   ${i}. ${formatFecha(fechaPago.toISOString().split('T')[0])}: C$${montoPago.toLocaleString()}\n`;
-    saldoRestante -= montoPago;
-  }
-  
-  return plan;
-}
-
-function obtenerHistorialCobros(ventaId) {
-  const cobrosVenta = cobros.filter(c => c.ventaId === ventaId).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-  if (cobrosVenta.length === 0) return '   No hay cobros registrados aún\n';
-  
-  let historial = '💰 *Historial de pagos realizados:*\n';
-  cobrosVenta.forEach((c, i) => {
-    historial += `   ${i+1}. ${formatFecha(c.fecha)}: C$${(parseFloat(c.monto) || 0).toLocaleString()} (${c.metodo})\n`;
-  });
-  return historial;
-}
-
 function obtenerHistorialAbonos(loteId) {
   const abonosLote = abonos.filter(a => a.loteId === loteId).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-  if (abonosLote.length === 0) return '   No hay abonos registrados aún\n';
+  if (abonosLote.length === 0) return '';
   
-  let historial = '💰 *Historial de abonos realizados:*\n';
+  let historial = '\n💰 *Historial de abonos realizados:*\n';
   abonosLote.forEach((a, i) => {
     historial += `   ${i+1}. ${formatFecha(a.fecha)}: C$${(parseFloat(a.monto) || 0).toLocaleString()} (${a.metodo})${a.notas ? ` - ${a.notas}` : ''}\n`;
   });
@@ -337,7 +237,7 @@ function obtenerHistorialAbonos(loteId) {
 }
 
 // ==========================================
-// MENSAJES WHATSAPP MEJORADOS
+// MENSAJES WHATSAPP - VERSIÓN SIMPLIFICADA
 // ==========================================
 function generarMensajeRecibo(datos, tipo) {
   let mensaje = `🦋 *ELECTRODOMÉSTICOS Y VARIEDADES KAREN* 🦋\n\n`;
@@ -347,8 +247,8 @@ function generarMensajeRecibo(datos, tipo) {
     mensaje += `*ID:* ${datos.id}\n`;
     mensaje += `*Cliente:* ${datos.cliente}\n`;
     mensaje += `*Fecha:* ${formatFecha(datos.fecha)}\n`;
-    mensaje += `*Teléfono:* ${datos.telefono || 'N/A'}\n\n`;
-    mensaje += `*PRODUCTOS:*\n`;
+    if (datos.telefono) mensaje += `*Teléfono:* ${datos.telefono}\n`;
+    mensaje += `\n*PRODUCTOS:*\n`;
     
     datos.productos.forEach((p, i) => {
       const subtotal = (parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1);
@@ -356,9 +256,6 @@ function generarMensajeRecibo(datos, tipo) {
     });
     
     const tipoPagoText = datos.tipoPago === 'cash' ? 'Cash/Contado' : 'Crédito';
-    const frecuenciaText = datos.frecuenciaPago === 'semanal' ? 'Semanal' : 
-                          datos.frecuenciaPago === 'quincenal' ? 'Quincenal' : 
-                          datos.frecuenciaPago === 'personalizado' ? 'Personalizado' : 'Mensual';
     
     mensaje += `\n*TOTAL:* C$${(parseFloat(datos.precioTotal) || 0).toLocaleString()}`;
     mensaje += `\n*TIPO DE PAGO:* ${tipoPagoText}`;
@@ -366,21 +263,10 @@ function generarMensajeRecibo(datos, tipo) {
     if (datos.tipoPago !== 'cash') {
       mensaje += `\n*PRIMA:* C$${(parseFloat(datos.prima) || 0).toLocaleString()}`;
       mensaje += `\n*SALDO:* C$${(parseFloat(datos.saldo) || 0).toLocaleString()}`;
-      mensaje += `\n*CUOTA (${frecuenciaText}):* C$${(parseFloat(datos.cuotaMensual) || 0).toLocaleString()}`;
-      mensaje += `\n*MESES:* ${datos.meses}`;
-      if (datos.frecuenciaPago === 'personalizado' && datos.fechasPersonalizadas) {
-        mensaje += `\n*FECHAS DE PAGO:* ${datos.fechasPersonalizadas.join(', ')} de cada mes`;
-      }
-      mensaje += `\n\n${generarPlanPagos(datos)}`;
+      mensaje += `\n*CUOTA:* C$${(parseFloat(datos.cuotaMensual) || 0).toLocaleString()}`;
     }
     
-    // Agregar historial de cobros si existen
-    const historialCobros = obtenerHistorialCobros(datos.id);
-    if (historialCobros !== '   No hay cobros registrados aún\n') {
-      mensaje += `\n${historialCobros}`;
-    }
-    
-    mensaje += `\n🌹 ¡Gracias por su compra! 🌹`;
+    mensaje += `\n\n🌹 ¡Gracias por su compra! 🌹`;
     
   } else if (tipo === 'abono') {
     const lote = datos.lote || {};
@@ -395,9 +281,10 @@ function generarMensajeRecibo(datos, tipo) {
     mensaje += `   Abonado: C$${(parseFloat(lote.abonado) || 0).toLocaleString()}\n`;
     mensaje += `   Saldo: C$${(parseFloat(lote.saldoPendiente) || 0).toLocaleString()}\n`;
     
-    // Agregar historial de abonos
     const historialAbonos = obtenerHistorialAbonos(datos.loteId);
-    mensaje += `\n${historialAbonos}`;
+    if (historialAbonos) {
+      mensaje += `\n${historialAbonos}`;
+    }
     
     if (datos.notas) {
       mensaje += `\n*Notas:* ${datos.notas}`;
@@ -416,21 +303,11 @@ function generarMensajeRecibo(datos, tipo) {
     mensaje += `💚 *MONTO COBRADO: C$${(parseFloat(datos.monto) || 0).toLocaleString()}*\n\n`;
     mensaje += `*Estado de la Cuenta:*\n`;
     mensaje += `   Total Venta: C$${(parseFloat(venta.precioTotal) || 0).toLocaleString()}\n`;
-    mensaje += `   Total Pagado: C$${(parseFloat(venta.pagado) || 0).toLocaleString()}\n`;
+    mensaje += `   Pagado: C$${(parseFloat(venta.pagado) || 0).toLocaleString()}\n`;
     mensaje += `   Saldo Pendiente: C$${(parseFloat(venta.saldo) || 0).toLocaleString()}\n`;
     
-    // Agregar historial de cobros actualizado
-    const historialCobros = obtenerHistorialCobros(datos.ventaId);
-    mensaje += `\n${historialCobros}`;
-    
     if (venta.tipoPago !== 'cash' && venta.saldo > 0) {
-      const frecuenciaText = venta.frecuenciaPago === 'semanal' ? 'Semanal' : 
-                            venta.frecuenciaPago === 'quincenal' ? 'Quincenal' : 
-                            venta.frecuenciaPago === 'personalizado' ? 'Personalizado' : 'Mensual';
-      mensaje += `\n*Próxima cuota (${frecuenciaText}):* C$${(parseFloat(venta.cuotaMensual) || 0).toLocaleString()}`;
-      if (venta.proximaFechaCobro) {
-        mensaje += `\n*Fecha estimada:* ${formatFecha(venta.proximaFechaCobro)}`;
-      }
+      mensaje += `\n*Próxima cuota:* C$${(parseFloat(venta.cuotaMensual) || 0).toLocaleString()}`;
     }
     
     if (datos.notas) {
@@ -440,12 +317,11 @@ function generarMensajeRecibo(datos, tipo) {
     mensaje += `\n\n🌹 ¡Gracias por su pago! 🌹`;
   }
   
-  mensaje += `\n\n_📞 Contáctanos: [Tu número de teléfono]_`;
   return mensaje;
 }
 
 // ==========================================
-// BÚSQUEDA GLOBAL DE CLIENTES
+// BÚSQUEDA GLOBAL
 // ==========================================
 function buscarClienteGlobal() {
   const busqueda = document.getElementById('buscadorGlobal').value.trim().toUpperCase();
@@ -456,7 +332,6 @@ function buscarClienteGlobal() {
     return;
   }
   
-  // Buscar en ventas por nombre de cliente o ID
   const resultados = ventas.filter(v => 
     v.cliente.toUpperCase().includes(busqueda) || 
     v.id.toUpperCase().includes(busqueda)
@@ -474,10 +349,6 @@ function buscarClienteGlobal() {
                        diasRestantes <= 7 ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-300' : 
                        'bg-gray-50 dark:bg-slate-700 border-gray-200';
     
-    const frecuenciaText = v.frecuenciaPago === 'semanal' ? ' (Semanal)' : 
-                          v.frecuenciaPago === 'quincenal' ? ' (Quincenal)' : 
-                          v.frecuenciaPago === 'personalizado' ? ' (Personalizado)' : '';
-    
     return `
       <div class="p-3 ${alertaClass} rounded-xl border cursor-pointer hover:shadow-md transition-shadow" onclick="verDetalleVenta('${v.id}'); limpiarBusqueda();">
         <div class="flex justify-between items-start">
@@ -492,7 +363,7 @@ function buscarClienteGlobal() {
         </div>
         <div class="mt-2 flex justify-between text-xs">
           <span class="${diasRestantes < 0 ? 'text-red-600 font-bold' : 'text-gray-500 dark:text-gray-400'}">
-            Próximo: ${formatFecha(v.proximaFechaCobro)} ${diasRestantes < 0 ? '(Vencido)' : ''}${frecuenciaText}
+            Próximo: ${formatFecha(v.proximaFechaCobro)} ${diasRestantes < 0 ? '(Vencido)' : ''}
           </span>
           <span class="text-gray-500 dark:text-gray-400">Cuota: C$${(parseFloat(v.cuotaMensual) || 0).toLocaleString()}</span>
         </div>
@@ -525,7 +396,7 @@ function registrarCobroRapido(ventaId) {
 }
 
 // ==========================================
-// RECORDATORIOS DE COBRO CON FRECUENCIA
+// RECORDATORIOS
 // ==========================================
 function toggleRecordatorios() {
   const lista = document.getElementById('listaRecordatorios');
@@ -539,7 +410,7 @@ function calcularProximaFechaCobro(venta) {
 
 function renderRecordatorios() {
   const hoy = new Date();
-  const proximosDias = 7; // Próximos 7 días
+  const proximosDias = 7;
   
   const recordatorios = ventas
     .filter(v => v.estado === 'PENDIENTE')
@@ -567,15 +438,11 @@ function renderRecordatorios() {
                         v.diasRestantes === 0 ? '¡Hoy!' : 
                         `En ${v.diasRestantes} días`;
     
-    const frecuenciaLabel = v.frecuenciaPago === 'semanal' ? ' (Sem)' : 
-                           v.frecuenciaPago === 'quincenal' ? ' (Qnc)' : 
-                           v.frecuenciaPago === 'personalizado' ? ' (Per)' : '';
-    
     return `
       <div class="flex items-center justify-between p-2 ${alertaClass} rounded-lg cursor-pointer hover:bg-white/30" onclick="verDetalleVenta('${v.id}')">
         <div class="flex-1">
           <p class="font-bold text-sm">${v.cliente}</p>
-          <p class="text-xs opacity-90">Cuota: C$${(parseFloat(v.cuotaMensual) || 0).toLocaleString()}${frecuenciaLabel}</p>
+          <p class="text-xs opacity-90">Cuota: C$${(parseFloat(v.cuotaMensual) || 0).toLocaleString()}</p>
         </div>
         <div class="text-right">
           <p class="text-xs font-bold">${textoAlerta}</p>
@@ -798,7 +665,7 @@ function updateSyncStatus(status) {
 }
 
 // ==========================================
-// IMPORTAR/EXPORTAR DATOS MEJORADO
+// IMPORTAR/EXPORTAR
 // ==========================================
 function exportarDatos() {
   const datos = { 
@@ -814,10 +681,7 @@ function exportarDatos() {
   a.download = `backup-control-${timestamp}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast('✅ Backup exportado con timestamp');
-  
-  // También guardar copia en localStorage como backup automático
-  localStorage.setItem('backup_automatico', JSON.stringify(datos));
+  showToast('✅ Backup exportado');
 }
 
 function mostrarImportar() {
@@ -840,11 +704,9 @@ function procesarImportacion() {
       
       if (!confirm('¿Reemplazar TODOS los datos? Asegúrate de haber exportado una copia primero.\n\n⚠️ Se hará un backup automático antes de importar.')) return;
       
-      // Hacer backup automático antes de importar
       const backupAutomatico = { lotes, compras, ventas, abonos, cobros, exportDate: new Date().toISOString() };
       localStorage.setItem('backup_pre_importacion', JSON.stringify(backupAutomatico));
       
-      // Validar que el archivo tenga la estructura correcta
       if (!datos.lotes || !Array.isArray(datos.lotes)) {
         alert('El archivo no tiene el formato correcto. Faltan lotes.');
         return;
@@ -861,7 +723,7 @@ function procesarImportacion() {
       updateResumen();
       renderRecordatorios();
       cerrarModal('modalImportar');
-      showToast('✅ Datos importados correctamente. Backup pre-importación guardado.');
+      showToast('✅ Datos importados correctamente');
     } catch (error) {
       alert('Error al importar: ' + error.message);
       console.error(error);
@@ -929,7 +791,7 @@ function normalizarCobro(c) {
 }
 
 // ==========================================
-// QR SYNC FUNCIONAL
+// QR SYNC
 // ==========================================
 function mostrarQRSync() {
   document.getElementById('modalQRSync').classList.remove('hidden');
@@ -940,7 +802,6 @@ function mostrarQRSync() {
 
 function generarQRParaExportar() {
   const datos = { lotes, compras, ventas, abonos, cobros, exportDate: new Date().toISOString() };
-  // Comprimir datos para QR (limitar a 2000 caracteres)
   const jsonStr = JSON.stringify(datos);
   
   if (jsonStr.length > 2000) {
@@ -959,12 +820,11 @@ function generarQRParaExportar() {
   });
   
   document.getElementById('qrInstrucciones').classList.remove('hidden');
-  showToast('📱 Escanea con el otro dispositivo usando "Importar desde QR"');
+  showToast('📱 Escanea con el otro dispositivo');
 }
 
 function importarDesdeQR() {
-  // Crear un textarea para pegar el texto escaneado
-  const jsonText = prompt('📲 Pega el texto que escaneaste del QR:\n\n(Si escaneaste con otra app, copia el texto y pégalo aquí)');
+  const jsonText = prompt('📲 Pega el texto que escaneaste del QR:');
   
   if (!jsonText) return;
   
@@ -973,7 +833,6 @@ function importarDesdeQR() {
     
     if (!confirm('¿Reemplazar TODOS los datos? Se hará un backup automático primero.')) return;
     
-    // Backup automático
     const backupAutomatico = { lotes, compras, ventas, abonos, cobros };
     localStorage.setItem('backup_pre_qr', JSON.stringify(backupAutomatico));
     
@@ -1008,7 +867,7 @@ function saveLocalData() {
     renderRecordatorios();
   } catch (e) {
     console.error('Error guardando en localStorage:', e);
-    showToast('❌ Error al guardar datos. Espacio lleno?');
+    showToast('❌ Error al guardar datos');
   }
 }
 
@@ -1040,13 +899,12 @@ function updateResumen() {
     sum + (item.productos?.filter(p => !p.vendido).length || 0), 0);
   document.getElementById('countStock').textContent = totalStock;
   
-  // Actualizar contadores en finanzas
   document.getElementById('countAbonos').textContent = abonos.length;
   document.getElementById('countCobros').textContent = cobros.length;
 }
 
 // ==========================================
-// NAVEGACIÓN
+// NAVEGACIÓN CON MENÚ MEJORADO
 // ==========================================
 function showSection(section) {
   ['lotes', 'compras', 'ventas', 'finanzas'].forEach(s => {
@@ -1055,11 +913,9 @@ function showSection(section) {
   document.getElementById(`section${section.charAt(0).toUpperCase() + section.slice(1)}`).classList.remove('hidden');
   
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.classList.remove('bg-pink-600', 'text-white');
-    btn.classList.add('bg-white', 'dark:bg-slate-800');
+    btn.classList.remove('active');
     if (btn.dataset.section === section) {
-      btn.classList.remove('bg-white', 'dark:bg-slate-800');
-      btn.classList.add('bg-pink-600', 'text-white');
+      btn.classList.add('active');
     }
   });
   
@@ -1100,7 +956,7 @@ function cerrarModal(modalId) {
 }
 
 // ==========================================
-// LOTES - CRUD COMPLETO
+// LOTES - CRUD
 // ==========================================
 function showForm(type, editId = null) {
   hideForms();
@@ -1278,7 +1134,6 @@ function cambiarTipoPago() {
   if (tipoPago === 'cash') {
     contenedorMeses.classList.add('hidden');
     contenedorFrecuencia.classList.add('hidden');
-    document.getElementById('ventaPrima').value = document.getElementById('previewTotalVenta').textContent.replace(/[^0-9.]/g, '');
     labelCuota.textContent = 'Pago Único';
     calcularVenta();
   } else {
@@ -1305,7 +1160,7 @@ function cambiarFrecuenciaPago() {
   } else if (frecuencia === 'quincenal') {
     labelCuota.textContent = 'Cuota Quincenal';
   } else {
-    labelCuota.textContent = 'Cuota Mensual';
+    labelCuota.textContent = 'Cuota';
   }
   
   calcularVenta();
@@ -1531,13 +1386,13 @@ function renderLotes() {
     const diasRestantes = Math.ceil((new Date(lote.fechaLimite) - new Date()) / (1000 * 60 * 60 * 24));
     
     return `
-      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4 border ${isPending ? 'border-red-200 dark:border-red-800' : 'border-green-200 dark:border-green-800'}">
+      <div class="card p-4 border ${isPending ? 'border-red-200 dark:border-red-800' : 'border-green-200 dark:border-green-800'}">
         <div class="flex justify-between items-start mb-3">
           <div>
             <h3 class="font-bold text-lg text-gray-800 dark:text-white flex items-center gap-2">
               ${lote.id}
-              ${diasRestantes <= 7 && isPending ? '<span class="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">¡Urgente!</span>' : ''}
-              ${!isPending ? '<span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">Pagado</span>' : ''}
+              ${diasRestantes <= 7 && isPending ? '<span class="badge badge-danger text-xs">¡Urgente!</span>' : ''}
+              ${!isPending ? '<span class="badge badge-success text-xs">Pagado</span>' : ''}
             </h3>
             <p class="text-xs text-gray-500 dark:text-gray-400">Recibido: ${formatFecha(lote.fechaRecepcion)}</p>
             <p class="text-xs ${diasRestantes < 0 && isPending ? 'text-red-600 font-bold' : 'text-gray-500 dark:text-gray-400'}">
@@ -1592,7 +1447,7 @@ function verDetalleLote(loteId) {
       </div>
       <div class="text-right">
         <p class="font-bold text-gray-800 dark:text-white">C$${((parseFloat(p.precioCarmen) || 0) * parseInt(p.cantidad)).toLocaleString()}</p>
-        ${p.vendido ? '<span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded">Vendido</span>' : '<span class="text-xs bg-blue-500 text-white px-2 py-0.5 rounded">Stock</span>'}
+        ${p.vendido ? '<span class="badge badge-success text-xs">Vendido</span>' : '<span class="badge badge-info text-xs">Stock</span>'}
       </div>
     </div>
   `).join('') || '<p class="text-gray-500 text-center">Sin productos</p>';
@@ -1641,7 +1496,7 @@ function editarLoteDesdeModal() {
 }
 
 // ==========================================
-// COMPRAS - CRUD COMPLETO
+// COMPRAS - CRUD
 // ==========================================
 function agregarProductoCompra() {
   productosCompraTemp.push({
@@ -1769,7 +1624,7 @@ function renderCompras() {
       sum + ((parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1)), 0) || 0;
     
     return `
-      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4 border border-purple-200 dark:border-purple-800">
+      <div class="card p-4 border border-purple-200 dark:border-purple-800">
         <div class="flex justify-between items-start mb-2">
           <div>
             <h3 class="font-bold text-lg text-gray-800 dark:text-white">${compra.id}</h3>
@@ -1783,8 +1638,8 @@ function renderCompras() {
         </div>
         
         <div class="flex items-center gap-2 mb-3">
-          <span class="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">${enStock} en stock</span>
-          <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded-full">${vendidos} vendidos</span>
+          <span class="badge badge-success">${enStock} en stock</span>
+          <span class="badge bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">${vendidos} vendidos</span>
         </div>
         
         <div class="flex gap-2">
@@ -1817,7 +1672,7 @@ function verDetalleCompra(compraId) {
       </div>
       <div class="text-right">
         <p class="font-bold text-gray-800 dark:text-white">C$${((parseFloat(p.precioCompra) || 0) * parseInt(p.cantidad)).toLocaleString()}</p>
-        ${p.vendido ? '<span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded">Vendido</span>' : '<span class="text-xs bg-purple-500 text-white px-2 py-0.5 rounded">Stock</span>'}
+        ${p.vendido ? '<span class="badge badge-success">Vendido</span>' : '<span class="badge badge-info">Stock</span>'}
       </div>
     </div>
   `).join('') || '<p class="text-gray-500 text-center">Sin productos</p>';
@@ -1844,7 +1699,7 @@ function editarCompraDesdeModal() {
 }
 
 // ==========================================
-// VENTAS - CRUD COMPLETO CON FRECUENCIA
+// VENTAS - CRUD
 // ==========================================
 function mostrarSelectorProductos(tipo) {
   document.getElementById('selectorProductos').classList.remove('hidden');
@@ -2030,7 +1885,6 @@ function calcularVenta() {
 
 function calcularProximaFecha(fechaBase, frecuencia, fechasPersonalizadas = []) {
   const fecha = new Date(fechaBase);
-  const hoy = new Date();
   
   switch(frecuencia) {
     case 'semanal':
@@ -2044,10 +1898,8 @@ function calcularProximaFecha(fechaBase, frecuencia, fechasPersonalizadas = []) 
         const diaActual = fecha.getDate();
         const mesActual = fecha.getMonth();
         const añoActual = fecha.getFullYear();
-        
         const fechasOrdenadas = [...fechasPersonalizadas].sort((a, b) => a - b);
         let siguienteFecha = fechasOrdenadas.find(d => d > diaActual);
-        
         if (siguienteFecha) {
           fecha.setDate(siguienteFecha);
         } else {
@@ -2058,7 +1910,6 @@ function calcularProximaFecha(fechaBase, frecuencia, fechasPersonalizadas = []) 
         fecha.setMonth(fecha.getMonth() + 1);
       }
       break;
-    case 'mensual':
     default:
       fecha.setMonth(fecha.getMonth() + 1);
       break;
@@ -2262,25 +2113,21 @@ function renderVentas() {
     const proximoCobro = calcularProximaFechaCobro(venta);
     const diasRestantes = Math.ceil((proximoCobro - new Date()) / (1000 * 60 * 60 * 24));
     
-    const frecuenciaLabel = venta.frecuenciaPago === 'semanal' ? ' • Semanal' : 
-                           venta.frecuenciaPago === 'quincenal' ? ' • Quincenal' : 
-                           venta.frecuenciaPago === 'personalizado' ? ' • Personalizado' : '';
-    
     const tipoPagoLabel = venta.tipoPago === 'cash' ? ' 💵 Cash' : '';
     
     return `
-      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4 border ${isPending ? 'border-orange-200 dark:border-orange-800' : 'border-green-200 dark:border-green-800'}">
+      <div class="card p-4 border ${isPending ? 'border-orange-200 dark:border-orange-800' : 'border-green-200 dark:border-green-800'}">
         <div class="flex justify-between items-start mb-2">
           <div>
             <h3 class="font-bold text-lg text-gray-800 dark:text-white flex items-center gap-2">
               ${venta.cliente}
-              ${!isPending ? '<span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">Pagado</span>' : ''}
-              ${venta.ventaOriginal ? '<span class="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">Extensión</span>' : ''}
-              ${tipoPagoLabel ? `<span class="text-xs bg-gray-500 text-white px-2 py-0.5 rounded-full">${tipoPagoLabel}</span>` : ''}
+              ${!isPending ? '<span class="badge badge-success">Pagado</span>' : ''}
+              ${venta.ventaOriginal ? '<span class="badge badge-info">Extensión</span>' : ''}
+              ${tipoPagoLabel ? `<span class="badge bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">${tipoPagoLabel}</span>` : ''}
             </h3>
             <p class="text-xs text-gray-500 dark:text-gray-400">${venta.id} | ${venta.telefono || 'Sin teléfono'}</p>
             ${isPending && venta.tipoPago !== 'cash' ? `<p class="text-xs ${diasRestantes < 0 ? 'text-red-600 font-bold' : 'text-gray-500 dark:text-gray-400'}">
-              Próximo cobro: ${formatFecha(venta.proximaFechaCobro)} ${diasRestantes < 0 ? '(Atrasado)' : ''}${frecuenciaLabel}
+              Próximo cobro: ${formatFecha(venta.proximaFechaCobro)} ${diasRestantes < 0 ? '(Atrasado)' : ''}
             </p>` : ''}
           </div>
           <div class="text-right">
@@ -2336,8 +2183,8 @@ function verDetalleVenta(ventaId) {
     </div>
   `).join('') || '<p class="text-gray-500 text-center">Sin productos</p>';
   
-  const frecuenciaText = venta.frecuenciaPago === 'semanal' ? 'Semanal (cada 7 días)' : 
-                        venta.frecuenciaPago === 'quincenal' ? 'Quincenal (cada 15 días)' : 
+  const frecuenciaText = venta.frecuenciaPago === 'semanal' ? 'Semanal' : 
+                        venta.frecuenciaPago === 'quincenal' ? 'Quincenal' : 
                         venta.frecuenciaPago === 'personalizado' ? 'Personalizado: días ' + (venta.fechasPersonalizadas?.join(', ') || '') : 
                         'Mensual';
   
@@ -2409,7 +2256,7 @@ function registrarCobroDesdeVenta() {
 }
 
 // ==========================================
-// PDF Y WHATSAPP - FUNCIONES ACTUALIZADAS (usando nuevo formato)
+// PDF (versión simplificada)
 // ==========================================
 async function generarPDFVenta(ventaId) {
   const venta = ventas.find(v => v.id === ventaId);
@@ -2422,15 +2269,12 @@ async function generarPDFVenta(ventaId) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
-    const colorPrimario = [236, 72, 153];
-    const colorTexto = [0, 0, 0];
-    
     doc.setFontSize(18);
-    doc.setTextColor(...colorPrimario);
+    doc.setTextColor(236, 72, 153);
     doc.text('ELECTRODOMÉSTICOS Y VARIEDADES KAREN', 105, 20, null, null, 'center');
     
     doc.setFontSize(10);
-    doc.setTextColor(...colorTexto);
+    doc.setTextColor(0, 0, 0);
     doc.text('Recibo de Venta', 105, 28, null, null, 'center');
     
     doc.setFontSize(12);
@@ -2441,7 +2285,7 @@ async function generarPDFVenta(ventaId) {
     y += 10;
     doc.text(`Fecha: ${formatFecha(venta.fecha)}`, 20, y);
     y += 10;
-    doc.text(`Teléfono: ${venta.telefono || 'N/A'}`, 20, y);
+    if (venta.telefono) doc.text(`Teléfono: ${venta.telefono}`, 20, y);
     y += 15;
     
     doc.text('PRODUCTOS:', 20, y);
@@ -2469,24 +2313,11 @@ async function generarPDFVenta(ventaId) {
       doc.text(`Saldo: C$${(venta.saldo).toLocaleString()}`, 20, y);
       y += 10;
       doc.text(`Cuota: C$${(venta.cuotaMensual).toLocaleString()}`, 20, y);
-      y += 10;
-      doc.text(`Meses: ${venta.meses}`, 20, y);
-      
-      const frecuenciaText = venta.frecuenciaPago === 'semanal' ? 'Semanal' : 
-                            venta.frecuenciaPago === 'quincenal' ? 'Quincenal' : 
-                            venta.frecuenciaPago === 'personalizado' ? 'Personalizado' : 'Mensual';
-      y += 10;
-      doc.text(`Frecuencia: ${frecuenciaText}`, 20, y);
-      
-      if (venta.frecuenciaPago === 'personalizado' && venta.fechasPersonalizadas) {
-        y += 10;
-        doc.text(`Fechas: ${venta.fechasPersonalizadas.join(', ')} de cada mes`, 20, y);
-      }
     }
     
     y += 20;
     doc.setFontSize(10);
-    doc.setTextColor(...colorPrimario);
+    doc.setTextColor(236, 72, 153);
     doc.text('¡Gracias por su compra!', 105, y, null, null, 'center');
     doc.text('ELECTRODOMÉSTICOS Y VARIEDADES KAREN', 105, y + 8, null, null, 'center');
     
@@ -2660,7 +2491,7 @@ function enviarWhatsAppCobro(cobroId) {
 }
 
 // ==========================================
-// VER DETALLE - ABONOS Y COBROS
+// VER DETALLE ABONOS Y COBROS
 // ==========================================
 function verDetalleAbono(abonoId) {
   const abono = abonos.find(a => a.id === abonoId);
@@ -2725,10 +2556,6 @@ function verDetalleCobro(cobroId) {
   
   document.getElementById('tituloDetalleCobro').textContent = `Cobro ${cobro.id}`;
   
-  const frecuenciaText = venta?.frecuenciaPago === 'semanal' ? 'Semanal' : 
-                        venta?.frecuenciaPago === 'quincenal' ? 'Quincenal' : 
-                        venta?.frecuenciaPago === 'personalizado' ? 'Personalizado' : 'Mensual';
-  
   document.getElementById('contenidoDetalleCobro').innerHTML = `
     <div class="space-y-3">
       <div class="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl">
@@ -2765,12 +2592,6 @@ function verDetalleCobro(cobroId) {
             <span class="text-gray-600 dark:text-gray-400">Saldo:</span>
             <span class="font-medium text-orange-600">C$${(parseFloat(venta?.saldo) || 0).toLocaleString()}</span>
           </div>
-          ${venta?.tipoPago !== 'cash' ? `
-          <div class="flex justify-between">
-            <span class="text-gray-600 dark:text-gray-400">Frecuencia:</span>
-            <span class="font-medium">${frecuenciaText}</span>
-          </div>
-          ` : ''}
         </div>
       </div>
     </div>
@@ -2791,7 +2612,7 @@ function editarCobroDesdeModal() {
 }
 
 // ==========================================
-// ABONOS - CRUD COMPLETO CON EDICIÓN INDIVIDUAL
+// ABONOS - CRUD
 // ==========================================
 function cargarSelectLotes() {
   const select = document.getElementById('abonoLoteId');
@@ -2971,7 +2792,7 @@ function renderAbonos() {
   }
   const abonosOrdenados = [...abonos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   container.innerHTML = abonosOrdenados.map(abono => `
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-3 border border-pink-200 dark:border-pink-800 cursor-pointer hover:bg-pink-50 dark:hover:bg-pink-900/20" onclick="verDetalleAbono('${abono.id}')">
+    <div class="card p-3 border border-pink-200 dark:border-pink-800 cursor-pointer hover:bg-pink-50 dark:hover:bg-pink-900/20" onclick="verDetalleAbono('${abono.id}')">
       <div class="flex justify-between items-start">
         <div>
           <p class="font-bold text-gray-800 dark:text-white">${abono.loteId}</p>
@@ -2985,7 +2806,7 @@ function renderAbonos() {
 }
 
 // ==========================================
-// COBROS - CRUD COMPLETO CON EDICIÓN INDIVIDUAL
+// COBROS - CRUD
 // ==========================================
 function buscarVentaCobro() {
   const busqueda = document.getElementById('cobroBusqueda').value.trim().toUpperCase();
@@ -3206,7 +3027,7 @@ function renderCobros() {
   container.innerHTML = cobrosOrdenados.map(cobro => {
     const venta = ventas.find(v => v.id === cobro.ventaId);
     return `
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-3 border border-green-200 dark:border-green-800 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20" onclick="verDetalleCobro('${cobro.id}')">
+      <div class="card p-3 border border-green-200 dark:border-green-800 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20" onclick="verDetalleCobro('${cobro.id}')">
         <div class="flex justify-between items-start">
           <div>
             <p class="font-bold text-gray-800 dark:text-white">${venta?.cliente || 'Cliente'}</p>
