@@ -13,6 +13,7 @@
   <link rel="apple-touch-icon" href="https://via.placeholder.com/192.png/4f46e5/ffffff?text=VK">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <link rel="stylesheet" href="styles.css">
   <script>
     tailwind.config = {
@@ -20,15 +21,8 @@
       theme: {
         extend: {
           colors: {
-            brand: {
-              50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
-              400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
-              800: '#3730a3', 900: '#312e81'
-            },
-            accent: {
-              50: '#fdf2f8', 100: '#fce7f3', 200: '#fbcfe8', 300: '#f9a8d4',
-              400: '#f472b6', 500: '#ec4899', 600: '#db2777', 700: '#be185d'
-            }
+            brand: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' },
+            accent: { 50:'#fdf2f8',100:'#fce7f3',200:'#fbcfe8',300:'#f9a8d4',400:'#f472b6',500:'#ec4899',600:'#db2777',700:'#be185d' }
           }
         }
       }
@@ -37,7 +31,6 @@
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 min-h-screen antialiased">
 
-  <!-- ═══════════ HEADER ═══════════ -->
   <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
       <div class="flex items-center gap-2 min-w-0">
@@ -48,24 +41,18 @@
         </div>
       </div>
       <div class="flex items-center gap-1.5 shrink-0">
-        <button onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700" title="Tema">
-          <svg id="themeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-          </svg>
+        <button onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+          <svg id="themeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
         </button>
-        <button onclick="abrirMenuBackup()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700" title="Backup">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3 3h10c1.5 0 3-1 3-3V7c0-2-1.5-3-3-3H7C5.5 4 4 5 4 7z M9 12l2 2 4-4"/>
-          </svg>
+        <button onclick="abrirMenuBackup()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3 3h10c1.5 0 3-1 3-3V7c0-2-1.5-3-3-3H7C5.5 4 4 5 4 7z M9 12l2 2 4-4"/></svg>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- ═══════════ MAIN ═══════════ -->
   <main id="appMain" class="max-w-7xl mx-auto px-4 py-4 pb-28"></main>
 
-  <!-- ═══════════ BOTTOM NAV ═══════════ -->
   <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 safe-bottom">
     <div class="max-w-7xl mx-auto grid grid-cols-5">
       <button data-nav="dashboard" onclick="navegar('dashboard')" class="nav-item">
@@ -91,40 +78,21 @@
     </div>
   </nav>
 
-  <!-- ═══════════ MODAL GENÉRICO ═══════════ -->
   <div id="modalOverlay" class="hidden fixed inset-0 bg-black/50 z-50 backdrop-blur-sm" onclick="cerrarModales()"></div>
 
-  <!-- ═══════════ MODAL: PROVEEDOR ═══════════ -->
+  <!-- MODAL PROVEEDOR -->
   <div id="modalProveedor" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
         <h3 id="tituloModalProveedor" class="text-lg font-bold text-slate-800 dark:text-white">Nuevo Proveedor</h3>
-        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
+        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
       </div>
       <div class="p-4 space-y-4">
         <input type="hidden" id="provId">
-        <div>
-          <label class="lbl">Nombre del proveedor *</label>
-          <input type="text" id="provNombre" class="inp" placeholder="Ej: Carmen, Distribuidora XYZ">
-        </div>
-        <div>
-          <label class="lbl">Teléfono</label>
-          <input type="tel" id="provTelefono" class="inp" placeholder="Ej: 88888888">
-        </div>
-        <div>
-          <label class="lbl">Tipo de pago habitual</label>
-          <select id="provTipo" class="inp">
-            <option value="credito">Crédito (con abonos)</option>
-            <option value="contado">Contado</option>
-            <option value="ambos">Ambos</option>
-          </select>
-        </div>
-        <div>
-          <label class="lbl">Notas</label>
-          <textarea id="provNotas" rows="2" class="inp" placeholder="Información adicional..."></textarea>
-        </div>
+        <div><label class="lbl">Nombre *</label><input type="text" id="provNombre" class="inp" placeholder="Ej: Carmen"></div>
+        <div><label class="lbl">Teléfono</label><input type="tel" id="provTelefono" class="inp" placeholder="Ej: 88888888"></div>
+        <div><label class="lbl">Tipo de pago</label><select id="provTipo" class="inp"><option value="credito">Crédito</option><option value="contado">Contado</option><option value="ambos">Ambos</option></select></div>
+        <div><label class="lbl">Notas</label><textarea id="provNotas" rows="2" class="inp"></textarea></div>
       </div>
       <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-2">
         <button onclick="guardarProveedor()" class="btn-primary flex-1">Guardar</button>
@@ -134,58 +102,36 @@
     </div>
   </div>
 
-  <!-- ═══════════ MODAL: COMPRA ═══════════ -->
+  <!-- MODAL COMPRA -->
   <div id="modalCompra" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-2xl max-h-[95vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between z-10">
         <h3 id="tituloModalCompra" class="text-lg font-bold text-slate-800 dark:text-white">Nueva Compra</h3>
-        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
+        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
       </div>
       <div class="p-4 space-y-4">
         <input type="hidden" id="compraId">
         <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="lbl">ID Compra</label>
-            <input type="text" id="compraCodigo" class="inp" placeholder="C001">
-          </div>
-          <div>
-            <label class="lbl">Fecha</label>
-            <input type="date" id="compraFecha" class="inp">
-          </div>
+          <div><label class="lbl">ID Compra</label><input type="text" id="compraCodigo" class="inp" placeholder="C001"></div>
+          <div><label class="lbl">Fecha</label><input type="date" id="compraFecha" class="inp"></div>
         </div>
-        <div>
-          <label class="lbl">Proveedor *</label>
-          <select id="compraProveedor" class="inp">
-            <option value="">Seleccione...</option>
-          </select>
-        </div>
-        <div>
-          <label class="lbl">Tipo de pago *</label>
-          <select id="compraTipoPago" class="inp" onchange="cambiarTipoPagoCompra()">
-            <option value="contado">Contado (pagado completo)</option>
-            <option value="credito">Crédito (con abonos)</option>
-          </select>
-        </div>
+        <div><label class="lbl">Proveedor *</label><select id="compraProveedor" class="inp"><option value="">Seleccione...</option></select></div>
+        <div><label class="lbl">Tipo de pago *</label><select id="compraTipoPago" class="inp" onchange="cambiarTipoPagoCompra()"><option value="contado">Contado</option><option value="credito">Crédito (con abonos)</option></select></div>
         <div id="contenedorPagoInicial" class="hidden">
           <label class="lbl">Pago inicial (C$)</label>
           <input type="number" id="compraPagoInicial" value="0" min="0" step="0.01" class="inp" oninput="recalcularCompra()">
-          <p class="text-xs text-slate-500 mt-1">Deja 0 si no diste nada al recibir la compra.</p>
         </div>
         <div>
           <div class="flex items-center justify-between mb-2">
             <label class="lbl mb-0">Productos</label>
-            <div class="flex gap-2">
-              <button type="button" onclick="agregarProductoCompra()" class="text-xs px-3 py-1.5 rounded-lg bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-medium">+ Agregar</button>
-            </div>
+            <button type="button" onclick="agregarProductoCompra()" class="text-xs px-3 py-1.5 rounded-lg bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-medium">+ Agregar</button>
           </div>
           <div id="listaProductosCompra" class="space-y-3"></div>
         </div>
         <div class="bg-brand-50 dark:bg-brand-900/20 rounded-xl p-3 space-y-1">
-          <div class="flex justify-between text-sm"><span class="text-slate-600 dark:text-slate-400">Total productos:</span><span id="compraTotal" class="font-bold text-slate-800 dark:text-white">C$0.00</span></div>
-          <div class="flex justify-between text-sm"><span class="text-slate-600 dark:text-slate-400">Pago inicial:</span><span id="compraPagado" class="font-bold text-emerald-600 dark:text-emerald-400">C$0.00</span></div>
-          <div class="flex justify-between text-sm border-t border-brand-200 dark:border-brand-800 pt-1"><span class="text-slate-700 dark:text-slate-300 font-medium">Saldo pendiente:</span><span id="compraSaldo" class="font-bold text-rose-600 dark:text-rose-400">C$0.00</span></div>
+          <div class="flex justify-between text-sm"><span class="text-slate-600 dark:text-slate-400">Total:</span><span id="compraTotal" class="font-bold text-slate-800 dark:text-white">C$0.00</span></div>
+          <div class="flex justify-between text-sm"><span class="text-slate-600 dark:text-slate-400">Pago inicial:</span><span id="compraPagado" class="font-bold text-emerald-600">C$0.00</span></div>
+          <div class="flex justify-between text-sm border-t border-brand-200 dark:border-brand-800 pt-1"><span class="text-slate-700 dark:text-slate-300 font-medium">Saldo:</span><span id="compraSaldo" class="font-bold text-rose-600">C$0.00</span></div>
         </div>
       </div>
       <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-2">
@@ -196,49 +142,21 @@
     </div>
   </div>
 
-  <!-- ═══════════ MODAL: PAGO A PROVEEDOR ═══════════ -->
+  <!-- MODAL PAGO A PROVEEDOR -->
   <div id="modalPagoProveedor" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
         <h3 id="tituloModalPago" class="text-lg font-bold text-slate-800 dark:text-white">Pago a Proveedor</h3>
-        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
+        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
       </div>
       <div class="p-4 space-y-4">
         <input type="hidden" id="pagoId">
-        <div>
-          <label class="lbl">Proveedor *</label>
-          <select id="pagoProveedor" class="inp" onchange="cargarComprasDelProveedor()">
-            <option value="">Seleccione...</option>
-          </select>
-        </div>
-        <div>
-          <label class="lbl">Compra a pagar</label>
-          <select id="pagoCompra" class="inp">
-            <option value="">Seleccione proveedor primero...</option>
-          </select>
-        </div>
-        <div>
-          <label class="lbl">Fecha</label>
-          <input type="date" id="pagoFecha" class="inp">
-        </div>
-        <div>
-          <label class="lbl">Monto (C$) *</label>
-          <input type="number" id="pagoMonto" min="0" step="0.01" class="inp" placeholder="0.00">
-        </div>
-        <div>
-          <label class="lbl">Método</label>
-          <select id="pagoMetodo" class="inp">
-            <option value="Efectivo">Efectivo</option>
-            <option value="Transferencia">Transferencia</option>
-            <option value="Depósito">Depósito</option>
-          </select>
-        </div>
-        <div>
-          <label class="lbl">Notas</label>
-          <textarea id="pagoNotas" rows="2" class="inp"></textarea>
-        </div>
+        <div><label class="lbl">Proveedor *</label><select id="pagoProveedor" class="inp" onchange="cargarComprasDelProveedor()"><option value="">Seleccione...</option></select></div>
+        <div><label class="lbl">Compra a pagar</label><select id="pagoCompra" class="inp"><option value="">Seleccione proveedor primero...</option></select></div>
+        <div><label class="lbl">Fecha</label><input type="date" id="pagoFecha" class="inp"></div>
+        <div><label class="lbl">Monto (C$) *</label><input type="number" id="pagoMonto" min="0" step="0.01" class="inp" placeholder="0.00"></div>
+        <div><label class="lbl">Método</label><select id="pagoMetodo" class="inp"><option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option><option value="Depósito">Depósito</option></select></div>
+        <div><label class="lbl">Notas</label><textarea id="pagoNotas" rows="2" class="inp"></textarea></div>
       </div>
       <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-2">
         <button onclick="guardarPagoProveedor()" class="btn-primary flex-1">Registrar Pago</button>
@@ -247,54 +165,170 @@
     </div>
   </div>
 
-  <!-- ═══════════ MODAL: BACKUP ═══════════ -->
+  <!-- MODAL VENTA -->
+  <div id="modalVenta" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-2xl max-h-[95vh] overflow-y-auto shadow-2xl">
+      <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between z-10">
+        <h3 id="tituloModalVenta" class="text-lg font-bold text-slate-800 dark:text-white">Nueva Venta</h3>
+        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+      </div>
+      <div class="p-4 space-y-4">
+        <input type="hidden" id="ventaId">
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="lbl">ID Venta</label><input type="text" id="ventaCodigo" class="inp" placeholder="V001"></div>
+          <div><label class="lbl">Fecha</label><input type="date" id="ventaFecha" class="inp"></div>
+        </div>
+        <div>
+          <label class="lbl">Cliente *</label>
+          <div class="flex gap-2">
+            <select id="ventaCliente" class="inp flex-1"><option value="">Seleccione...</option></select>
+            <button type="button" onclick="abrirModalClienteRapido()" class="px-3 rounded-xl bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-bold">+</button>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="lbl mb-0">Productos</label>
+            <div class="flex gap-2">
+              <button type="button" onclick="abrirSelectorProductosVenta()" class="text-xs px-3 py-1.5 rounded-lg bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-medium">📦 Del Stock</button>
+              <button type="button" onclick="agregarProductoVentaManual()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">+ Manual</button>
+            </div>
+          </div>
+          <div id="listaProductosVenta" class="space-y-3"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="lbl">Prima (C$)</label><input type="number" id="ventaPrima" value="0" min="0" step="0.01" class="inp" oninput="recalcularVenta()"></div>
+          <div><label class="lbl">Tipo</label><select id="ventaTipoPago" class="inp" onchange="cambiarTipoPagoVenta()"><option value="credito">Crédito</option><option value="contado">Contado</option></select></div>
+        </div>
+        <div id="contenedorCredito">
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="lbl">Meses</label><input type="number" id="ventaMeses" value="12" min="1" class="inp" oninput="recalcularVenta()"></div>
+            <div><label class="lbl">Frecuencia</label><select id="ventaFrecuencia" class="inp" onchange="cambiarFrecuenciaVenta()"><option value="mensual">Mensual</option><option value="quincenal">Quincenal</option><option value="semanal">Semanal</option></select></div>
+          </div>
+          <div id="contenedorProximaFecha" class="mt-3">
+            <label class="lbl">Próximo cobro</label>
+            <input type="date" id="ventaProximaFecha" class="inp">
+          </div>
+        </div>
+        <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 space-y-1">
+          <div class="flex justify-between text-sm"><span class="text-slate-600 dark:text-slate-400">Total:</span><span id="ventaTotal" class="font-bold text-slate-800 dark:text-white">C$0.00</span></div>
+          <div class="flex justify-between text-sm"><span class="text-slate-600 dark:text-slate-400">Prima:</span><span id="ventaPrimaVer" class="font-bold text-emerald-600">C$0.00</span></div>
+          <div class="flex justify-between text-sm border-t border-emerald-200 dark:border-emerald-800 pt-1"><span class="text-slate-700 dark:text-slate-300 font-medium">Saldo:</span><span id="ventaSaldo" class="font-bold text-rose-600">C$0.00</span></div>
+          <div class="flex justify-between text-sm"><span class="text-slate-600 dark:text-slate-400">Cuota:</span><span id="ventaCuota" class="font-bold text-brand-600">C$0.00</span></div>
+        </div>
+      </div>
+      <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-2">
+        <button onclick="guardarVenta()" class="btn-primary flex-1">Guardar Venta</button>
+        <button onclick="eliminarVenta()" id="btnEliminarVenta" class="btn-danger hidden">Eliminar</button>
+        <button onclick="cerrarModales()" class="btn-ghost">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CLIENTE -->
+  <div id="modalCliente" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
+        <h3 id="tituloModalCliente" class="text-lg font-bold text-slate-800 dark:text-white">Nuevo Cliente</h3>
+        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+      </div>
+      <div class="p-4 space-y-4">
+        <input type="hidden" id="clienteId">
+        <div><label class="lbl">Nombre *</label><input type="text" id="clienteNombre" class="inp"></div>
+        <div><label class="lbl">Teléfono</label><input type="tel" id="clienteTelefono" class="inp" placeholder="88888888"></div>
+        <div><label class="lbl">Notas</label><textarea id="clienteNotas" rows="2" class="inp"></textarea></div>
+      </div>
+      <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-2">
+        <button onclick="guardarCliente()" class="btn-primary flex-1">Guardar</button>
+        <button onclick="eliminarCliente()" id="btnEliminarCliente" class="btn-danger hidden">Eliminar</button>
+        <button onclick="cerrarModales()" class="btn-ghost">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL COBRO -->
+  <div id="modalCobro" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
+        <h3 id="tituloModalCobro" class="text-lg font-bold text-slate-800 dark:text-white">Registrar Cobro</h3>
+        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+      </div>
+      <div class="p-4 space-y-4">
+        <input type="hidden" id="cobroId">
+        <div><label class="lbl">Buscar venta *</label><input type="text" id="cobroBusqueda" class="inp" placeholder="ID o nombre del cliente..." oninput="buscarVentaParaCobro()"><div id="resultadosCobro" class="hidden mt-2 space-y-2 max-h-40 overflow-y-auto"></div></div>
+        <input type="hidden" id="cobroVentaId">
+        <div id="infoVentaCobro" class="hidden bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3"></div>
+        <div><label class="lbl">Fecha</label><input type="date" id="cobroFecha" class="inp"></div>
+        <div><label class="lbl">Monto (C$) *</label><input type="number" id="cobroMonto" min="0" step="0.01" class="inp" placeholder="0.00"></div>
+        <div><label class="lbl">Método</label><select id="cobroMetodo" class="inp"><option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option><option value="Depósito">Depósito</option></select></div>
+        <div><label class="lbl">Notas</label><textarea id="cobroNotas" rows="2" class="inp"></textarea></div>
+      </div>
+      <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-2">
+        <button onclick="guardarCobro()" class="btn-primary flex-1">Registrar Cobro</button>
+        <button onclick="cerrarModales()" class="btn-ghost">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL SELECTOR PRODUCTOS DEL STOCK -->
+  <div id="modalSelectorProductos" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-800 dark:text-white">Productos en Stock</h3>
+        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+      </div>
+      <div class="p-4">
+        <input type="text" id="buscarProductoStock" class="inp mb-3" placeholder="🔍 Buscar producto..." oninput="filtrarProductosStock()">
+        <div id="listaProductosStock" class="space-y-2 max-h-[60vh] overflow-y-auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ESCÁNER -->
+  <div id="modalEscaner" class="hidden fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black">
+    <div class="bg-slate-900 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
+      <div class="p-4 flex items-center justify-between text-white">
+        <h3 class="text-lg font-bold">📷 Escanear código</h3>
+        <button onclick="cerrarEscaner()" class="p-2 rounded-xl bg-white/10 text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="lectorQR" class="w-full aspect-square bg-black"></div>
+      <div class="p-4 text-center text-white text-sm">
+        <p id="resultadoEscaner">Apunta al código de barras o QR</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL BACKUP -->
   <div id="modalBackup" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-md shadow-2xl">
       <div class="border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
         <h3 class="text-lg font-bold text-slate-800 dark:text-white">Backup y Datos</h3>
-        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
+        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
       </div>
       <div class="p-4 space-y-3">
-        <button onclick="exportarBackup()" class="w-full p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex items-center gap-3 hover:bg-emerald-100 dark:hover:bg-emerald-900/30">
-          <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-          </div>
-          <div class="text-left">
-            <p class="font-bold text-slate-800 dark:text-white">Exportar Backup</p>
-            <p class="text-xs text-slate-500">Descarga un archivo .json</p>
-          </div>
+        <button onclick="exportarBackup()" class="w-full p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></div>
+          <div class="text-left"><p class="font-bold text-slate-800 dark:text-white">Exportar Backup</p><p class="text-xs text-slate-500">Descarga un .json</p></div>
         </button>
-        <button onclick="document.getElementById('inputImportar').click()" class="w-full p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center gap-3 hover:bg-amber-100 dark:hover:bg-amber-900/30">
-          <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-          </div>
-          <div class="text-left">
-            <p class="font-bold text-slate-800 dark:text-white">Importar Backup</p>
-            <p class="text-xs text-slate-500">Carga un archivo .json</p>
-          </div>
+        <button onclick="document.getElementById('inputImportar').click()" class="w-full p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></div>
+          <div class="text-left"><p class="font-bold text-slate-800 dark:text-white">Importar Backup</p><p class="text-xs text-slate-500">Carga un .json</p></div>
         </button>
         <input type="file" id="inputImportar" accept=".json" class="hidden" onchange="importarBackup(event)">
-        <button onclick="borrarTodosLosDatos()" class="w-full p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 flex items-center gap-3 hover:bg-rose-100 dark:hover:bg-rose-900/30">
-          <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          </div>
-          <div class="text-left">
-            <p class="font-bold text-slate-800 dark:text-white">Borrar todos los datos</p>
-            <p class="text-xs text-slate-500">⚠️ Acción irreversible</p>
-          </div>
+        <button onclick="borrarTodosLosDatos()" class="w-full p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></div>
+          <div class="text-left"><p class="font-bold text-slate-800 dark:text-white">Borrar todos los datos</p><p class="text-xs text-slate-500">⚠️ Irreversible</p></div>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ═══════════ TOAST ═══════════ -->
+  <!-- TOAST -->
   <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-5 py-3 rounded-2xl shadow-2xl opacity-0 pointer-events-none transition-all duration-300 z-[60] max-w-[90vw]">
     <p id="toastMsg" class="text-sm font-medium">Listo</p>
   </div>
 
-  <!-- ═══════════ SCRIPTS ═══════════ -->
   <script src="db.js"></script>
   <script src="migracion.js"></script>
   <script src="app.js"></script>
