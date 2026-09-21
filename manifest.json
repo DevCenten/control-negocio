@@ -1,23 +1,25 @@
 {
-  "name": "Electrodomésticos y Variedades Karen",
-  "short_name": "EVK Control",
-  "description": "Sistema de gestión de lotes, compras, ventas y finanzas",
+  "name": "Variedades Karen",
+  "short_name": "VK",
+  "description": "Sistema de gestión empresarial - Compras, ventas, finanzas",
   "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#1e293b",
-  "theme_color": "#ec4899",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
   "orientation": "portrait",
   "scope": "/",
   "icons": [
     {
-      "src": "https://via.placeholder.com/192.png/ec4899/ffffff?text=EVK",
+      "src": "https://via.placeholder.com/192.png/4f46e5/ffffff?text=VK",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "https://via.placeholder.com/512.png/ec4899/ffffff?text=EVK",
+      "src": "https://via.placeholder.com/512.png/4f46e5/ffffff?text=VK",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
