@@ -1,7 +1,7 @@
 {
-  "name": "Variedades Karen",
-  "short_name": "VK",
-  "description": "Sistema de gestión empresarial - Compras, ventas, finanzas",
+  "name": "Variedades Karen - Sistema de Gestión",
+  "short_name": "VK Control",
+  "description": "Sistema empresarial de gestión de compras, ventas, finanzas y clientes",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#0f172a",

@@ -37,11 +37,14 @@
       <div class="flex items-center gap-2 min-w-0">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-600 to-accent-500 flex items-center justify-center text-white font-bold shadow-lg shrink-0">VK</div>
         <div class="min-w-0">
-          <h1 class="text-sm font-bold text-slate-800 dark:text-white truncate">Variedades Karen</h1>
+          <h1 id="headerTitulo" class="text-sm font-bold text-slate-800 dark:text-white truncate">Variedades Karen</h1>
           <p id="headerSubtitle" class="text-[10px] text-slate-500 dark:text-slate-400">Cargando...</p>
         </div>
       </div>
       <div class="flex items-center gap-1.5 shrink-0">
+        <button onclick="abrirBuscadorGlobal()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700" title="Buscar">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </button>
         <button onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
           <svg id="themeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
         </button>
@@ -306,27 +309,83 @@
     </div>
   </div>
 
-  <!-- MODAL BACKUP -->
-  <div id="modalBackup" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-md shadow-2xl">
-      <div class="border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
-        <h3 class="text-lg font-bold text-slate-800 dark:text-white">Backup y Datos</h3>
+  <!-- MODAL BUSCADOR GLOBAL -->
+  <div id="modalBuscador" class="hidden fixed inset-0 z-50 flex items-start justify-center p-0 sm:p-4 bg-black/50">
+    <div class="bg-white dark:bg-slate-900 rounded-b-3xl sm:rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div class="p-4 flex items-center gap-2">
+        <div class="search-box flex-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input type="text" id="inputBuscador" class="inp pl-10" placeholder="Buscar clientes, ventas, compras, productos..." oninput="buscarGlobal()">
+        </div>
         <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
       </div>
-      <div class="p-4 space-y-3">
-        <button onclick="exportarBackup()" class="w-full p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></div>
-          <div class="text-left"><p class="font-bold text-slate-800 dark:text-white">Exportar Backup</p><p class="text-xs text-slate-500">Descarga .json</p></div>
-        </button>
-        <button onclick="document.getElementById('inputImportar').click()" class="w-full p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></div>
-          <div class="text-left"><p class="font-bold text-slate-800 dark:text-white">Importar Backup</p><p class="text-xs text-slate-500">Carga .json</p></div>
-        </button>
-        <input type="file" id="inputImportar" accept=".json" class="hidden" onchange="importarBackup(event)">
-        <button onclick="borrarTodosLosDatos()" class="w-full p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></div>
-          <div class="text-left"><p class="font-bold text-slate-800 dark:text-white">Borrar todos los datos</p><p class="text-xs text-slate-500">⚠️ Irreversible</p></div>
-        </button>
+      <div id="resultadosBuscador" class="px-4 pb-4 space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- MODAL RECORDATORIO -->
+  <div id="modalRecordatorio" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
+        <h3 id="tituloModalRecordatorio" class="text-lg font-bold text-slate-800 dark:text-white">Nuevo Recordatorio</h3>
+        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+      </div>
+      <div class="p-4 space-y-4">
+        <input type="hidden" id="recId">
+        <div><label class="lbl">Título *</label><input type="text" id="recTitulo" class="inp" placeholder="Ej: Llamar a cliente"></div>
+        <div><label class="lbl">Descripción</label><textarea id="recDescripcion" rows="2" class="inp"></textarea></div>
+        <div><label class="lbl">Fecha *</label><input type="date" id="recFecha" class="inp"></div>
+        <div><label class="lbl">Prioridad</label><select id="recPrioridad" class="inp"><option value="normal">Normal</option><option value="alta">Alta</option><option value="baja">Baja</option></select></div>
+      </div>
+      <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-2">
+        <button onclick="guardarRecordatorio()" class="btn-primary flex-1">Guardar</button>
+        <button onclick="eliminarRecordatorio()" id="btnEliminarRec" class="btn-danger hidden">Eliminar</button>
+        <button onclick="cerrarModales()" class="btn-ghost">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CONFIGURACIÓN -->
+  <div id="modalConfiguracion" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-800 dark:text-white">⚙️ Configuración</h3>
+        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+      </div>
+      <div class="p-4 space-y-4">
+        <div class="card">
+          <h4 class="font-bold text-sm text-slate-800 dark:text-white mb-3">🏢 Datos de la empresa</h4>
+          <div class="space-y-3">
+            <div><label class="lbl">Nombre</label><input type="text" id="cfgNombre" class="inp"></div>
+            <div><label class="lbl">Teléfono</label><input type="tel" id="cfgTelefono" class="inp"></div>
+            <div><label class="lbl">Dirección</label><input type="text" id="cfgDireccion" class="inp"></div>
+            <div><label class="lbl">Mensaje de WhatsApp</label><textarea id="cfgMensaje" rows="2" class="inp"></textarea></div>
+          </div>
+        </div>
+        <div class="card">
+          <h4 class="font-bold text-sm text-slate-800 dark:text-white mb-3">💰 Moneda</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="lbl">Símbolo</label><input type="text" id="cfgMoneda" class="inp" maxlength="3"></div>
+            <div><label class="lbl">Código</label><input type="text" id="cfgCodigo" class="inp" maxlength="3"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h4 class="font-bold text-sm text-slate-800 dark:text-white mb-3">💾 Respaldo automático</h4>
+          <label class="flex items-center gap-2">
+            <input type="checkbox" id="cfgBackupAuto" class="w-4 h-4">
+            <span class="text-sm">Recordarme hacer backup cada 7 días</span>
+          </label>
+          <p class="text-xs text-slate-500 mt-2">Última exportación: <span id="cfgUltimoBackup">-</span></p>
+        </div>
+        <div class="card">
+          <h4 class="font-bold text-sm text-slate-800 dark:text-white mb-3">📊 Datos</h4>
+          <div class="space-y-1 text-xs text-slate-500">
+            <p>Registros: ${'{}'}</p>
+          </div>
+        </div>
+      </div>
+      <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4">
+        <button onclick="guardarConfiguracion()" class="btn-primary w-full">Guardar Configuración</button>
       </div>
     </div>
   </div>

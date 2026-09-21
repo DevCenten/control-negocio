@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
    app.js — Variedades Karen · Sistema de Gestión Empresarial
-   Fase 3: Dashboard con gráficas, Reportes, Notificaciones
+   Fase 4 FINAL: Fotos, Recordatorios, Configuración, Buscador
    ═══════════════════════════════════════════════════════════ */
 
 const App = {
@@ -10,16 +10,22 @@ const App = {
   ventaEnEdicion: null,
   proveedorEnEdicion: null,
   clienteEnEdicion: null,
+  recordatorioEnEdicion: null,
   productosCompraTemp: [],
   productosVentaTemp: [],
   scannerActivo: null,
   productoEscanerDestino: null,
+  fotoDestino: null,
   stockDisponible: [],
   charts: {},
-  rangoReporte: { desde: null, hasta: null }
+  rangoReporte: { desde: null, hasta: null },
+  config: null
 };
 
-const fmtC = (n) => 'C$' + (parseFloat(n) || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtC = (n) => {
+  const cfg = App.config || { moneda: 'C$' };
+  return cfg.moneda + (parseFloat(n) || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 const fmtFecha = (f) => {
   if (!f) return 'N/A';
   const s = f.includes('T') ? f.split('T')[0] : f;
@@ -29,8 +35,35 @@ const fmtFecha = (f) => {
 const hoyISO = () => new Date().toISOString().split('T')[0];
 const diffDias = (fecha) => Math.ceil((new Date(fecha) - new Date()) / 86400000);
 
+/* ═══════════ CONFIGURACIÓN ═══════════ */
+function configDefault() {
+  return {
+    nombre: 'Variedades Karen',
+    telefono: '',
+    direccion: '',
+    mensaje: '¡Gracias por su compra!',
+    moneda: 'C$',
+    codigoMoneda: 'NIO',
+    backupAuto: true,
+    ultimoBackup: null
+  };
+}
+
+function cargarConfig() {
+  try {
+    App.config = JSON.parse(localStorage.getItem('vk_config') || 'null') || configDefault();
+  } catch (e) {
+    App.config = configDefault();
+  }
+}
+
+function guardarConfigLocal() {
+  localStorage.setItem('vk_config', JSON.stringify(App.config));
+}
+
 /* ═══════════ INICIALIZACIÓN ═══════════ */
 window.addEventListener('DOMContentLoaded', async () => {
+  cargarConfig();
   cargarTema();
   try {
     const migro = await migrarDesdeLocalStorage();
@@ -38,6 +71,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await DB.cargarTodo();
     actualizarHeader();
     navegar('dashboard');
+    verificarBackupAuto();
   } catch (e) {
     console.error('Error init:', e);
     toast('❌ Error al cargar datos');
@@ -45,8 +79,19 @@ window.addEventListener('DOMContentLoaded', async () => {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 });
 
+function verificarBackupAuto() {
+  if (!App.config.backupAuto) return;
+  const ultimo = App.config.ultimoBackup ? new Date(App.config.ultimoBackup) : null;
+  const dias = ultimo ? Math.floor((Date.now() - ultimo) / 86400000) : 999;
+  if (dias >= 7) {
+    setTimeout(() => toast('💾 Recuerda hacer backup (han pasado ' + (dias > 900 ? 'muchos' : dias) + ' días)'), 2000);
+  }
+}
+
 function actualizarHeader() {
   const sub = document.getElementById('headerSubtitle');
+  const titulo = document.getElementById('headerTitulo');
+  if (titulo) titulo.textContent = App.config.nombre;
   if (sub) sub.textContent = `${DB.proveedores.length} prov · ${DB.compras.length} compras · ${DB.ventas.length} ventas · ${DB.clientes.length} clientes`;
   actualizarBadgeNotif();
 }
@@ -60,7 +105,6 @@ function toggleTheme() {
   const isDark = document.documentElement.classList.toggle('dark');
   localStorage.setItem('tema', isDark ? 'dark' : 'light');
   actualizarIconoTema(isDark);
-  // Refrescar gráficas
   if (App.seccionActual === 'dashboard') navegar('dashboard');
   else if (App.seccionActual === 'reportes') navegar('reportes');
 }
@@ -74,11 +118,10 @@ function actualizarIconoTema(isDark) {
 
 /* ═══════════ NAVEGACIÓN ═══════════ */
 function navegar(seccion, sub = null) {
-  // Destruir gráficas anteriores
   Object.values(App.charts).forEach(c => { try { c.destroy(); } catch(e){} });
   App.charts = {};
   App.seccionActual = seccion;
-  App.subseccion = sub || App.subseccion;
+  if (sub) App.subseccion = sub;
   document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.nav === seccion));
   const main = document.getElementById('appMain');
   main.innerHTML = '';
@@ -92,12 +135,9 @@ function navegar(seccion, sub = null) {
   actualizarHeader();
 }
 
-function cambiarSubtab(sub) {
-  App.subseccion = sub;
-  navegar(App.seccionActual, sub);
-}
+function cambiarSubtab(sub) { App.subseccion = sub; navegar(App.seccionActual, sub); }
 
-/* ═══════════ HELPERS DE ANÁLISIS ═══════════ */
+/* ═══════════ HELPERS ANÁLISIS ═══════════ */
 function ventasPorMes(meses = 6) {
   const resultado = [];
   const hoy = new Date();
@@ -105,32 +145,22 @@ function ventasPorMes(meses = 6) {
     const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     const label = d.toLocaleDateString('es-NI', { month: 'short' });
-    const total = DB.ventas
-      .filter(v => (v.fecha || '').startsWith(key))
-      .reduce((s, v) => s + (parseFloat(v.precioTotal) || 0), 0);
+    const total = DB.ventas.filter(v => (v.fecha || '').startsWith(key)).reduce((s, v) => s + (parseFloat(v.precioTotal) || 0), 0);
     resultado.push({ label, total, key });
   }
   return resultado;
 }
-
 function topProductos(limite = 5) {
   const contador = {};
-  DB.ventas.forEach(v => {
-    (v.productos || []).forEach(p => {
-      const key = p.nombre || 'Sin nombre';
-      if (!contador[key]) contador[key] = { cantidad: 0, ingresos: 0 };
-      contador[key].cantidad += parseInt(p.cantidad) || 1;
-      contador[key].ingresos += (parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1);
-    });
-  });
-  return Object.entries(contador)
-    .map(([nombre, data]) => ({ nombre, ...data }))
-    .sort((a, b) => b.cantidad - a.cantidad)
-    .slice(0, limite);
+  DB.ventas.forEach(v => (v.productos || []).forEach(p => {
+    const k = p.nombre || 'Sin nombre';
+    if (!contador[k]) contador[k] = { cantidad: 0, ingresos: 0 };
+    contador[k].cantidad += parseInt(p.cantidad) || 1;
+    contador[k].ingresos += (parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1);
+  }));
+  return Object.entries(contador).map(([nombre, d]) => ({ nombre, ...d })).sort((a, b) => b.cantidad - a.cantidad).slice(0, limite);
 }
-
 function distribucionCartera() {
-  const hoy = new Date();
   const buckets = { alDia: 0, porVencer: 0, vencido: 0, pagado: 0 };
   DB.ventas.forEach(v => {
     const saldo = parseFloat(v.saldo) || 0;
@@ -142,7 +172,6 @@ function distribucionCartera() {
   });
   return buckets;
 }
-
 function flujoCaja(meses = 6) {
   const resultado = [];
   const hoy = new Date();
@@ -160,108 +189,97 @@ function flujoCaja(meses = 6) {
 /* ═══════════ NOTIFICACIONES ═══════════ */
 function calcularNotificaciones() {
   const notifs = [];
-  const hoy = new Date();
-
-  // Cobros vencidos
   DB.ventas.filter(v => v.estado === 'PENDIENTE' && v.proximaFechaCobro).forEach(v => {
     const dias = diffDias(v.proximaFechaCobro);
-    if (dias < 0) {
-      notifs.push({
-        tipo: 'danger', icono: '⚠️', titulo: 'Cobro vencido',
-        mensaje: `${v.cliente} - ${Math.abs(dias)} días atrasado`,
-        monto: fmtC(v.cuotaMensual),
-        accion: () => abrirModalCobroPara(v.id)
-      });
-    } else if (dias === 0) {
-      notifs.push({
-        tipo: 'warning', icono: '🔔', titulo: 'Cobro HOY',
-        mensaje: `${v.cliente}`,
-        monto: fmtC(v.cuotaMensual),
-        accion: () => abrirModalCobroPara(v.id)
-      });
-    } else if (dias <= 7) {
-      notifs.push({
-        tipo: 'info', icono: '📅', titulo: `Cobro en ${dias} días`,
-        mensaje: `${v.cliente}`,
-        monto: fmtC(v.cuotaMensual),
-        accion: () => abrirModalCobroPara(v.id)
-      });
-    }
+    if (dias < 0) notifs.push({ tipo: 'danger', icono: '⚠️', titulo: 'Cobro vencido', mensaje: `${v.cliente} - ${Math.abs(dias)} días atrasado`, monto: fmtC(v.cuotaMensual), accion: () => abrirModalCobroPara(v.id) });
+    else if (dias === 0) notifs.push({ tipo: 'warning', icono: '🔔', titulo: 'Cobro HOY', mensaje: v.cliente, monto: fmtC(v.cuotaMensual), accion: () => abrirModalCobroPara(v.id) });
+    else if (dias <= 7) notifs.push({ tipo: 'info', icono: '📅', titulo: `Cobro en ${dias} días`, mensaje: v.cliente, monto: fmtC(v.cuotaMensual), accion: () => abrirModalCobroPara(v.id) });
   });
-
-  // Deudas con proveedores
   DB.compras.filter(c => (parseFloat(c.saldo) || 0) > 0).forEach(c => {
     const prov = DB.proveedores.find(p => p.id === c.proveedorId);
-    notifs.push({
-      tipo: 'info', icono: '💳', titulo: 'Deuda con proveedor',
-      mensaje: `${prov ? prov.nombre : 'N/A'} - Compra ${c.id}`,
-      monto: fmtC(c.saldo),
-      accion: () => abrirModalPagoPara(c.proveedorId)
-    });
+    notifs.push({ tipo: 'info', icono: '💳', titulo: 'Deuda con proveedor', mensaje: `${prov ? prov.nombre : 'N/A'} - Compra ${c.id}`, monto: fmtC(c.saldo), accion: () => abrirModalPagoPara(c.proveedorId) });
   });
-
+  const hoyStr = hoyISO();
+  DB.recordatorios?.filter(r => !r.completado && r.fecha <= hoyStr).forEach(r => {
+    notifs.push({ tipo: r.prioridad === 'alta' ? 'danger' : 'warning', icono: '📌', titulo: 'Recordatorio', mensaje: r.titulo, monto: '', accion: () => abrirModalRecordatorio(r.id) });
+  });
   return notifs;
 }
-
 function actualizarBadgeNotif() {
   const notifs = calcularNotificaciones();
   const badge = document.getElementById('badgeNotif');
   if (!badge) return;
   const criticas = notifs.filter(n => n.tipo === 'danger' || n.tipo === 'warning').length;
-  if (criticas > 0) {
-    badge.textContent = criticas > 99 ? '99+' : criticas;
-    badge.classList.remove('hidden');
-  } else {
-    badge.classList.add('hidden');
-  }
+  if (criticas > 0) { badge.textContent = criticas > 99 ? '99+' : criticas; badge.classList.remove('hidden'); }
+  else badge.classList.add('hidden');
 }
-
 function abrirPanelNotificaciones() {
   const notifs = calcularNotificaciones();
   const cont = document.getElementById('listaNotificaciones');
-  if (notifs.length === 0) {
-    cont.innerHTML = '<div class="text-center py-12"><p class="text-5xl mb-3">🎉</p><p class="text-slate-500">Todo al día</p></div>';
-  } else {
-    const colores = {
-      danger: 'bg-rose-100 dark:bg-rose-900/30 text-rose-600',
-      warning: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600',
-      info: 'bg-brand-100 dark:bg-brand-900/30 text-brand-600'
-    };
+  if (notifs.length === 0) cont.innerHTML = '<div class="text-center py-12"><p class="text-5xl mb-3">🎉</p><p class="text-slate-500">Todo al día</p></div>';
+  else {
+    const colores = { danger: 'bg-rose-100 dark:bg-rose-900/30 text-rose-600', warning: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600', info: 'bg-brand-100 dark:bg-brand-900/30 text-brand-600' };
     cont.innerHTML = notifs.map((n, i) => `
-      <div class="notif-item cursor-pointer" onclick="cerrarModales(); setTimeout(() => { App.notifsAcciones[${i}](); }, 200)">
-        <div class="notif-icon ${colores[n.tipo]}">
-          <span class="text-xl">${n.icono}</span>
-        </div>
-        <div class="flex-1 min-w-0">
-          <p class="font-semibold text-sm text-slate-800 dark:text-white">${n.titulo}</p>
-          <p class="text-xs text-slate-500 truncate">${n.mensaje}</p>
-          <p class="text-sm font-bold text-slate-700 dark:text-slate-300 mt-1">${n.monto}</p>
-        </div>
+      <div class="notif-item cursor-pointer" onclick="cerrarModales(); setTimeout(() => App.notifsAcciones[${i}](), 200)">
+        <div class="notif-icon ${colores[n.tipo]}"><span class="text-xl">${n.icono}</span></div>
+        <div class="flex-1 min-w-0"><p class="font-semibold text-sm text-slate-800 dark:text-white">${n.titulo}</p><p class="text-xs text-slate-500 truncate">${n.mensaje}</p>${n.monto ? `<p class="text-sm font-bold text-slate-700 dark:text-slate-300 mt-1">${n.monto}</p>` : ''}</div>
       </div>`).join('');
     App.notifsAcciones = notifs.map(n => n.accion);
   }
   abrirModal('modalNotificaciones');
 }
 
-/* ═══════════ DASHBOARD CON GRÁFICAS ═══════════ */
+/* ═══════════ BUSCADOR GLOBAL ═══════════ */
+function abrirBuscadorGlobal() {
+  abrirModal('modalBuscador');
+  setTimeout(() => document.getElementById('inputBuscador').focus(), 200);
+}
+function buscarGlobal() {
+  const q = document.getElementById('inputBuscador').value.trim().toLowerCase();
+  const cont = document.getElementById('resultadosBuscador');
+  if (q.length < 2) { cont.innerHTML = '<p class="text-center text-slate-400 text-sm py-4">Escribe al menos 2 caracteres</p>'; return; }
+  const resultados = [];
+  DB.clientes.filter(c => c.nombre.toLowerCase().includes(q) || (c.telefono || '').includes(q)).slice(0, 5).forEach(c => {
+    const deuda = DB.ventas.filter(v => v.clienteId === c.id).reduce((s, v) => s + (parseFloat(v.saldo) || 0), 0);
+    resultados.push({ tipo: 'Cliente', icono: '👤', titulo: c.nombre, subtitulo: c.telefono || 'Sin teléfono', monto: deuda > 0 ? fmtC(deuda) : '', accion: () => { cerrarModales(); setTimeout(() => abrirModalCliente(c.id), 200); } });
+  });
+  DB.ventas.filter(v => v.id.toLowerCase().includes(q) || (v.cliente || '').toLowerCase().includes(q)).slice(0, 5).forEach(v => {
+    resultados.push({ tipo: 'Venta', icono: '💰', titulo: `${v.id} - ${v.cliente}`, subtitulo: `${fmtFecha(v.fecha)} - ${v.estado}`, monto: fmtC(v.precioTotal), accion: () => { cerrarModales(); setTimeout(() => verDetalleVenta(v.id), 200); } });
+  });
+  DB.compras.filter(c => c.id.toLowerCase().includes(q)).slice(0, 5).forEach(c => {
+    const prov = DB.proveedores.find(p => p.id === c.proveedorId);
+    resultados.push({ tipo: 'Compra', icono: '📦', titulo: `${c.id} - ${prov ? prov.nombre : ''}`, subtitulo: fmtFecha(c.fecha), monto: fmtC(c.total), accion: () => { cerrarModales(); setTimeout(() => verDetalleCompra(c.id), 200); } });
+  });
+  const productosVistos = new Set();
+  DB.compras.forEach(c => (c.productos || []).forEach(p => {
+    if (productosVistos.has(p.nombre)) return;
+    if ((p.nombre || '').toLowerCase().includes(q) || (p.serie || '').toLowerCase().includes(q)) {
+      productosVistos.add(p.nombre);
+      resultados.push({ tipo: 'Producto', icono: '🔍', titulo: p.nombre, subtitulo: `Serie: ${p.serie || 'N/A'} · Mod: ${p.modelo || 'N/A'}`, monto: p.vendido ? 'Vendido' : 'En stock', accion: () => { cerrarModales(); setTimeout(() => verDetalleCompra(c.id), 200); } });
+    }
+  }));
+  if (resultados.length === 0) { cont.innerHTML = '<p class="text-center text-slate-400 text-sm py-4">Sin resultados</p>'; return; }
+  const colores = { Cliente: 'bg-brand-100 dark:bg-brand-900/30 text-brand-600', Venta: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600', Compra: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600', Producto: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' };
+  cont.innerHTML = resultados.map((r, i) => `
+    <div class="notif-item cursor-pointer" onclick="App.busquedaAcciones[${i}]()">
+      <div class="notif-icon ${colores[r.tipo]}"><span class="text-xl">${r.icono}</span></div>
+      <div class="flex-1 min-w-0"><p class="font-semibold text-sm text-slate-800 dark:text-white truncate">${r.titulo}</p><p class="text-xs text-slate-500 truncate">${r.subtitulo}</p></div>
+      <div class="text-right shrink-0"><span class="badge badge-info text-[10px]">${r.tipo}</span>${r.monto ? `<p class="text-sm font-bold mt-1">${r.monto}</p>` : ''}</div>
+    </div>`).join('');
+  App.busquedaAcciones = resultados.map(r => r.accion);
+}
+
+/* ═══════════ DASHBOARD ═══════════ */
 function renderDashboard(el) {
   const deudaTotal = DB.compras.reduce((s, c) => s + (parseFloat(c.saldo) || 0), 0);
   const carteraClientes = DB.ventas.reduce((s, v) => s + (parseFloat(v.saldo) || 0), 0);
-  const stockValor = DB.compras.reduce((s, c) =>
-    s + (c.productos || []).filter(p => !p.vendido).reduce((ss, p) =>
-      ss + (parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1), 0), 0);
+  const stockValor = DB.compras.reduce((s, c) => s + (c.productos || []).filter(p => !p.vendido).reduce((ss, p) => ss + (parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1), 0), 0);
   const ganancia = DB.ventas.reduce((s, v) => {
-    const costo = (v.productos || []).reduce((c, p) =>
-      c + (parseFloat(p.precioCompra) || parseFloat(p.precioCarmen) || 0) * (parseInt(p.cantidad) || 1), 0);
+    const costo = (v.productos || []).reduce((c, p) => c + (parseFloat(p.precioCompra) || parseFloat(p.precioCarmen) || 0) * (parseInt(p.cantidad) || 1), 0);
     return s + ((parseFloat(v.precioTotal) || 0) - costo);
   }, 0);
-
-  const hoy = new Date();
-  const alertas = DB.ventas.filter(v => v.estado === 'PENDIENTE' && v.proximaFechaCobro)
-    .map(v => ({ ...v, dias: diffDias(v.proximaFechaCobro) }))
-    .filter(v => v.dias <= 7)
-    .sort((a, b) => a.dias - b.dias)
-    .slice(0, 4);
+  const alertas = DB.ventas.filter(v => v.estado === 'PENDIENTE' && v.proximaFechaCobro).map(v => ({ ...v, dias: diffDias(v.proximaFechaCobro) })).filter(v => v.dias <= 7).sort((a, b) => a.dias - b.dias).slice(0, 4);
+  const recPendientes = (DB.recordatorios || []).filter(r => !r.completado).slice(0, 3);
 
   el.innerHTML = `
     <div class="anim-in space-y-4">
@@ -296,25 +314,31 @@ function renderDashboard(el) {
         <div class="chart-container-lg"><canvas id="chartTopProductos"></canvas></div>
       </div>
 
+      ${recPendientes.length > 0 ? `
+        <div class="card">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-sm text-slate-800 dark:text-white">📌 Recordatorios</h3>
+            <button onclick="navegar('mas', 'recordatorios')" class="text-xs text-brand-600 font-medium">Ver todos</button>
+          </div>
+          <div class="space-y-2">
+            ${recPendientes.map(r => {
+              const dias = diffDias(r.fecha);
+              const cls = dias < 0 ? 'border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20' : dias === 0 ? 'border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20' : 'border-slate-200 dark:border-slate-800';
+              return `<div class="p-3 rounded-xl border ${cls} cursor-pointer flex justify-between items-center" onclick="abrirModalRecordatorio('${r.id}')">
+                <div class="min-w-0"><p class="font-semibold text-sm truncate">${r.titulo}</p><p class="text-xs text-slate-500">${fmtFecha(r.fecha)}</p></div>
+                <span class="badge ${dias < 0 ? 'badge-danger' : dias === 0 ? 'badge-warning' : 'badge-info'}">${dias < 0 ? 'Vencido' : dias === 0 ? 'Hoy' : `${dias}d`}</span>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>` : ''}
+
       <div>
         <h2 class="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 px-1">⚡ Acciones rápidas</h2>
         <div class="grid grid-cols-2 gap-3">
-          <button onclick="abrirModalVenta()" class="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white text-left shadow-lg">
-            <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <p class="font-bold text-sm">Nueva Venta</p>
-          </button>
-          <button onclick="abrirModalCompra()" class="p-4 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white text-left shadow-lg">
-            <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4"/></svg>
-            <p class="font-bold text-sm">Nueva Compra</p>
-          </button>
-          <button onclick="abrirModalCobro()" class="p-4 rounded-2xl bg-gradient-to-br from-accent-500 to-accent-700 text-white text-left shadow-lg">
-            <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-            <p class="font-bold text-sm">Cobrar</p>
-          </button>
-          <button onclick="abrirModalPago()" class="p-4 rounded-2xl bg-gradient-to-br from-slate-500 to-slate-700 text-white text-left shadow-lg">
-            <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 9v1"/></svg>
-            <p class="font-bold text-sm">Pagar</p>
-          </button>
+          <button onclick="abrirModalVenta()" class="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white text-left shadow-lg"><svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg><p class="font-bold text-sm">Nueva Venta</p></button>
+          <button onclick="abrirModalCompra()" class="p-4 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white text-left shadow-lg"><svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4"/></svg><p class="font-bold text-sm">Nueva Compra</p></button>
+          <button onclick="abrirModalCobro()" class="p-4 rounded-2xl bg-gradient-to-br from-accent-500 to-accent-700 text-white text-left shadow-lg"><svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg><p class="font-bold text-sm">Cobrar</p></button>
+          <button onclick="abrirModalRecordatorio()" class="p-4 rounded-2xl bg-gradient-to-br from-slate-500 to-slate-700 text-white text-left shadow-lg"><svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg><p class="font-bold text-sm">Recordatorio</p></button>
         </div>
       </div>
 
@@ -323,30 +347,24 @@ function renderDashboard(el) {
           <h2 class="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">🔔 Alertas de cobro</h2>
           <div class="space-y-2">
             ${alertas.map(v => {
-              const cls = v.dias < 0 ? 'border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20' :
-                          v.dias === 0 ? 'border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20' :
-                          'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800';
+              const cls = v.dias < 0 ? 'border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20' : v.dias === 0 ? 'border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20' : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800';
               const txt = v.dias < 0 ? `Vencido ${Math.abs(v.dias)}d` : v.dias === 0 ? '¡Hoy!' : `En ${v.dias}d`;
               return `<div class="p-3 rounded-xl border ${cls} flex justify-between items-center cursor-pointer" onclick="abrirModalCobroPara('${v.id}')">
                 <div class="min-w-0"><p class="font-semibold text-sm text-slate-800 dark:text-white truncate">${v.cliente}</p><p class="text-xs text-slate-500">Cuota: ${fmtC(v.cuotaMensual)}</p></div>
-                <div class="text-right"><span class="badge ${v.dias < 0 ? 'badge-danger' : v.dias === 0 ? 'badge-warning' : 'badge-info'}">${txt}</span><p class="text-xs mt-1 text-slate-500">Saldo: ${fmtC(v.saldo)}</p></div>
+                <div class="text-right"><span class="badge ${v.dias < 0 ? 'badge-danger' : v.dias === 0 ? 'badge-warning' : 'badge-info'}">${txt}</span></div>
               </div>`;
             }).join('')}
           </div>
         </div>` : ''}
     </div>
   `;
-
-  // Renderizar gráficas después de insertar HTML
   setTimeout(() => renderizarGraficasDashboard(), 50);
 }
 
 function kpiCard(titulo, valor, color, iconPath) {
   const colors = { rose: 'from-rose-500 to-rose-700', amber: 'from-amber-500 to-amber-700', brand: 'from-brand-500 to-brand-700', emerald: 'from-emerald-500 to-emerald-700' };
   return `<div class="kpi">
-    <div class="w-9 h-9 rounded-xl bg-gradient-to-br ${colors[color]} flex items-center justify-center text-white mb-2">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}"/></svg>
-    </div>
+    <div class="w-9 h-9 rounded-xl bg-gradient-to-br ${colors[color]} flex items-center justify-center text-white mb-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}"/></svg></div>
     <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">${titulo}</p>
     <p class="text-base font-extrabold text-slate-800 dark:text-white truncate">${valor}</p>
   </div>`;
@@ -357,111 +375,24 @@ function renderizarGraficasDashboard() {
   const gridColor = isDark ? '#334155' : '#e2e8f0';
   const textColor = isDark ? '#cbd5e1' : '#475569';
 
-  // Ventas por mes
   const ventas = ventasPorMes(6);
   const ctxVentas = document.getElementById('chartVentasMes');
-  if (ctxVentas) {
-    App.charts.ventasMes = new Chart(ctxVentas, {
-      type: 'bar',
-      data: {
-        labels: ventas.map(v => v.label),
-        datasets: [{
-          label: 'Ventas C$',
-          data: ventas.map(v => v.total),
-          backgroundColor: '#4f46e5',
-          borderRadius: 8,
-          maxBarThickness: 40
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { beginAtZero: true, ticks: { color: textColor, callback: v => 'C$' + (v/1000).toFixed(0) + 'k' }, grid: { color: gridColor } },
-          x: { ticks: { color: textColor }, grid: { display: false } }
-        }
-      }
-    });
-  }
+  if (ctxVentas) App.charts.ventasMes = new Chart(ctxVentas, { type: 'bar', data: { labels: ventas.map(v => v.label), datasets: [{ label: 'Ventas', data: ventas.map(v => v.total), backgroundColor: '#4f46e5', borderRadius: 8, maxBarThickness: 40 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: textColor, callback: v => 'C$' + (v/1000).toFixed(0) + 'k' }, grid: { color: gridColor } }, x: { ticks: { color: textColor }, grid: { display: false } } } } });
 
-  // Cartera (dona)
   const cartera = distribucionCartera();
   const ctxCartera = document.getElementById('chartCartera');
-  if (ctxCartera) {
-    App.charts.cartera = new Chart(ctxCartera, {
-      type: 'doughnut',
-      data: {
-        labels: ['Al día', 'Por vencer', 'Vencido', 'Pagado'],
-        datasets: [{
-          data: [cartera.alDia, cartera.porVencer, cartera.vencido, cartera.pagado],
-          backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#6366f1'],
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'bottom', labels: { color: textColor, font: { size: 11 }, padding: 8, boxWidth: 12 } }
-        },
-        cutout: '65%'
-      }
-    });
-  }
+  if (ctxCartera) App.charts.cartera = new Chart(ctxCartera, { type: 'doughnut', data: { labels: ['Al día', 'Por vencer', 'Vencido', 'Pagado'], datasets: [{ data: [cartera.alDia, cartera.porVencer, cartera.vencido, cartera.pagado], backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#6366f1'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 11 }, padding: 8, boxWidth: 12 } } }, cutout: '65%' } });
 
-  // Flujo de caja
   const flujo = flujoCaja(6);
   const ctxFlujo = document.getElementById('chartFlujo');
-  if (ctxFlujo) {
-    App.charts.flujo = new Chart(ctxFlujo, {
-      type: 'line',
-      data: {
-        labels: flujo.map(f => f.label),
-        datasets: [
-          { label: 'Ingresos', data: flujo.map(f => f.ingresos), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.3, fill: true },
-          { label: 'Egresos', data: flujo.map(f => f.egresos), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', tension: 0.3, fill: true }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 11 }, padding: 8, boxWidth: 12 } } },
-        scales: {
-          y: { beginAtZero: true, ticks: { color: textColor, callback: v => 'C$' + (v/1000).toFixed(0) + 'k' }, grid: { color: gridColor } },
-          x: { ticks: { color: textColor }, grid: { display: false } }
-        }
-      }
-    });
-  }
+  if (ctxFlujo) App.charts.flujo = new Chart(ctxFlujo, { type: 'line', data: { labels: flujo.map(f => f.label), datasets: [{ label: 'Ingresos', data: flujo.map(f => f.ingresos), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.3, fill: true }, { label: 'Egresos', data: flujo.map(f => f.egresos), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', tension: 0.3, fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 11 }, padding: 8, boxWidth: 12 } } }, scales: { y: { beginAtZero: true, ticks: { color: textColor, callback: v => 'C$' + (v/1000).toFixed(0) + 'k' }, grid: { color: gridColor } }, x: { ticks: { color: textColor }, grid: { display: false } } } } });
 
-  // Top productos
   const top = topProductos(5);
   const ctxTop = document.getElementById('chartTopProductos');
-  if (ctxTop) {
-    App.charts.topProductos = new Chart(ctxTop, {
-      type: 'bar',
-      data: {
-        labels: top.map(t => t.nombre.length > 25 ? t.nombre.slice(0, 25) + '…' : t.nombre),
-        datasets: [{
-          label: 'Unidades vendidas',
-          data: top.map(t => t.cantidad),
-          backgroundColor: '#ec4899',
-          borderRadius: 8,
-          maxBarThickness: 30
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { beginAtZero: true, ticks: { color: textColor }, grid: { color: gridColor } },
-          y: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } }
-        }
-      }
-    });
-  }
+  if (ctxTop) App.charts.topProductos = new Chart(ctxTop, { type: 'bar', data: { labels: top.map(t => t.nombre.length > 25 ? t.nombre.slice(0, 25) + '…' : t.nombre), datasets: [{ label: 'Unidades', data: top.map(t => t.cantidad), backgroundColor: '#ec4899', borderRadius: 8, maxBarThickness: 30 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { color: textColor }, grid: { color: gridColor } }, y: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } } } } });
 }
 
-/* ═══════════ COMPRAS ═══════════ */
+/* ═══════════ COMPRAS (con fotos) ═══════════ */
 function renderCompras(el) {
   if (!App.subseccion || !['historial', 'deudas'].includes(App.subseccion)) App.subseccion = 'historial';
   const sub = App.subseccion;
@@ -478,7 +409,6 @@ function renderCompras(el) {
       ${sub === 'historial' ? renderComprasHistorial() : renderComprasDeudas()}
     </div>`;
 }
-
 function renderComprasHistorial() {
   const compras = [...DB.compras].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   if (compras.length === 0) return '<div class="card text-center py-12"><p class="text-4xl mb-2">📦</p><p class="text-slate-500 text-sm">Sin compras</p></div>';
@@ -494,7 +424,6 @@ function renderComprasHistorial() {
     </div>`;
   }).join('')}</div>`;
 }
-
 function renderComprasDeudas() {
   const porProveedor = {};
   DB.compras.forEach(c => {
@@ -507,17 +436,11 @@ function renderComprasDeudas() {
   if (items.length === 0) return '<div class="card text-center py-12"><p class="text-4xl mb-2">🎉</p><p class="text-slate-500 text-sm">No hay deudas pendientes</p></div>';
   return `<div class="space-y-3">${items.map(([provId, data]) => {
     const prov = DB.proveedores.find(p => p.id === provId);
-    return `<div class="card">
-      <div class="flex justify-between items-center mb-2">
-        <div><p class="font-bold text-slate-800 dark:text-white">${prov ? prov.nombre : 'N/A'}</p><p class="text-xs text-slate-500">${data.compras.length} compras pendientes</p></div>
-        <p class="text-lg font-extrabold text-rose-600">${fmtC(data.total)}</p>
-      </div>
-      <button onclick="abrirModalPagoPara('${provId}')" class="w-full py-2 rounded-xl bg-accent-100 dark:bg-accent-900/30 text-accent-700 dark:text-accent-300 font-semibold text-sm">Pagar a este proveedor</button>
-    </div>`;
+    return `<div class="card"><div class="flex justify-between items-center mb-2"><div><p class="font-bold text-slate-800 dark:text-white">${prov ? prov.nombre : 'N/A'}</p><p class="text-xs text-slate-500">${data.compras.length} compras pendientes</p></div><p class="text-lg font-extrabold text-rose-600">${fmtC(data.total)}</p></div><button onclick="abrirModalPagoPara('${provId}')" class="w-full py-2 rounded-xl bg-accent-100 dark:bg-accent-900/30 text-accent-700 dark:text-accent-300 font-semibold text-sm">Pagar a este proveedor</button></div>`;
   }).join('')}</div>`;
 }
 
-/* ═══════════ MODALES COMPRA (igual que fase 2) ═══════════ */
+/* ═══════════ MODAL COMPRA ═══════════ */
 function abrirModalCompra(compraId = null) {
   const sel = document.getElementById('compraProveedor');
   sel.innerHTML = '<option value="">Seleccione...</option>' + DB.proveedores.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
@@ -552,7 +475,6 @@ function abrirModalCompra(compraId = null) {
   renderProductosCompraTemp();
   abrirModal('modalCompra');
 }
-
 function cambiarTipoPagoCompra() {
   const tipo = document.getElementById('compraTipoPago').value;
   document.getElementById('contenedorPagoInicial').classList.toggle('hidden', tipo === 'contado');
@@ -586,14 +508,13 @@ function renderProductosCompraTemp() {
         <input type="number" placeholder="Costo C$" min="0" step="0.01" value="${p.precioCompra || ''}" oninput="actualizarProductoCompra(${i}, 'precioCompra', parseFloat(this.value)||0)" class="inp text-sm">
         <input type="number" placeholder="Venta C$" min="0" step="0.01" value="${p.precioVenta || ''}" oninput="actualizarProductoCompra(${i}, 'precioVenta', parseFloat(this.value)||0)" class="inp text-sm">
       </div>
+      <div class="flex items-center gap-2">
+        ${p.foto ? `<div class="foto-preview"><img src="${p.foto}"><button onclick="eliminarFotoProducto('compra', ${i})">×</button></div>` : `<button type="button" onclick="tomarFotoProducto('compra', ${i})" class="flex items-center gap-1 text-xs px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-medium"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Añadir foto</button>`}
+      </div>
     </div>
   `).join('');
 }
-
-function agregarProductoCompra() {
-  App.productosCompraTemp.push({ nombre: '', cantidad: 1, precioCompra: 0, precioVenta: 0, serie: '', modelo: '', foto: null, vendido: false });
-  renderProductosCompraTemp();
-}
+function agregarProductoCompra() { App.productosCompraTemp.push({ nombre: '', cantidad: 1, precioCompra: 0, precioVenta: 0, serie: '', modelo: '', foto: null, vendido: false }); renderProductosCompraTemp(); }
 function actualizarProductoCompra(i, campo, valor) { App.productosCompraTemp[i][campo] = valor; recalcularCompra(); }
 function quitarProductoCompra(i) { App.productosCompraTemp.splice(i, 1); renderProductosCompraTemp(); recalcularCompra(); }
 
@@ -620,7 +541,7 @@ async function guardarCompra() {
   const pagoInicial = tipoPago === 'contado' ? total : (parseFloat(document.getElementById('compraPagoInicial').value) || 0);
   const saldo = Math.max(0, total - pagoInicial);
   const editando = !!App.compraEnEdicion;
-  if (!editando && DB.compras.some(c => c.id === id)) return toast('⚠️ Ya existe una compra con ese ID');
+  if (!editando && DB.compras.some(c => c.id === id)) return toast('⚠️ Ya existe ese ID');
   const compra = { id, proveedorId, fecha, tipoPago, productos, total, pagado: pagoInicial, saldo, estado: saldo <= 0 ? 'PAGADO' : 'PENDIENTE', lastModified: Date.now() };
   if (editando && App.compraEnEdicion.tipoPago === 'credito') {
     const pagosAntiguos = DB.pagosProveedor.filter(p => p.compraId === id && p.origen === 'pago_inicial');
@@ -631,14 +552,12 @@ async function guardarCompra() {
   if (idx >= 0) DB.compras[idx] = compra; else DB.compras.push(compra);
   if (tipoPago === 'credito' && pagoInicial > 0) {
     const pago = { id: 'pago_' + generarId(), proveedorId, compraId: id, fecha, monto: pagoInicial, metodo: 'Efectivo', notas: 'Pago inicial', origen: 'pago_inicial', lastModified: Date.now() };
-    await DB.guardarPago(pago);
-    DB.pagosProveedor.push(pago);
+    await DB.guardarPago(pago); DB.pagosProveedor.push(pago);
   }
   toast(editando ? '✅ Compra actualizada' : '✅ Compra registrada');
   cerrarModales();
   navegar('compras');
 }
-
 async function eliminarCompra() {
   if (!App.compraEnEdicion) return;
   if (!confirm(`¿Eliminar la compra ${App.compraEnEdicion.id}?`)) return;
@@ -674,19 +593,15 @@ function verDetalleCompra(id) {
       </div>
       <div><p class="font-bold text-sm mb-2">Productos (${c.productos.length})</p>
         <div class="space-y-2 max-h-60 overflow-y-auto">
-          ${c.productos.map(p => `<div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 flex justify-between items-center ${p.vendido ? 'opacity-60' : ''}">
-            <div class="min-w-0"><p class="font-medium text-sm ${p.vendido ? 'line-through' : ''}">${p.nombre}</p><p class="text-xs text-slate-500">${p.cantidad} × ${fmtC(p.precioCompra)}${p.serie ? ' · S/N: ' + p.serie : ''}${p.modelo ? ' · Mod: ' + p.modelo : ''}</p></div>
+          ${c.productos.map(p => `<div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 flex justify-between items-center gap-2 ${p.vendido ? 'opacity-60' : ''}">
+            ${p.foto ? `<img src="${p.foto}" class="w-12 h-12 rounded-lg object-cover shrink-0">` : ''}
+            <div class="min-w-0 flex-1"><p class="font-medium text-sm ${p.vendido ? 'line-through' : ''}">${p.nombre}</p><p class="text-xs text-slate-500">${p.cantidad} × ${fmtC(p.precioCompra)}${p.serie ? ' · S/N: ' + p.serie : ''}${p.modelo ? ' · Mod: ' + p.modelo : ''}</p></div>
             ${p.vendido ? '<span class="badge badge-success">Vendido</span>' : '<span class="badge badge-info">Stock</span>'}
           </div>`).join('')}
         </div>
       </div>
-      ${pagos.length > 0 ? `<div><p class="font-bold text-sm mb-2">Pagos (${pagos.length})</p>
-        <div class="space-y-2 max-h-48 overflow-y-auto">${pagos.map(p => `<div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 flex justify-between items-center"><div><p class="text-sm font-medium">${fmtFecha(p.fecha)}</p><p class="text-xs">${p.metodo}${p.notas ? ' · ' + p.notas : ''}</p></div><p class="font-bold text-emerald-700">${fmtC(p.monto)}</p></div>`).join('')}</div>
-      </div>` : ''}
-      <div class="flex gap-2 pt-2">
-        <button onclick="abrirModalCompra('${c.id}')" class="btn-primary flex-1 text-sm">✏️ Editar</button>
-        <button onclick="cerrarModales()" class="btn-ghost text-sm">Cerrar</button>
-      </div>
+      ${pagos.length > 0 ? `<div><p class="font-bold text-sm mb-2">Pagos (${pagos.length})</p><div class="space-y-2 max-h-48 overflow-y-auto">${pagos.map(p => `<div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 flex justify-between items-center"><div><p class="text-sm font-medium">${fmtFecha(p.fecha)}</p><p class="text-xs">${p.metodo}${p.notas ? ' · ' + p.notas : ''}</p></div><p class="font-bold text-emerald-700">${fmtC(p.monto)}</p></div>`).join('')}</div></div>` : ''}
+      <div class="flex gap-2 pt-2"><button onclick="abrirModalCompra('${c.id}')" class="btn-primary flex-1 text-sm">✏️ Editar</button><button onclick="cerrarModales()" class="btn-ghost text-sm">Cerrar</button></div>
     </div>`;
   abrirModalContenido('Detalle Compra', html);
 }
@@ -697,10 +612,7 @@ function renderVentas(el) {
   const sub = App.subseccion;
   el.innerHTML = `
     <div class="anim-in space-y-4">
-      <div class="flex items-center justify-between gap-2">
-        <h2 class="text-xl font-extrabold text-slate-800 dark:text-white">Ventas</h2>
-        <button onclick="abrirModalVenta()" class="btn-primary text-sm">+ Nueva</button>
-      </div>
+      <div class="flex items-center justify-between gap-2"><h2 class="text-xl font-extrabold text-slate-800 dark:text-white">Ventas</h2><button onclick="abrirModalVenta()" class="btn-primary text-sm">+ Nueva</button></div>
       <div class="subtabs">
         <button class="subtab ${sub === 'activas' ? 'active' : ''}" onclick="cambiarSubtab('activas')">🔴 Activas</button>
         <button class="subtab ${sub === 'pagadas' ? 'active' : ''}" onclick="cambiarSubtab('pagadas')">✅ Pagadas</button>
@@ -709,7 +621,6 @@ function renderVentas(el) {
       ${sub === 'activas' ? renderVentasActivas() : sub === 'pagadas' ? renderVentasPagadas() : renderClientesLista()}
     </div>`;
 }
-
 function renderVentasActivas() {
   const ventas = DB.ventas.filter(v => v.estado === 'PENDIENTE').sort((a, b) => new Date(a.proximaFechaCobro || a.fecha) - new Date(b.proximaFechaCobro || b.fecha));
   if (ventas.length === 0) return '<div class="card text-center py-12"><p class="text-4xl mb-2">🎉</p><p class="text-slate-500 text-sm">Sin ventas pendientes</p></div>';
@@ -718,16 +629,12 @@ function renderVentasActivas() {
     const cls = dias < 0 ? 'border-rose-300 dark:border-rose-800' : dias <= 7 ? 'border-amber-300 dark:border-amber-800' : 'border-slate-200 dark:border-slate-800';
     const progress = v.precioTotal > 0 ? ((v.precioTotal - v.saldo) / v.precioTotal * 100) : 0;
     return `<div class="card border-2 ${cls} cursor-pointer" onclick="verDetalleVenta('${v.id}')">
-      <div class="flex justify-between items-start mb-2">
-        <div class="min-w-0"><p class="font-bold text-slate-800 dark:text-white truncate">${v.cliente}</p><p class="text-xs text-slate-500">${v.id} · ${v.telefono || 'Sin teléfono'}</p></div>
-        <p class="font-extrabold text-orange-600">${fmtC(v.saldo)}</p>
-      </div>
+      <div class="flex justify-between items-start mb-2"><div class="min-w-0"><p class="font-bold text-slate-800 dark:text-white truncate">${v.cliente}</p><p class="text-xs text-slate-500">${v.id} · ${v.telefono || 'Sin teléfono'}</p></div><p class="font-extrabold text-orange-600">${fmtC(v.saldo)}</p></div>
       <div class="flex justify-between text-xs mb-2"><span class="text-slate-500">Cuota: ${fmtC(v.cuotaMensual)}</span><span class="${dias < 0 ? 'text-rose-600 font-bold' : 'text-slate-500'}">${v.proximaFechaCobro ? (dias < 0 ? `Vencido ${Math.abs(dias)}d` : dias === 0 ? 'Hoy' : `En ${dias}d`) : 'Sin fecha'}</span></div>
       <div class="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-orange-500" style="width: ${progress}%"></div></div>
     </div>`;
   }).join('')}</div>`;
 }
-
 function renderVentasPagadas() {
   const ventas = DB.ventas.filter(v => v.estado === 'PAGADO').sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   if (ventas.length === 0) return '<div class="card text-center py-12"><p class="text-4xl mb-2">📭</p><p class="text-slate-500 text-sm">Sin ventas pagadas</p></div>';
@@ -737,30 +644,22 @@ function renderVentasPagadas() {
       <div class="text-right"><p class="font-bold text-emerald-600">${fmtC(v.precioTotal)}</p><span class="badge badge-success">Pagado</span></div>
     </div>`).join('')}</div>`;
 }
-
 function renderClientesLista() {
   const clientes = [...DB.clientes].sort((a, b) => a.nombre.localeCompare(b.nombre));
   if (clientes.length === 0) return '<div class="card text-center py-12"><p class="text-4xl mb-2">👥</p><p class="text-slate-500 text-sm">Sin clientes</p></div>';
   return `<div class="card mb-3"><input type="text" id="buscarCliente" class="inp" placeholder="🔍 Buscar..." oninput="filtrarClientes()"></div>
     <button onclick="abrirModalCliente()" class="btn-primary w-full mb-3 text-sm">+ Nuevo Cliente</button>
-    <div id="listaClientesCont" class="space-y-2">
-      ${clientes.map(c => {
-        const ventas = DB.ventas.filter(v => v.clienteId === c.id);
-        const deuda = ventas.reduce((s, v) => s + (parseFloat(v.saldo) || 0), 0);
-        return `<div class="card cursor-pointer flex justify-between items-center" data-nombre="${c.nombre.toLowerCase()}" onclick="abrirModalCliente('${c.id}')">
-          <div class="min-w-0"><p class="font-semibold text-slate-800 dark:text-white truncate">${c.nombre}</p><p class="text-xs text-slate-500">${c.telefono || 'Sin teléfono'} · ${ventas.length} ventas</p></div>
-          <div class="text-right"><p class="text-xs text-slate-500">Debe</p><p class="font-bold ${deuda > 0 ? 'text-rose-600' : 'text-emerald-600'}">${fmtC(deuda)}</p></div>
-        </div>`;
-      }).join('')}
-    </div>`;
+    <div id="listaClientesCont" class="space-y-2">${clientes.map(c => {
+      const ventas = DB.ventas.filter(v => v.clienteId === c.id);
+      const deuda = ventas.reduce((s, v) => s + (parseFloat(v.saldo) || 0), 0);
+      return `<div class="card cursor-pointer flex justify-between items-center" data-nombre="${c.nombre.toLowerCase()}" onclick="abrirModalCliente('${c.id}')">
+        <div class="min-w-0"><p class="font-semibold text-slate-800 dark:text-white truncate">${c.nombre}</p><p class="text-xs text-slate-500">${c.telefono || 'Sin teléfono'} · ${ventas.length} ventas</p></div>
+        <div class="text-right"><p class="text-xs text-slate-500">Debe</p><p class="font-bold ${deuda > 0 ? 'text-rose-600' : 'text-emerald-600'}">${fmtC(deuda)}</p></div>
+      </div>`;
+    }).join('')}</div>`;
 }
+function filtrarClientes() { const q = document.getElementById('buscarCliente').value.toLowerCase(); document.querySelectorAll('#listaClientesCont [data-nombre]').forEach(el => { el.style.display = el.dataset.nombre.includes(q) ? '' : 'none'; }); }
 
-function filtrarClientes() {
-  const q = document.getElementById('buscarCliente').value.toLowerCase();
-  document.querySelectorAll('#listaClientesCont [data-nombre]').forEach(el => { el.style.display = el.dataset.nombre.includes(q) ? '' : 'none'; });
-}
-
-/* ═══════════ MODAL VENTA ═══════════ */
 function abrirModalVenta(ventaId = null) {
   const sel = document.getElementById('ventaCliente');
   sel.innerHTML = '<option value="">Seleccione...</option>' + DB.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
@@ -801,13 +700,7 @@ function abrirModalVenta(ventaId = null) {
   renderProductosVentaTemp();
   abrirModal('modalVenta');
 }
-
-function cambiarTipoPagoVenta() {
-  const tipo = document.getElementById('ventaTipoPago').value;
-  document.getElementById('contenedorCredito').classList.toggle('hidden', tipo === 'contado');
-  recalcularVenta();
-}
-
+function cambiarTipoPagoVenta() { document.getElementById('contenedorCredito').classList.toggle('hidden', document.getElementById('ventaTipoPago').value === 'contado'); recalcularVenta(); }
 function cambiarFrecuenciaVenta() {
   const frec = document.getElementById('ventaFrecuencia').value;
   const input = document.getElementById('ventaProximaFecha');
@@ -821,30 +714,15 @@ function cambiarFrecuenciaVenta() {
 
 function renderProductosVentaTemp() {
   const cont = document.getElementById('listaProductosVenta');
-  if (!App.productosVentaTemp || App.productosVentaTemp.length === 0) {
-    cont.innerHTML = '<p class="text-center text-slate-400 text-sm py-4">Sin productos.</p>';
-    return;
-  }
+  if (!App.productosVentaTemp || App.productosVentaTemp.length === 0) { cont.innerHTML = '<p class="text-center text-slate-400 text-sm py-4">Sin productos.</p>'; return; }
   cont.innerHTML = App.productosVentaTemp.map((p, i) => `
     <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 space-y-2">
-      <div class="flex items-center justify-between">
-        <span class="text-xs font-bold text-slate-500">${p.sourceType === 'stock' ? '📦 Stock' : '✏️ Manual'}</span>
-        <button onclick="quitarProductoVenta(${i})" class="text-rose-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-      </div>
+      <div class="flex items-center justify-between"><span class="text-xs font-bold text-slate-500">${p.sourceType === 'stock' ? '📦 Stock' : '✏️ Manual'}</span><button onclick="quitarProductoVenta(${i})" class="text-rose-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div>
       <input type="text" value="${p.nombre || ''}" ${p.sourceType === 'stock' ? 'readonly' : ''} oninput="actualizarProductoVenta(${i}, 'nombre', this.value)" class="inp text-sm">
-      <div class="grid grid-cols-3 gap-2">
-        <input type="number" value="${p.cantidad || 1}" ${p.sourceType === 'stock' ? 'readonly' : ''} oninput="actualizarProductoVenta(${i}, 'cantidad', parseInt(this.value)||1)" class="inp text-sm">
-        <input type="number" value="${p.precioCompra || 0}" readonly class="inp text-sm bg-slate-100 dark:bg-slate-800">
-        <input type="number" placeholder="Venta C$" value="${p.precioVenta || ''}" oninput="actualizarProductoVenta(${i}, 'precioVenta', parseFloat(this.value)||0); recalcularVenta();" class="inp text-sm bg-emerald-50 dark:bg-emerald-900/20">
-      </div>
-    </div>
-  `).join('');
+      <div class="grid grid-cols-3 gap-2"><input type="number" value="${p.cantidad || 1}" ${p.sourceType === 'stock' ? 'readonly' : ''} oninput="actualizarProductoVenta(${i}, 'cantidad', parseInt(this.value)||1)" class="inp text-sm"><input type="number" value="${p.precioCompra || 0}" readonly class="inp text-sm bg-slate-100 dark:bg-slate-800"><input type="number" placeholder="Venta C$" value="${p.precioVenta || ''}" oninput="actualizarProductoVenta(${i}, 'precioVenta', parseFloat(this.value)||0); recalcularVenta();" class="inp text-sm bg-emerald-50 dark:bg-emerald-900/20"></div>
+    </div>`).join('');
 }
-
-function agregarProductoVentaManual() {
-  App.productosVentaTemp.push({ nombre: '', cantidad: 1, precioCompra: 0, precioVenta: 0, sourceType: 'manual', sourceId: null });
-  renderProductosVentaTemp();
-}
+function agregarProductoVentaManual() { App.productosVentaTemp.push({ nombre: '', cantidad: 1, precioCompra: 0, precioVenta: 0, sourceType: 'manual', sourceId: null }); renderProductosVentaTemp(); }
 function actualizarProductoVenta(i, campo, valor) { App.productosVentaTemp[i][campo] = valor; }
 function quitarProductoVenta(i) { App.productosVentaTemp.splice(i, 1); renderProductosVentaTemp(); recalcularVenta(); }
 
@@ -860,22 +738,16 @@ function abrirSelectorProductosVenta() {
   renderListaProductosStock(stock);
   abrirModal('modalSelectorProductos');
 }
-
 function renderListaProductosStock(lista) {
   const cont = document.getElementById('listaProductosStock');
   if (lista.length === 0) { cont.innerHTML = '<p class="text-center text-slate-500 py-8">Sin productos</p>'; return; }
   cont.innerHTML = lista.map(p => `
     <div class="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 flex justify-between items-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onclick="seleccionarProductoStock('${p.uniqueId}')">
-      <div class="min-w-0"><p class="font-semibold text-sm text-slate-800 dark:text-white truncate">${p.nombre}</p><p class="text-xs text-slate-500">${p.compraId} · ${p.proveedorNombre}${p.serie ? ' · S/N: ' + p.serie : ''}</p></div>
-      <div class="text-right shrink-0"><p class="font-bold text-sm">${fmtC(p.precioVentaSugerido || p.precioCompra)}</p><p class="text-xs text-slate-500">Costo: ${fmtC(p.precioCompra)}</p></div>
+      <div class="flex items-center gap-2 min-w-0 flex-1">${p.foto ? `<img src="${p.foto}" class="w-10 h-10 rounded-lg object-cover shrink-0">` : ''}<div class="min-w-0"><p class="font-semibold text-sm text-slate-800 dark:text-white truncate">${p.nombre}</p><p class="text-xs text-slate-500">${p.compraId} · ${p.proveedorNombre}${p.serie ? ' · S/N: ' + p.serie : ''}</p></div></div>
+      <div class="text-right shrink-0 ml-2"><p class="font-bold text-sm">${fmtC(p.precioVentaSugerido || p.precioCompra)}</p><p class="text-xs text-slate-500">Costo: ${fmtC(p.precioCompra)}</p></div>
     </div>`).join('');
 }
-
-function filtrarProductosStock() {
-  const q = document.getElementById('buscarProductoStock').value.toLowerCase();
-  renderListaProductosStock((App.stockDisponible || []).filter(p => (p.nombre || '').toLowerCase().includes(q) || (p.serie || '').toLowerCase().includes(q)));
-}
-
+function filtrarProductosStock() { const q = document.getElementById('buscarProductoStock').value.toLowerCase(); renderListaProductosStock((App.stockDisponible || []).filter(p => (p.nombre || '').toLowerCase().includes(q) || (p.serie || '').toLowerCase().includes(q))); }
 function seleccionarProductoStock(uniqueId) {
   const p = App.stockDisponible.find(x => x.uniqueId === uniqueId);
   if (!p) return;
@@ -885,7 +757,6 @@ function seleccionarProductoStock(uniqueId) {
   cerrarModales();
   toast('📦 Producto agregado');
 }
-
 function recalcularVenta() {
   const productos = App.productosVentaTemp || [];
   const total = productos.reduce((s, p) => s + ((parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1)), 0);
@@ -899,7 +770,6 @@ function recalcularVenta() {
   document.getElementById('ventaSaldo').textContent = fmtC(tipo === 'contado' ? 0 : saldo);
   document.getElementById('ventaCuota').textContent = fmtC(cuota);
 }
-
 async function guardarVenta() {
   const id = document.getElementById('ventaCodigo').value.trim().toUpperCase();
   const fecha = document.getElementById('ventaFecha').value;
@@ -911,7 +781,7 @@ async function guardarVenta() {
   const proximaFecha = document.getElementById('ventaProximaFecha').value;
   const productos = (App.productosVentaTemp || []).filter(p => p.nombre && (parseFloat(p.precioVenta) || 0) > 0);
   if (!id || !fecha || !clienteId) return toast('⚠️ Completa ID, fecha y cliente');
-  if (productos.length === 0) return toast('⚠️ Agrega productos con precio');
+  if (productos.length === 0) return toast('⚠️ Agrega productos');
   const cliente = DB.clientes.find(c => c.id === clienteId);
   if (!cliente) return toast('⚠️ Cliente no encontrado');
   const total = productos.reduce((s, p) => s + ((parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1)), 0);
@@ -924,11 +794,7 @@ async function guardarVenta() {
   for (const p of productos) {
     if (p.sourceType === 'stock' && p.sourceId != null && p.indexEnCompra != null) {
       const compra = DB.compras.find(c => c.id === p.sourceId);
-      if (compra && compra.productos[p.indexEnCompra]) {
-        compra.productos[p.indexEnCompra].vendido = true;
-        compra.lastModified = Date.now();
-        await DB.guardarCompra(compra);
-      }
+      if (compra && compra.productos[p.indexEnCompra]) { compra.productos[p.indexEnCompra].vendido = true; compra.lastModified = Date.now(); await DB.guardarCompra(compra); }
     }
   }
   const venta = { id, clienteId, cliente: cliente.nombre, telefono: cliente.telefono, fecha, productos, precioTotal: total, prima, saldo, pagado: prima, meses, cuotaMensual: cuota, estado: saldo <= 0 ? 'PAGADO' : 'PENDIENTE', proximaFechaCobro: tipoPago === 'contado' ? fecha : proximaFecha, tipoPago, frecuenciaPago: frecuencia, fechasPersonalizadas: [], lastModified: Date.now() };
@@ -938,27 +804,20 @@ async function guardarVenta() {
   if (prima > 0) {
     for (const c of DB.cobros.filter(x => x.ventaId === id && x.origen === 'prima')) { await DB.eliminarCobro(c.id); DB.cobros = DB.cobros.filter(x => x.id !== c.id); }
     const cobro = { id: 'cobro_' + generarId(), ventaId: id, fecha, monto: prima, metodo: 'Efectivo', notas: 'Prima', origen: 'prima', lastModified: Date.now() };
-    await DB.guardarCobro(cobro);
-    DB.cobros.push(cobro);
+    await DB.guardarCobro(cobro); DB.cobros.push(cobro);
   }
   toast(editando ? '✅ Venta actualizada' : '✅ Venta registrada');
   cerrarModales();
   navegar('ventas');
 }
-
 async function liberarProductosDeVenta(venta) {
   for (const p of venta.productos || []) {
     if (p.sourceType === 'stock' && p.sourceId != null && p.indexEnCompra != null) {
       const compra = DB.compras.find(c => c.id === p.sourceId);
-      if (compra && compra.productos[p.indexEnCompra]) {
-        compra.productos[p.indexEnCompra].vendido = false;
-        compra.lastModified = Date.now();
-        await DB.guardarCompra(compra);
-      }
+      if (compra && compra.productos[p.indexEnCompra]) { compra.productos[p.indexEnCompra].vendido = false; compra.lastModified = Date.now(); await DB.guardarCompra(compra); }
     }
   }
 }
-
 async function eliminarVenta() {
   if (!App.ventaEnEdicion) return;
   if (!confirm(`¿Eliminar la venta ${App.ventaEnEdicion.id}?`)) return;
@@ -972,37 +831,23 @@ async function eliminarVenta() {
   cerrarModales();
   navegar('ventas');
 }
-
 function verDetalleVenta(id) {
   const v = DB.ventas.find(x => x.id === id);
   if (!v) return;
   const cobros = DB.cobros.filter(c => c.ventaId === id).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   const html = `
     <div class="space-y-3">
-      <div class="flex justify-between items-start">
-        <div><p class="text-xs text-slate-500">Cliente</p><p class="font-bold text-lg text-slate-800 dark:text-white">${v.cliente}</p><p class="text-xs text-slate-500">${v.id} · ${v.telefono || 'Sin teléfono'}</p></div>
-        <span class="badge ${v.estado === 'PENDIENTE' ? 'badge-warning' : 'badge-success'}">${v.estado}</span>
-      </div>
+      <div class="flex justify-between items-start"><div><p class="text-xs text-slate-500">Cliente</p><p class="font-bold text-lg text-slate-800 dark:text-white">${v.cliente}</p><p class="text-xs text-slate-500">${v.id} · ${v.telefono || 'Sin teléfono'}</p></div><span class="badge ${v.estado === 'PENDIENTE' ? 'badge-warning' : 'badge-success'}">${v.estado}</span></div>
       <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 space-y-1">
         <div class="flex justify-between text-sm"><span>Total:</span><span class="font-bold">${fmtC(v.precioTotal)}</span></div>
         <div class="flex justify-between text-sm"><span>Pagado:</span><span class="font-bold text-emerald-600">${fmtC(v.pagado)}</span></div>
         <div class="flex justify-between text-sm border-t border-emerald-200 dark:border-emerald-800 pt-1"><span>Saldo:</span><span class="font-bold text-rose-600">${fmtC(v.saldo)}</span></div>
         ${v.tipoPago === 'credito' ? `<div class="flex justify-between text-sm"><span>Cuota:</span><span class="font-bold">${fmtC(v.cuotaMensual)}</span></div><div class="flex justify-between text-sm"><span>Próximo:</span><span class="font-bold">${fmtFecha(v.proximaFechaCobro)}</span></div>` : ''}
       </div>
-      <div><p class="font-bold text-sm mb-2">Productos (${v.productos.length})</p>
-        <div class="space-y-2 max-h-40 overflow-y-auto">${v.productos.map(p => `<div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-3"><p class="font-medium text-sm">${p.nombre}</p><p class="text-xs text-slate-500">${p.cantidad} × ${fmtC(p.precioVenta)}${p.serie ? ' · S/N: ' + p.serie : ''}</p></div>`).join('')}</div>
-      </div>
-      ${cobros.length > 0 ? `<div><p class="font-bold text-sm mb-2">Cobros (${cobros.length})</p>
-        <div class="space-y-2 max-h-40 overflow-y-auto">${cobros.map(c => `<div class="bg-brand-50 dark:bg-brand-900/20 rounded-xl p-3 flex justify-between items-center"><div><p class="text-sm font-medium">${fmtFecha(c.fecha)}</p><p class="text-xs">${c.metodo}${c.notas ? ' · ' + c.notas : ''}</p></div><p class="font-bold text-brand-700">${fmtC(c.monto)}</p></div>`).join('')}</div>
-      </div>` : ''}
-      <div class="flex flex-wrap gap-2 pt-2">
-        <button onclick="generarPDFVenta('${v.id}')" class="btn-ghost text-sm flex-1">📄 PDF</button>
-        <button onclick="enviarWhatsAppVenta('${v.id}')" class="btn-ghost text-sm flex-1">💬 WhatsApp</button>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        ${v.estado === 'PENDIENTE' ? `<button onclick="abrirModalCobroPara('${v.id}')" class="btn-primary text-sm flex-1">💰 Cobrar</button>` : ''}
-        <button onclick="abrirModalVenta('${v.id}')" class="btn-accent text-sm flex-1">✏️ Editar</button>
-      </div>
+      <div><p class="font-bold text-sm mb-2">Productos (${v.productos.length})</p><div class="space-y-2 max-h-40 overflow-y-auto">${v.productos.map(p => `<div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 flex items-center gap-2">${p.foto ? `<img src="${p.foto}" class="w-10 h-10 rounded-lg object-cover">` : ''}<div class="min-w-0"><p class="font-medium text-sm">${p.nombre}</p><p class="text-xs text-slate-500">${p.cantidad} × ${fmtC(p.precioVenta)}${p.serie ? ' · S/N: ' + p.serie : ''}</p></div></div>`).join('')}</div></div>
+      ${cobros.length > 0 ? `<div><p class="font-bold text-sm mb-2">Cobros (${cobros.length})</p><div class="space-y-2 max-h-40 overflow-y-auto">${cobros.map(c => `<div class="bg-brand-50 dark:bg-brand-900/20 rounded-xl p-3 flex justify-between items-center"><div><p class="text-sm font-medium">${fmtFecha(c.fecha)}</p><p class="text-xs">${c.metodo}${c.notas ? ' · ' + c.notas : ''}</p></div><p class="font-bold text-brand-700">${fmtC(c.monto)}</p></div>`).join('')}</div></div>` : ''}
+      <div class="flex flex-wrap gap-2 pt-2"><button onclick="generarPDFVenta('${v.id}')" class="btn-ghost text-sm flex-1">📄 PDF</button><button onclick="enviarWhatsAppVenta('${v.id}')" class="btn-ghost text-sm flex-1">💬 WhatsApp</button></div>
+      <div class="flex flex-wrap gap-2">${v.estado === 'PENDIENTE' ? `<button onclick="abrirModalCobroPara('${v.id}')" class="btn-primary text-sm flex-1">💰 Cobrar</button>` : ''}<button onclick="abrirModalVenta('${v.id}')" class="btn-accent text-sm flex-1">✏️ Editar</button></div>
       <button onclick="cerrarModales()" class="btn-ghost w-full text-sm">Cerrar</button>
     </div>`;
   abrirModalContenido('Detalle Venta', html);
@@ -1032,7 +877,6 @@ function abrirModalCliente(id = null) {
   abrirModal('modalCliente');
 }
 function abrirModalClienteRapido() { abrirModalCliente(); }
-
 async function guardarCliente() {
   const nombre = document.getElementById('clienteNombre').value.trim();
   if (!nombre) return toast('⚠️ Ingresa el nombre');
@@ -1041,15 +885,11 @@ async function guardarCliente() {
   const idx = DB.clientes.findIndex(c => c.id === cliente.id);
   if (idx >= 0) DB.clientes[idx] = cliente; else DB.clientes.push(cliente);
   const ventaCliente = document.getElementById('ventaCliente');
-  if (ventaCliente) {
-    ventaCliente.innerHTML = '<option value="">Seleccione...</option>' + DB.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
-    ventaCliente.value = cliente.id;
-  }
+  if (ventaCliente) { ventaCliente.innerHTML = '<option value="">Seleccione...</option>' + DB.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join(''); ventaCliente.value = cliente.id; }
   toast('✅ Cliente guardado');
   cerrarModales();
   if (App.seccionActual === 'ventas' && App.subseccion === 'clientes') navegar('ventas', 'clientes');
 }
-
 async function eliminarCliente() {
   if (!App.clienteEnEdicion) return;
   const ventas = DB.ventas.filter(v => v.clienteId === App.clienteEnEdicion.id);
@@ -1062,7 +902,7 @@ async function eliminarCliente() {
   navegar('ventas', 'clientes');
 }
 
-/* ═══════════ COBROS ═══════════ */
+/* ═══════════ COBROS Y PAGOS ═══════════ */
 function abrirModalCobro() {
   document.getElementById('tituloModalCobro').textContent = 'Registrar Cobro';
   document.getElementById('cobroBusqueda').value = '';
@@ -1075,43 +915,25 @@ function abrirModalCobro() {
   document.getElementById('infoVentaCobro').classList.add('hidden');
   abrirModal('modalCobro');
 }
-
-function abrirModalCobroPara(ventaId) {
-  cerrarModales();
-  setTimeout(() => {
-    abrirModalCobro();
-    seleccionarVentaParaCobro(ventaId);
-  }, 200);
-}
-
+function abrirModalCobroPara(ventaId) { cerrarModales(); setTimeout(() => { abrirModalCobro(); seleccionarVentaParaCobro(ventaId); }, 200); }
 function buscarVentaParaCobro() {
   const q = document.getElementById('cobroBusqueda').value.trim().toUpperCase();
   const cont = document.getElementById('resultadosCobro');
   if (q.length < 2) { cont.classList.add('hidden'); return; }
   const res = DB.ventas.filter(v => v.estado === 'PENDIENTE' && (v.id.toUpperCase().includes(q) || v.cliente.toUpperCase().includes(q)));
-  cont.innerHTML = res.length === 0 ? '<p class="text-center text-sm text-slate-500 py-2">Sin resultados</p>' :
-    res.map(v => `<div onclick="seleccionarVentaParaCobro('${v.id}')" class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-900/20"><p class="font-semibold text-sm">${v.cliente}</p><div class="flex justify-between text-xs text-slate-500"><span>${v.id}</span><span>Saldo: ${fmtC(v.saldo)}</span></div></div>`).join('');
+  cont.innerHTML = res.length === 0 ? '<p class="text-center text-sm text-slate-500 py-2">Sin resultados</p>' : res.map(v => `<div onclick="seleccionarVentaParaCobro('${v.id}')" class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-900/20"><p class="font-semibold text-sm">${v.cliente}</p><div class="flex justify-between text-xs text-slate-500"><span>${v.id}</span><span>Saldo: ${fmtC(v.saldo)}</span></div></div>`).join('');
   cont.classList.remove('hidden');
 }
-
 function seleccionarVentaParaCobro(ventaId) {
   const v = DB.ventas.find(x => x.id === ventaId);
   if (!v) return;
   document.getElementById('cobroVentaId').value = v.id;
   document.getElementById('resultadosCobro').classList.add('hidden');
   document.getElementById('cobroBusqueda').value = v.cliente + ' (' + v.id + ')';
-  document.getElementById('infoVentaCobro').innerHTML = `
-    <div class="space-y-1 text-sm">
-      <div class="flex justify-between"><span class="text-slate-600 dark:text-slate-400">Cliente:</span><span class="font-bold">${v.cliente}</span></div>
-      <div class="flex justify-between"><span class="text-slate-600 dark:text-slate-400">Total:</span><span>${fmtC(v.precioTotal)}</span></div>
-      <div class="flex justify-between"><span class="text-slate-600 dark:text-slate-400">Pagado:</span><span class="text-emerald-600">${fmtC(v.pagado)}</span></div>
-      <div class="flex justify-between border-t border-emerald-200 dark:border-emerald-800 pt-1"><span class="font-semibold">Saldo:</span><span class="font-bold text-rose-600">${fmtC(v.saldo)}</span></div>
-      <div class="flex justify-between"><span class="text-slate-600 dark:text-slate-400">Cuota:</span><span>${fmtC(v.cuotaMensual)}</span></div>
-    </div>`;
+  document.getElementById('infoVentaCobro').innerHTML = `<div class="space-y-1 text-sm"><div class="flex justify-between"><span class="text-slate-600 dark:text-slate-400">Cliente:</span><span class="font-bold">${v.cliente}</span></div><div class="flex justify-between"><span class="text-slate-600 dark:text-slate-400">Total:</span><span>${fmtC(v.precioTotal)}</span></div><div class="flex justify-between"><span class="text-slate-600 dark:text-slate-400">Pagado:</span><span class="text-emerald-600">${fmtC(v.pagado)}</span></div><div class="flex justify-between border-t border-emerald-200 dark:border-emerald-800 pt-1"><span class="font-semibold">Saldo:</span><span class="font-bold text-rose-600">${fmtC(v.saldo)}</span></div><div class="flex justify-between"><span class="text-slate-600 dark:text-slate-400">Cuota:</span><span>${fmtC(v.cuotaMensual)}</span></div></div>`;
   document.getElementById('infoVentaCobro').classList.remove('hidden');
   document.getElementById('cobroMonto').value = (parseFloat(v.cuotaMensual) || 0).toFixed(2);
 }
-
 async function guardarCobro() {
   const ventaId = document.getElementById('cobroVentaId').value;
   const fecha = document.getElementById('cobroFecha').value;
@@ -1124,8 +946,7 @@ async function guardarCobro() {
   if (!v) return;
   if (monto > (parseFloat(v.saldo) || 0) + 0.01) return toast(`⚠️ Monto supera saldo (${fmtC(v.saldo)})`);
   const cobro = { id: 'cobro_' + generarId(), ventaId, fecha, monto, metodo, notas, lastModified: Date.now() };
-  await DB.guardarCobro(cobro);
-  DB.cobros.push(cobro);
+  await DB.guardarCobro(cobro); DB.cobros.push(cobro);
   v.pagado = (parseFloat(v.pagado) || 0) + monto;
   v.saldo = Math.max(0, (parseFloat(v.precioTotal) || 0) - v.pagado);
   v.estado = v.saldo <= 0 ? 'PAGADO' : 'PENDIENTE';
@@ -1143,8 +964,6 @@ async function guardarCobro() {
   cerrarModales();
   navegar(App.seccionActual);
 }
-
-/* ═══════════ PAGOS A PROVEEDOR ═══════════ */
 function abrirModalPago() {
   document.getElementById('tituloModalPago').textContent = 'Pago a Proveedor';
   const sel = document.getElementById('pagoProveedor');
@@ -1156,15 +975,7 @@ function abrirModalPago() {
   document.getElementById('pagoNotas').value = '';
   abrirModal('modalPagoProveedor');
 }
-
-function abrirModalPagoPara(provId) {
-  abrirModalPago();
-  setTimeout(() => {
-    document.getElementById('pagoProveedor').value = provId;
-    cargarComprasDelProveedor();
-  }, 100);
-}
-
+function abrirModalPagoPara(provId) { abrirModalPago(); setTimeout(() => { document.getElementById('pagoProveedor').value = provId; cargarComprasDelProveedor(); }, 100); }
 function cargarComprasDelProveedor() {
   const provId = document.getElementById('pagoProveedor').value;
   const sel = document.getElementById('pagoCompra');
@@ -1172,7 +983,6 @@ function cargarComprasDelProveedor() {
   if (compras.length === 0) { sel.innerHTML = '<option value="">Sin compras pendientes</option>'; return; }
   sel.innerHTML = '<option value="">Aplicar a saldo general</option>' + compras.map(c => `<option value="${c.id}">${c.id} - ${fmtC(c.saldo)}</option>`).join('');
 }
-
 async function guardarPagoProveedor() {
   const proveedorId = document.getElementById('pagoProveedor').value;
   const compraId = document.getElementById('pagoCompra').value || null;
@@ -1183,25 +993,17 @@ async function guardarPagoProveedor() {
   if (!proveedorId) return toast('⚠️ Selecciona proveedor');
   if (monto <= 0) return toast('⚠️ Ingresa monto');
   const pago = { id: 'pago_' + generarId(), proveedorId, compraId, fecha, monto, metodo, notas, lastModified: Date.now() };
-  await DB.guardarPago(pago);
-  DB.pagosProveedor.push(pago);
-  if (compraId) {
-    await aplicarPagoACompra(compraId, monto);
-  } else {
+  await DB.guardarPago(pago); DB.pagosProveedor.push(pago);
+  if (compraId) await aplicarPagoACompra(compraId, monto);
+  else {
     let restante = monto;
     const pendientes = DB.compras.filter(c => c.proveedorId === proveedorId && (parseFloat(c.saldo) || 0) > 0).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-    for (const c of pendientes) {
-      if (restante <= 0) break;
-      const aplicar = Math.min(restante, parseFloat(c.saldo) || 0);
-      await aplicarPagoACompra(c.id, aplicar);
-      restante -= aplicar;
-    }
+    for (const c of pendientes) { if (restante <= 0) break; const aplicar = Math.min(restante, parseFloat(c.saldo) || 0); await aplicarPagoACompra(c.id, aplicar); restante -= aplicar; }
   }
   toast('✅ Pago registrado');
   cerrarModales();
   navegar(App.seccionActual);
 }
-
 async function aplicarPagoACompra(compraId, monto) {
   const c = DB.compras.find(x => x.id === compraId);
   if (!c) return;
@@ -1212,69 +1014,97 @@ async function aplicarPagoACompra(compraId, monto) {
   await DB.guardarCompra(c);
 }
 
+/* ═══════════ RECORDATORIOS ═══════════ */
+function abrirModalRecordatorio(id = null) {
+  if (id) {
+    const r = DB.recordatorios.find(x => x.id === id);
+    if (!r) return;
+    document.getElementById('tituloModalRecordatorio').textContent = 'Editar Recordatorio';
+    document.getElementById('recId').value = r.id;
+    document.getElementById('recTitulo').value = r.titulo;
+    document.getElementById('recDescripcion').value = r.descripcion || '';
+    document.getElementById('recFecha').value = r.fecha;
+    document.getElementById('recPrioridad').value = r.prioridad || 'normal';
+    document.getElementById('btnEliminarRec').classList.remove('hidden');
+    App.recordatorioEnEdicion = r;
+  } else {
+    document.getElementById('tituloModalRecordatorio').textContent = 'Nuevo Recordatorio';
+    document.getElementById('recId').value = '';
+    document.getElementById('recTitulo').value = '';
+    document.getElementById('recDescripcion').value = '';
+    document.getElementById('recFecha').value = hoyISO();
+    document.getElementById('recPrioridad').value = 'normal';
+    document.getElementById('btnEliminarRec').classList.add('hidden');
+    App.recordatorioEnEdicion = null;
+  }
+  abrirModal('modalRecordatorio');
+}
+async function guardarRecordatorio() {
+  const titulo = document.getElementById('recTitulo').value.trim();
+  const fecha = document.getElementById('recFecha').value;
+  if (!titulo || !fecha) return toast('⚠️ Completa título y fecha');
+  const rec = {
+    id: document.getElementById('recId').value || 'rec_' + generarId(),
+    titulo, descripcion: document.getElementById('recDescripcion').value.trim(),
+    fecha, prioridad: document.getElementById('recPrioridad').value,
+    completado: false, lastModified: Date.now()
+  };
+  await DB.guardarRecordatorio(rec);
+  const idx = DB.recordatorios.findIndex(r => r.id === rec.id);
+  if (idx >= 0) DB.recordatorios[idx] = rec; else DB.recordatorios.push(rec);
+  toast('✅ Recordatorio guardado');
+  cerrarModales();
+  if (App.seccionActual === 'mas') navegar('mas');
+  actualizarHeader();
+}
+async function eliminarRecordatorio() {
+  if (!App.recordatorioEnEdicion) return;
+  if (!confirm('¿Eliminar este recordatorio?')) return;
+  await DB.eliminarRecordatorio(App.recordatorioEnEdicion.id);
+  DB.recordatorios = DB.recordatorios.filter(r => r.id !== App.recordatorioEnEdicion.id);
+  toast('🗑️ Recordatorio eliminado');
+  cerrarModales();
+  navegar('mas');
+}
+
 /* ═══════════ REPORTES ═══════════ */
 function renderReportes(el) {
-  // Inicializar rango por defecto: mes actual
   if (!App.rangoReporte.desde) {
     const hoy = new Date();
     App.rangoReporte.desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
     App.rangoReporte.hasta = hoyISO();
   }
-
   el.innerHTML = `
     <div class="anim-in space-y-4">
       <h2 class="text-xl font-extrabold text-slate-800 dark:text-white">Reportes</h2>
-
       <div class="card">
         <label class="lbl">Rango de fechas</label>
-        <div class="date-range">
-          <input type="date" id="repDesde" class="inp" value="${App.rangoReporte.desde}">
-          <span class="text-slate-400">→</span>
-          <input type="date" id="repHasta" class="inp" value="${App.rangoReporte.hasta}">
-        </div>
-        <div class="grid grid-cols-3 gap-2 mt-3">
-          <button onclick="setRango('hoy')" class="text-xs py-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-medium">Hoy</button>
-          <button onclick="setRango('mes')" class="text-xs py-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-medium">Este mes</button>
-          <button onclick="setRango('año')" class="text-xs py-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-medium">Este año</button>
-        </div>
+        <div class="date-range"><input type="date" id="repDesde" class="inp" value="${App.rangoReporte.desde}"><span class="text-slate-400">→</span><input type="date" id="repHasta" class="inp" value="${App.rangoReporte.hasta}"></div>
+        <div class="grid grid-cols-3 gap-2 mt-3"><button onclick="setRango('hoy')" class="text-xs py-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-medium">Hoy</button><button onclick="setRango('mes')" class="text-xs py-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-medium">Mes</button><button onclick="setRango('año')" class="text-xs py-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-medium">Año</button></div>
         <button onclick="aplicarRangoReporte()" class="btn-primary w-full mt-3 text-sm">Aplicar</button>
       </div>
-
       <div id="resultadosReporte"></div>
-    </div>
-  `;
+    </div>`;
   setTimeout(() => aplicarRangoReporte(), 100);
 }
-
 function setRango(tipo) {
   const hoy = new Date();
-  if (tipo === 'hoy') {
-    App.rangoReporte.desde = hoyISO();
-    App.rangoReporte.hasta = hoyISO();
-  } else if (tipo === 'mes') {
-    App.rangoReporte.desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
-    App.rangoReporte.hasta = hoyISO();
-  } else if (tipo === 'año') {
-    App.rangoReporte.desde = new Date(hoy.getFullYear(), 0, 1).toISOString().split('T')[0];
-    App.rangoReporte.hasta = hoyISO();
-  }
+  if (tipo === 'hoy') { App.rangoReporte.desde = hoyISO(); App.rangoReporte.hasta = hoyISO(); }
+  else if (tipo === 'mes') { App.rangoReporte.desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0]; App.rangoReporte.hasta = hoyISO(); }
+  else if (tipo === 'año') { App.rangoReporte.desde = new Date(hoy.getFullYear(), 0, 1).toISOString().split('T')[0]; App.rangoReporte.hasta = hoyISO(); }
   document.getElementById('repDesde').value = App.rangoReporte.desde;
   document.getElementById('repHasta').value = App.rangoReporte.hasta;
   aplicarRangoReporte();
 }
-
 function aplicarRangoReporte() {
   App.rangoReporte.desde = document.getElementById('repDesde').value;
   App.rangoReporte.hasta = document.getElementById('repHasta').value;
   const { desde, hasta } = App.rangoReporte;
-
   const enRango = (f) => f >= desde && f <= hasta;
-
   const ventas = DB.ventas.filter(v => enRango(v.fecha));
   const cobros = DB.cobros.filter(c => enRango(c.fecha));
   const compras = DB.compras.filter(c => enRango(c.fecha));
   const pagos = DB.pagosProveedor.filter(p => enRango(p.fecha));
-
   const totalVentas = ventas.reduce((s, v) => s + (parseFloat(v.precioTotal) || 0), 0);
   const totalCobros = cobros.reduce((s, c) => s + (parseFloat(c.monto) || 0), 0);
   const totalCompras = compras.reduce((s, c) => s + (parseFloat(c.total) || 0), 0);
@@ -1283,99 +1113,29 @@ function aplicarRangoReporte() {
     const costo = (v.productos || []).reduce((c, p) => c + (parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1), 0);
     return s + ((parseFloat(v.precioTotal) || 0) - costo);
   }, 0);
-
   const gananciaNeta = totalCobros - totalPagos;
-
-  const cont = document.getElementById('resultadosReporte');
-  cont.innerHTML = `
+  document.getElementById('resultadosReporte').innerHTML = `
     <div class="grid grid-cols-2 gap-3 mb-4">
-      <div class="kpi"><p class="text-[11px] text-slate-500">Ventas del período</p><p class="text-lg font-extrabold text-brand-600">${fmtC(totalVentas)}</p><p class="text-xs text-slate-500">${ventas.length} ventas</p></div>
-      <div class="kpi"><p class="text-[11px] text-slate-500">Cobros del período</p><p class="text-lg font-extrabold text-emerald-600">${fmtC(totalCobros)}</p><p class="text-xs text-slate-500">${cobros.length} cobros</p></div>
-      <div class="kpi"><p class="text-[11px] text-slate-500">Compras del período</p><p class="text-lg font-extrabold text-rose-600">${fmtC(totalCompras)}</p><p class="text-xs text-slate-500">${compras.length} compras</p></div>
-      <div class="kpi"><p class="text-[11px] text-slate-500">Pagos a proveedores</p><p class="text-lg font-extrabold text-orange-600">${fmtC(totalPagos)}</p><p class="text-xs text-slate-500">${pagos.length} pagos</p></div>
+      <div class="kpi"><p class="text-[11px] text-slate-500">Ventas</p><p class="text-lg font-extrabold text-brand-600">${fmtC(totalVentas)}</p><p class="text-xs text-slate-500">${ventas.length} ventas</p></div>
+      <div class="kpi"><p class="text-[11px] text-slate-500">Cobros</p><p class="text-lg font-extrabold text-emerald-600">${fmtC(totalCobros)}</p><p class="text-xs text-slate-500">${cobros.length} cobros</p></div>
+      <div class="kpi"><p class="text-[11px] text-slate-500">Compras</p><p class="text-lg font-extrabold text-rose-600">${fmtC(totalCompras)}</p><p class="text-xs text-slate-500">${compras.length} compras</p></div>
+      <div class="kpi"><p class="text-[11px] text-slate-500">Pagos</p><p class="text-lg font-extrabold text-orange-600">${fmtC(totalPagos)}</p><p class="text-xs text-slate-500">${pagos.length} pagos</p></div>
     </div>
-
-    <div class="card mb-4">
-      <h3 class="font-bold text-sm text-slate-800 dark:text-white mb-2">💰 Utilidad</h3>
-      <div class="report-row"><span>Utilidad bruta (ventas - costo)</span><span class="font-bold text-brand-600">${fmtC(utilidadBruta)}</span></div>
+    <div class="card mb-4"><h3 class="font-bold text-sm text-slate-800 dark:text-white mb-2">💰 Utilidad</h3>
+      <div class="report-row"><span>Utilidad bruta</span><span class="font-bold text-brand-600">${fmtC(utilidadBruta)}</span></div>
       <div class="report-row"><span>Cobrado - Pagado</span><span class="font-bold ${gananciaNeta >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${fmtC(gananciaNeta)}</span></div>
     </div>
-
-    <div class="card mb-4">
-      <h3 class="font-bold text-sm text-slate-800 dark:text-white mb-3">📊 Resumen por mes (últimos 6)</h3>
-      <div class="chart-container"><canvas id="chartRepVentas"></canvas></div>
-    </div>
-
-    <div class="card">
-      <h3 class="font-bold text-sm text-slate-800 dark:text-white mb-3">🏆 Top 5 del período</h3>
-      <div id="topPeriodo">${renderTopPeriodo(ventas)}</div>
-    </div>
-
     <div class="grid grid-cols-2 gap-3 mt-4">
-      <button onclick="exportarReportePDF()" class="btn-primary text-sm">📄 Exportar PDF</button>
+      <button onclick="exportarReportePDF()" class="btn-primary text-sm">📄 PDF</button>
       <button onclick="compartirReporte()" class="btn-accent text-sm">💬 Compartir</button>
-    </div>
-  `;
-
-  // Gráfica del reporte
-  setTimeout(() => {
-    const isDark = document.documentElement.classList.contains('dark');
-    const gridColor = isDark ? '#334155' : '#e2e8f0';
-    const textColor = isDark ? '#cbd5e1' : '#475569';
-    const ventasMes = ventasPorMes(6);
-    const ctx = document.getElementById('chartRepVentas');
-    if (ctx) {
-      App.charts.repVentas = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ventasMes.map(v => v.label),
-          datasets: [{ label: 'Ventas', data: ventasMes.map(v => v.total), backgroundColor: '#6366f1', borderRadius: 8, maxBarThickness: 40 }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: { beginAtZero: true, ticks: { color: textColor, callback: v => 'C$' + (v/1000).toFixed(0) + 'k' }, grid: { color: gridColor } },
-            x: { ticks: { color: textColor }, grid: { display: false } }
-          }
-        }
-      });
-    }
-  }, 50);
+    </div>`;
 }
-
-function renderTopPeriodo(ventas) {
-  const contador = {};
-  ventas.forEach(v => {
-    (v.productos || []).forEach(p => {
-      const k = p.nombre || 'Sin nombre';
-      if (!contador[k]) contador[k] = { cantidad: 0, ingresos: 0 };
-      contador[k].cantidad += parseInt(p.cantidad) || 1;
-      contador[k].ingresos += (parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1);
-    });
-  });
-  const top = Object.entries(contador).map(([nombre, d]) => ({ nombre, ...d })).sort((a, b) => b.cantidad - a.cantidad).slice(0, 5);
-  if (top.length === 0) return '<p class="text-center text-slate-500 text-sm py-4">Sin datos</p>';
-  return `<div class="space-y-2">${top.map((t, i) => `
-    <div class="report-row">
-      <div class="flex items-center gap-2 min-w-0">
-        <span class="w-6 h-6 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 flex items-center justify-center text-xs font-bold shrink-0">${i+1}</span>
-        <span class="text-sm font-medium truncate">${t.nombre}</span>
-      </div>
-      <div class="text-right shrink-0">
-        <p class="text-sm font-bold">${t.cantidad} uds</p>
-        <p class="text-xs text-slate-500">${fmtC(t.ingresos)}</p>
-      </div>
-    </div>`).join('')}</div>`;
-}
-
 function exportarReportePDF() {
   const { desde, hasta } = App.rangoReporte;
   const ventas = DB.ventas.filter(v => v.fecha >= desde && v.fecha <= hasta);
   const cobros = DB.cobros.filter(c => c.fecha >= desde && c.fecha <= hasta);
   const compras = DB.compras.filter(c => c.fecha >= desde && c.fecha <= hasta);
   const pagos = DB.pagosProveedor.filter(p => p.fecha >= desde && p.fecha <= hasta);
-
   const totalVentas = ventas.reduce((s, v) => s + (parseFloat(v.precioTotal) || 0), 0);
   const totalCobros = cobros.reduce((s, c) => s + (parseFloat(c.monto) || 0), 0);
   const totalCompras = compras.reduce((s, c) => s + (parseFloat(c.total) || 0), 0);
@@ -1384,89 +1144,229 @@ function exportarReportePDF() {
     const costo = (v.productos || []).reduce((c, p) => c + (parseFloat(p.precioCompra) || 0) * (parseInt(p.cantidad) || 1), 0);
     return s + ((parseFloat(v.precioTotal) || 0) - costo);
   }, 0);
-
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   doc.setFontSize(18); doc.setTextColor(79,70,229);
-  doc.text('VARIEDADES KAREN', 105, 20, null, null, 'center');
-  doc.setFontSize(11); doc.setTextColor(0);
+  doc.text(App.config.nombre.toUpperCase(), 105, 20, null, null, 'center');
+  doc.setFontSize(10); doc.setTextColor(0);
   doc.text('Reporte de Gestión', 105, 28, null, null, 'center');
-  doc.setFontSize(10);
   doc.text(`Período: ${fmtFecha(desde)} al ${fmtFecha(hasta)}`, 105, 36, null, null, 'center');
-  doc.setFontSize(12);
-  let y = 55;
+  doc.setFontSize(12); let y = 55;
   doc.text('RESUMEN GENERAL', 20, y); y += 10;
   doc.setFontSize(10);
-  doc.text(`Ventas del período: ${ventas.length}  |  Total: ${fmtC(totalVentas)}`, 20, y); y += 8;
-  doc.text(`Cobros del período: ${cobros.length}  |  Total: ${fmtC(totalCobros)}`, 20, y); y += 8;
-  doc.text(`Compras del período: ${compras.length}  |  Total: ${fmtC(totalCompras)}`, 20, y); y += 8;
-  doc.text(`Pagos a proveedores: ${pagos.length}  |  Total: ${fmtC(totalPagos)}`, 20, y); y += 8;
+  doc.text(`Ventas: ${ventas.length} | Total: ${fmtC(totalVentas)}`, 20, y); y += 8;
+  doc.text(`Cobros: ${cobros.length} | Total: ${fmtC(totalCobros)}`, 20, y); y += 8;
+  doc.text(`Compras: ${compras.length} | Total: ${fmtC(totalCompras)}`, 20, y); y += 8;
+  doc.text(`Pagos: ${pagos.length} | Total: ${fmtC(totalPagos)}`, 20, y); y += 8;
   doc.text(`Utilidad bruta: ${fmtC(utilidadBruta)}`, 20, y); y += 15;
-  doc.setFontSize(12);
-  doc.text('TOP 5 PRODUCTOS', 20, y); y += 10;
-  doc.setFontSize(10);
-  const contador = {};
-  ventas.forEach(v => (v.productos || []).forEach(p => {
-    const k = p.nombre || 'Sin nombre';
-    if (!contador[k]) contador[k] = { cantidad: 0, ingresos: 0 };
-    contador[k].cantidad += parseInt(p.cantidad) || 1;
-    contador[k].ingresos += (parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1);
-  }));
-  const top = Object.entries(contador).map(([n, d]) => ({ nombre: n, ...d })).sort((a, b) => b.cantidad - a.cantidad).slice(0, 5);
-  top.forEach((t, i) => { doc.text(`${i+1}. ${t.nombre} - ${t.cantidad} uds - ${fmtC(t.ingresos)}`, 25, y); y += 7; });
-  y += 10;
   doc.setFontSize(10); doc.setTextColor(79,70,229);
-  doc.text('Variedades Karen - Sistema de Gestión', 105, y, null, null, 'center');
+  doc.text(App.config.nombre + ' - Sistema de Gestión', 105, y, null, null, 'center');
   doc.save(`Reporte_${desde}_a_${hasta}.pdf`);
   toast('📄 Reporte exportado');
 }
-
 function compartirReporte() {
   const { desde, hasta } = App.rangoReporte;
   const ventas = DB.ventas.filter(v => v.fecha >= desde && v.fecha <= hasta);
   const cobros = DB.cobros.filter(c => c.fecha >= desde && c.fecha <= hasta);
   const totalVentas = ventas.reduce((s, v) => s + (parseFloat(v.precioTotal) || 0), 0);
   const totalCobros = cobros.reduce((s, c) => s + (parseFloat(c.monto) || 0), 0);
-  const msg = `🦋 *VARIEDADES KAREN* 🦋\n\n📊 *Reporte del período*\nDel ${fmtFecha(desde)} al ${fmtFecha(hasta)}\n\n` +
-    `💰 Ventas: ${fmtC(totalVentas)} (${ventas.length})\n` +
-    `✅ Cobros: ${fmtC(totalCobros)} (${cobros.length})\n\n🌹 Sistema de Gestión`;
+  const msg = `🦋 *${App.config.nombre.toUpperCase()}* 🦋\n\n📊 *Reporte*\nDel ${fmtFecha(desde)} al ${fmtFecha(hasta)}\n\n💰 Ventas: ${fmtC(totalVentas)} (${ventas.length})\n✅ Cobros: ${fmtC(totalCobros)} (${cobros.length})\n\n🌹 Sistema de Gestión`;
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
 /* ═══════════ MÁS ═══════════ */
 function renderMas(el) {
+  if (!App.subseccion) App.subseccion = 'proveedores';
+  const sub = App.subseccion;
   el.innerHTML = `
     <div class="anim-in space-y-4">
       <h2 class="text-xl font-extrabold text-slate-800 dark:text-white">Más</h2>
-      <div class="card">
-        <h3 class="font-bold text-slate-800 dark:text-white mb-3">Proveedores</h3>
-        <button onclick="abrirModalProveedor()" class="btn-primary w-full mb-3 text-sm">+ Nuevo Proveedor</button>
-        ${DB.proveedores.length === 0 ? '<p class="text-center text-sm text-slate-500 py-4">Sin proveedores</p>' : `
-          <div class="space-y-2">
-            ${DB.proveedores.map(p => {
-              const deuda = DB.compras.filter(c => c.proveedorId === p.id).reduce((s, c) => s + (parseFloat(c.saldo) || 0), 0);
-              return `<div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 cursor-pointer" onclick="abrirModalProveedor('${p.id}')">
-                <div class="min-w-0"><p class="font-semibold text-sm truncate">${p.nombre}</p><p class="text-xs text-slate-500">${p.telefono || 'Sin teléfono'} · ${p.tipo}</p></div>
-                <div class="text-right"><p class="text-xs text-slate-500">Deuda</p><p class="font-bold text-sm ${deuda > 0 ? 'text-rose-600' : 'text-emerald-600'}">${fmtC(deuda)}</p></div>
-              </div>`;
-            }).join('')}
-          </div>`}
+      <div class="subtabs">
+        <button class="subtab ${sub === 'proveedores' ? 'active' : ''}" onclick="cambiarSubtab('proveedores')">🏢 Prov</button>
+        <button class="subtab ${sub === 'recordatorios' ? 'active' : ''}" onclick="cambiarSubtab('recordatorios')">📌 Record</button>
+        <button class="subtab ${sub === 'config' ? 'active' : ''}" onclick="cambiarSubtab('config')">⚙️ Config</button>
       </div>
-      <div class="card">
-        <h3 class="font-bold text-slate-800 dark:text-white mb-3">Backup y datos</h3>
-        <button onclick="abrirMenuBackup()" class="btn-ghost w-full text-sm">Abrir opciones de backup</button>
-      </div>
-      <div class="card">
-        <h3 class="font-bold text-slate-800 dark:text-white mb-3">Información</h3>
-        <div class="space-y-1 text-xs text-slate-500">
-          <p>Versión: 3.0 (Fase 3)</p>
-          <p>${DB.proveedores.length} proveedores · ${DB.compras.length} compras · ${DB.ventas.length} ventas</p>
-          <p>${DB.clientes.length} clientes · ${DB.cobros.length} cobros · ${DB.pagosProveedor.length} pagos</p>
-        </div>
-      </div>
+      <div>${sub === 'proveedores' ? renderProveedoresLista() : sub === 'recordatorios' ? renderRecordatoriosLista() : renderConfigLista()}</div>
     </div>`;
 }
 
+function renderProveedoresLista() {
+  return `<button onclick="abrirModalProveedor()" class="btn-primary w-full mb-3 text-sm">+ Nuevo Proveedor</button>
+    ${DB.proveedores.length === 0 ? '<div class="card text-center py-8"><p class="text-slate-500 text-sm">Sin proveedores</p></div>' : `
+      <div class="space-y-2">${DB.proveedores.map(p => {
+        const deuda = DB.compras.filter(c => c.proveedorId === p.id).reduce((s, c) => s + (parseFloat(c.saldo) || 0), 0);
+        return `<div class="card flex items-center justify-between cursor-pointer" onclick="abrirModalProveedor('${p.id}')">
+          <div class="min-w-0"><p class="font-semibold text-sm truncate">${p.nombre}</p><p class="text-xs text-slate-500">${p.telefono || 'Sin teléfono'} · ${p.tipo}</p></div>
+          <div class="text-right"><p class="text-xs text-slate-500">Deuda</p><p class="font-bold text-sm ${deuda > 0 ? 'text-rose-600' : 'text-emerald-600'}">${fmtC(deuda)}</p></div>
+        </div>`;
+      }).join('')}</div>`}`;
+}
+
+function renderRecordatoriosLista() {
+  const recs = [...(DB.recordatorios || [])].sort((a, b) => a.fecha.localeCompare(b.fecha));
+  return `<button onclick="abrirModalRecordatorio()" class="btn-primary w-full mb-3 text-sm">+ Nuevo Recordatorio</button>
+    ${recs.length === 0 ? '<div class="card text-center py-8"><p class="text-slate-500 text-sm">Sin recordatorios</p></div>' : `
+      <div class="space-y-2">${recs.map(r => {
+        const dias = diffDias(r.fecha);
+        const cls = r.completado ? 'completado' : '';
+        const badge = r.completado ? '<span class="badge badge-success">Hecho</span>' : dias < 0 ? '<span class="badge badge-danger">Vencido</span>' : dias === 0 ? '<span class="badge badge-warning">Hoy</span>' : `<span class="badge badge-info">${dias}d</span>`;
+        return `<div class="recordatorio-item ${cls}" onclick="toggleRecordatorio('${r.id}')">
+          <div class="w-6 h-6 rounded-full border-2 ${r.completado ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-600'} flex items-center justify-center shrink-0 mt-0.5">${r.completado ? '<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>' : ''}</div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-sm text-slate-800 dark:text-white rec-titulo truncate">${r.titulo}</p>
+            ${r.descripcion ? `<p class="text-xs text-slate-500 truncate">${r.descripcion}</p>` : ''}
+            <p class="text-xs text-slate-500 mt-1">${fmtFecha(r.fecha)} · ${r.prioridad}</p>
+          </div>
+          <div class="shrink-0">${badge}</div>
+          <button onclick="event.stopPropagation(); abrirModalRecordatorio('${r.id}')" class="p-1 text-slate-400 hover:text-brand-600 shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </button>
+        </div>`;
+      }).join('')}</div>`}`;
+}
+
+async function toggleRecordatorio(id) {
+  const r = DB.recordatorios.find(x => x.id === id);
+  if (!r) return;
+  r.completado = !r.completado;
+  r.lastModified = Date.now();
+  await DB.guardarRecordatorio(r);
+  toast(r.completado ? '✅ Completado' : '↩️ Marcado como pendiente');
+  navegar('mas', 'recordatorios');
+}
+
+function renderConfigLista() {
+  const totalRecords = DB.proveedores.length + DB.compras.length + DB.ventas.length + DB.clientes.length + DB.cobros.length + DB.pagosProveedor.length + (DB.recordatorios?.length || 0);
+  return `
+    <div class="card mb-3">
+      <h3 class="font-bold text-sm text-slate-800 dark:text-white mb-3">🏢 Datos de la empresa</h3>
+      <div class="space-y-3">
+        <div><label class="lbl">Nombre</label><input type="text" id="cfgNombre" class="inp" value="${App.config.nombre}"></div>
+        <div><label class="lbl">Teléfono</label><input type="tel" id="cfgTelefono" class="inp" value="${App.config.telefono}"></div>
+        <div><label class="lbl">Dirección</label><input type="text" id="cfgDireccion" class="inp" value="${App.config.direccion}"></div>
+        <div><label class="lbl">Mensaje de WhatsApp</label><textarea id="cfgMensaje" rows="2" class="inp">${App.config.mensaje}</textarea></div>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <h3 class="font-bold text-sm text-slate-800 dark:text-white mb-3">💰 Moneda</h3>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">Símbolo</label><input type="text" id="cfgMoneda" class="inp" maxlength="3" value="${App.config.moneda}"></div>
+        <div><label class="lbl">Código</label><input type="text" id="cfgCodigo" class="inp" maxlength="3" value="${App.config.codigoMoneda}"></div>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <h3 class="font-bold text-sm text-slate-800 dark:text-white mb-3">💾 Respaldo automático</h3>
+      <label class="flex items-center gap-2"><input type="checkbox" id="cfgBackupAuto" class="w-4 h-4" ${App.config.backupAuto ? 'checked' : ''}><span class="text-sm">Recordarme hacer backup cada 7 días</span></label>
+      <p class="text-xs text-slate-500 mt-2">Última exportación: <span class="font-medium">${App.config.ultimoBackup ? fmtFecha(App.config.ultimoBackup.split('T')[0]) : 'Nunca'}</span></p>
+    </div>
+    <div class="card mb-3">
+      <h3 class="font-bold text-sm text-slate-800 dark:text-white mb-3">📊 Datos</h3>
+      <div class="space-y-1 text-xs text-slate-500">
+        <p>Total registros: ${totalRecords}</p>
+        <p>${DB.proveedores.length} proveedores · ${DB.compras.length} compras · ${DB.ventas.length} ventas</p>
+        <p>${DB.clientes.length} clientes · ${DB.cobros.length} cobros · ${DB.pagosProveedor.length} pagos</p>
+        <p>${(DB.recordatorios || []).length} recordatorios</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3 class="font-bold text-sm text-slate-800 dark:text-white mb-3">📤 Exportar por categoría (CSV)</h3>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="exportarCSV('ventas')" class="text-xs py-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-medium">Ventas</button>
+        <button onclick="exportarCSV('compras')" class="text-xs py-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-medium">Compras</button>
+        <button onclick="exportarCSV('cobros')" class="text-xs py-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-medium">Cobros</button>
+        <button onclick="exportarCSV('clientes')" class="text-xs py-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-medium">Clientes</button>
+      </div>
+    </div>
+    <button onclick="guardarConfiguracion()" class="btn-primary w-full mt-4">💾 Guardar Configuración</button>
+  `;
+}
+
+function guardarConfiguracion() {
+  App.config = {
+    ...App.config,
+    nombre: document.getElementById('cfgNombre').value.trim() || 'Variedades Karen',
+    telefono: document.getElementById('cfgTelefono').value.trim(),
+    direccion: document.getElementById('cfgDireccion').value.trim(),
+    mensaje: document.getElementById('cfgMensaje').value.trim(),
+    moneda: document.getElementById('cfgMoneda').value.trim() || 'C$',
+    codigoMoneda: document.getElementById('cfgCodigo').value.trim() || 'NIO',
+    backupAuto: document.getElementById('cfgBackupAuto').checked
+  };
+  guardarConfigLocal();
+  toast('✅ Configuración guardada');
+  actualizarHeader();
+  navegar('mas', 'config');
+}
+
+function exportarCSV(tipo) {
+  let datos = [], cabeceras = [];
+  if (tipo === 'ventas') {
+    cabeceras = ['ID', 'Cliente', 'Telefono', 'Fecha', 'Total', 'Prima', 'Saldo', 'Pagado', 'Estado'];
+    datos = DB.ventas.map(v => [v.id, v.cliente, v.telefono || '', v.fecha, v.precioTotal, v.prima, v.saldo, v.pagado, v.estado]);
+  } else if (tipo === 'compras') {
+    cabeceras = ['ID', 'Proveedor', 'Fecha', 'Total', 'Pagado', 'Saldo', 'Estado'];
+    datos = DB.compras.map(c => {
+      const p = DB.proveedores.find(x => x.id === c.proveedorId);
+      return [c.id, p ? p.nombre : '', c.fecha, c.total, c.pagado, c.saldo, c.estado];
+    });
+  } else if (tipo === 'cobros') {
+    cabeceras = ['ID', 'Venta', 'Cliente', 'Fecha', 'Monto', 'Metodo', 'Notas'];
+    datos = DB.cobros.map(c => {
+      const v = DB.ventas.find(x => x.id === c.ventaId);
+      return [c.id, c.ventaId, v ? v.cliente : '', c.fecha, c.monto, c.metodo, c.notas || ''];
+    });
+  } else if (tipo === 'clientes') {
+    cabeceras = ['ID', 'Nombre', 'Telefono', 'Notas'];
+    datos = DB.clientes.map(c => [c.id, c.nombre, c.telefono || '', c.notas || '']);
+  }
+  const csv = [cabeceras, ...datos].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${tipo}_${hoyISO()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ CSV exportado');
+}
+
+/* ═══════════ FOTOS ═══════════ */
+function tomarFotoProducto(contexto, index) {
+  App.fotoDestino = { contexto, index };
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      // Comprimir
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 400;
+        let w = img.width, h = img.height;
+        if (w > h && w > MAX) { h = h * MAX / w; w = MAX; }
+        else if (h > MAX) { w = w * MAX / h; h = MAX; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        if (contexto === 'compra') { App.productosCompraTemp[index].foto = dataUrl; renderProductosCompraTemp(); }
+        else if (contexto === 'venta') { App.productosVentaTemp[index].foto = dataUrl; renderProductosVentaTemp(); }
+        toast('📷 Foto guardada');
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+function eliminarFotoProducto(contexto, index) {
+  if (contexto === 'compra') { App.productosCompraTemp[index].foto = null; renderProductosCompraTemp(); }
+  else if (contexto === 'venta') { App.productosVentaTemp[index].foto = null; renderProductosVentaTemp(); }
+}
+
+/* ═══════════ PROVEEDOR ═══════════ */
 function abrirModalProveedor(id = null) {
   if (id) {
     const p = DB.proveedores.find(x => x.id === id);
@@ -1491,7 +1391,6 @@ function abrirModalProveedor(id = null) {
   }
   abrirModal('modalProveedor');
 }
-
 async function guardarProveedor() {
   const nombre = document.getElementById('provNombre').value.trim();
   if (!nombre) return toast('⚠️ Ingresa el nombre');
@@ -1501,9 +1400,8 @@ async function guardarProveedor() {
   if (idx >= 0) DB.proveedores[idx] = proveedor; else DB.proveedores.push(proveedor);
   toast('✅ Proveedor guardado');
   cerrarModales();
-  if (App.seccionActual === 'mas') navegar('mas');
+  if (App.seccionActual === 'mas') navegar('mas', 'proveedores');
 }
-
 async function eliminarProveedor() {
   if (!App.proveedorEnEdicion) return;
   const compras = DB.compras.filter(c => c.proveedorId === App.proveedorEnEdicion.id);
@@ -1513,40 +1411,31 @@ async function eliminarProveedor() {
   DB.proveedores = DB.proveedores.filter(p => p.id !== App.proveedorEnEdicion.id);
   toast('🗑️ Proveedor eliminado');
   cerrarModales();
-  navegar('mas');
+  navegar('mas', 'proveedores');
 }
 
 /* ═══════════ ESCÁNER ═══════════ */
-function escanearParaProducto(contexto, index, campo) {
-  App.productoEscanerDestino = { contexto, index, campo };
-  abrirEscaner();
-}
-
+function escanearParaProducto(contexto, index, campo) { App.productoEscanerDestino = { contexto, index, campo }; abrirEscaner(); }
 function abrirEscaner() {
   abrirModal('modalEscaner');
   setTimeout(() => {
     if (App.scannerActivo) return;
     const scanner = new Html5Qrcode("lectorQR");
     App.scannerActivo = scanner;
-    scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
-      (texto) => {
-        document.getElementById('resultadoEscaner').textContent = '✅ ' + texto;
-        if (App.productoEscanerDestino) {
-          const { contexto, index, campo } = App.productoEscanerDestino;
-          if (contexto === 'compra') { App.productosCompraTemp[index][campo] = texto; renderProductosCompraTemp(); }
-          else if (contexto === 'venta') { App.productosVentaTemp[index][campo] = texto; renderProductosVentaTemp(); }
-          toast('✅ Código capturado');
-        }
-        cerrarEscaner();
-      }, () => {}
-    ).catch(e => { toast('❌ No se pudo abrir la cámara'); cerrarEscaner(); });
+    scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (texto) => {
+      document.getElementById('resultadoEscaner').textContent = '✅ ' + texto;
+      if (App.productoEscanerDestino) {
+        const { contexto, index, campo } = App.productoEscanerDestino;
+        if (contexto === 'compra') { App.productosCompraTemp[index][campo] = texto; renderProductosCompraTemp(); }
+        else if (contexto === 'venta') { App.productosVentaTemp[index][campo] = texto; renderProductosVentaTemp(); }
+        toast('✅ Código capturado');
+      }
+      cerrarEscaner();
+    }, () => {}).catch(e => { toast('❌ No se pudo abrir la cámara'); cerrarEscaner(); });
   }, 300);
 }
-
 function cerrarEscaner() {
-  if (App.scannerActivo) {
-    App.scannerActivo.stop().then(() => { App.scannerActivo.clear(); App.scannerActivo = null; }).catch(() => { App.scannerActivo = null; });
-  }
+  if (App.scannerActivo) { App.scannerActivo.stop().then(() => { App.scannerActivo.clear(); App.scannerActivo = null; }).catch(() => { App.scannerActivo = null; }); }
   App.productoEscanerDestino = null;
   cerrarModales();
 }
@@ -1558,11 +1447,10 @@ function generarPDFVenta(ventaId) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   doc.setFontSize(18); doc.setTextColor(79,70,229);
-  doc.text('VARIEDADES KAREN', 105, 20, null, null, 'center');
+  doc.text(App.config.nombre.toUpperCase(), 105, 20, null, null, 'center');
   doc.setFontSize(10); doc.setTextColor(0);
   doc.text('Recibo de Venta', 105, 28, null, null, 'center');
-  doc.setFontSize(12);
-  let y = 45;
+  doc.setFontSize(12); let y = 45;
   doc.text(`ID: ${v.id}`, 20, y); y += 8;
   doc.text(`Cliente: ${v.cliente}`, 20, y); y += 8;
   doc.text(`Fecha: ${fmtFecha(v.fecha)}`, 20, y); y += 8;
@@ -1570,34 +1458,32 @@ function generarPDFVenta(ventaId) {
   y += 4; doc.text('PRODUCTOS:', 20, y); y += 8;
   v.productos.forEach((p, i) => {
     const sub = (parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1);
-    doc.text(`${i+1}. ${p.nombre} x${p.cantidad} - C$${sub.toLocaleString()}`, 25, y);
+    doc.text(`${i+1}. ${p.nombre} x${p.cantidad} - ${fmtC(sub)}`, 25, y);
     if (p.serie) { y += 6; doc.text(`   S/N: ${p.serie}${p.modelo ? ' · Mod: ' + p.modelo : ''}`, 25, y); }
     y += 8;
   });
   y += 4; doc.line(20, y, 190, y); y += 8;
   doc.text(`Tipo: ${v.tipoPago === 'contado' ? 'Contado' : 'Crédito'}`, 20, y); y += 8;
-  doc.text(`Total: C$${(v.precioTotal).toLocaleString()}`, 20, y);
+  doc.text(`Total: ${fmtC(v.precioTotal)}`, 20, y);
   if (v.tipoPago === 'credito') {
-    y += 8; doc.text(`Prima: C$${(v.prima).toLocaleString()}`, 20, y);
-    y += 8; doc.text(`Saldo: C$${(v.saldo).toLocaleString()}`, 20, y);
-    y += 8; doc.text(`Cuota: C$${(v.cuotaMensual).toLocaleString()}`, 20, y);
+    y += 8; doc.text(`Prima: ${fmtC(v.prima)}`, 20, y);
+    y += 8; doc.text(`Saldo: ${fmtC(v.saldo)}`, 20, y);
+    y += 8; doc.text(`Cuota: ${fmtC(v.cuotaMensual)}`, 20, y);
     y += 8; doc.text(`Próximo cobro: ${fmtFecha(v.proximaFechaCobro)}`, 20, y);
   }
   y += 15; doc.setFontSize(10); doc.setTextColor(79,70,229);
-  doc.text('¡Gracias por su compra!', 105, y, null, null, 'center');
+  doc.text(App.config.mensaje || '¡Gracias por su compra!', 105, y, null, null, 'center');
   doc.save(`Venta_${v.id}_${v.cliente.replace(/\s+/g, '_')}.pdf`);
   toast('📄 PDF generado');
 }
-
 function enviarWhatsAppVenta(ventaId) {
   const v = DB.ventas.find(x => x.id === ventaId);
   if (!v) return;
-  let msg = `🦋 *VARIEDADES KAREN* 🦋\n\n📋 *Recibo de Venta*\n\n`;
-  msg += `*ID:* ${v.id}\n*Cliente:* ${v.cliente}\n*Fecha:* ${fmtFecha(v.fecha)}\n\n*PRODUCTOS:*\n`;
-  v.productos.forEach((p, i) => { msg += `${i+1}. ${p.nombre} x${p.cantidad} - C$${((parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1)).toLocaleString()}\n`; });
-  msg += `\n*TOTAL:* C$${(v.precioTotal).toLocaleString()}\n*Tipo:* ${v.tipoPago === 'contado' ? 'Contado' : 'Crédito'}\n`;
-  if (v.tipoPago === 'credito') msg += `*Prima:* C$${(v.prima).toLocaleString()}\n*Saldo:* C$${(v.saldo).toLocaleString()}\n*Cuota:* C$${(v.cuotaMensual).toLocaleString()}\n*Próximo:* ${fmtFecha(v.proximaFechaCobro)}\n`;
-  msg += `\n🌹 ¡Gracias por su compra! 🌹`;
+  let msg = `🦋 *${App.config.nombre.toUpperCase()}* 🦋\n\n📋 *Recibo de Venta*\n\n*ID:* ${v.id}\n*Cliente:* ${v.cliente}\n*Fecha:* ${fmtFecha(v.fecha)}\n\n*PRODUCTOS:*\n`;
+  v.productos.forEach((p, i) => { msg += `${i+1}. ${p.nombre} x${p.cantidad} - ${fmtC((parseFloat(p.precioVenta) || 0) * (parseInt(p.cantidad) || 1))}\n`; });
+  msg += `\n*TOTAL:* ${fmtC(v.precioTotal)}\n*Tipo:* ${v.tipoPago === 'contado' ? 'Contado' : 'Crédito'}\n`;
+  if (v.tipoPago === 'credito') msg += `*Prima:* ${fmtC(v.prima)}\n*Saldo:* ${fmtC(v.saldo)}\n*Cuota:* ${fmtC(v.cuotaMensual)}\n*Próximo:* ${fmtFecha(v.proximaFechaCobro)}\n`;
+  msg += `\n🌹 ${App.config.mensaje || '¡Gracias por su compra!'} 🌹`;
   const tel = (v.telefono || '').replace(/[^0-9]/g, '');
   window.open(tel ? `https://wa.me/505${tel}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
 }
@@ -1612,7 +1498,7 @@ function abrirModal(id) {
 function cerrarModales() {
   if (App.scannerActivo) { try { App.scannerActivo.stop(); App.scannerActivo.clear(); } catch(e){} App.scannerActivo = null; }
   document.getElementById('modalOverlay').classList.add('hidden');
-  ['modalProveedor','modalCompra','modalPagoProveedor','modalVenta','modalCliente','modalCobro','modalSelectorProductos','modalEscaner','modalBackup','modalContenido','modalNotificaciones'].forEach(id => {
+  ['modalProveedor','modalCompra','modalPagoProveedor','modalVenta','modalCliente','modalCobro','modalSelectorProductos','modalEscaner','modalBackup','modalContenido','modalNotificaciones','modalBuscador','modalRecordatorio'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
   });
@@ -1623,14 +1509,7 @@ function abrirModalContenido(titulo, html) {
     modal = document.createElement('div');
     modal.id = 'modalContenido';
     modal.className = 'hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4';
-    modal.innerHTML = `
-      <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between z-10">
-          <h3 id="tituloModalContenido" class="text-lg font-bold text-slate-800 dark:text-white"></h3>
-          <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
-        </div>
-        <div id="cuerpoModalContenido" class="p-4"></div>
-      </div>`;
+    modal.innerHTML = `<div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl"><div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between z-10"><h3 id="tituloModalContenido" class="text-lg font-bold text-slate-800 dark:text-white"></h3><button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div id="cuerpoModalContenido" class="p-4"></div></div>`;
     document.body.appendChild(modal);
   }
   document.getElementById('tituloModalContenido').textContent = titulo;
@@ -1640,19 +1519,19 @@ function abrirModalContenido(titulo, html) {
 
 /* ═══════════ BACKUP ═══════════ */
 function abrirMenuBackup() { abrirModal('modalBackup'); }
-
 function exportarBackup() {
-  const datos = { version: 3, exportadoEn: new Date().toISOString(), app: 'Variedades Karen', proveedores: DB.proveedores, compras: DB.compras, ventas: DB.ventas, clientes: DB.clientes, pagosProveedor: DB.pagosProveedor, cobros: DB.cobros };
+  const datos = { version: 4, exportadoEn: new Date().toISOString(), app: App.config.nombre, proveedores: DB.proveedores, compras: DB.compras, ventas: DB.ventas, clientes: DB.clientes, pagosProveedor: DB.pagosProveedor, cobros: DB.cobros, recordatorios: DB.recordatorios || [] };
   const fecha = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = `variedades-karen-backup-${fecha}.json`; a.click();
   URL.revokeObjectURL(url);
+  App.config.ultimoBackup = new Date().toISOString();
+  guardarConfigLocal();
   toast('✅ Backup exportado');
   cerrarModales();
 }
-
 async function importarBackup(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1662,7 +1541,7 @@ async function importarBackup(event) {
       const datos = JSON.parse(e.target.result);
       const migrado = migrarBackup(datos);
       if (!confirm(`¿Reemplazar TODOS los datos?\n\nBackup: ${datos.app || 'desconocido'}\nVersión: ${datos.version || 1}`)) return;
-      const backup = { proveedores: DB.proveedores, compras: DB.compras, ventas: DB.ventas, clientes: DB.clientes, pagosProveedor: DB.pagosProveedor, cobros: DB.cobros };
+      const backup = { proveedores: DB.proveedores, compras: DB.compras, ventas: DB.ventas, clientes: DB.clientes, pagosProveedor: DB.pagosProveedor, cobros: DB.cobros, recordatorios: DB.recordatorios };
       localStorage.setItem('backup_pre_import', JSON.stringify(backup));
       await DB.vaciarTodo();
       await guardarMultiples('proveedores', migrado.proveedores || []);
@@ -1671,6 +1550,7 @@ async function importarBackup(event) {
       await guardarMultiples('clientes', migrado.clientes || []);
       await guardarMultiples('pagosProveedor', migrado.pagosProveedor || []);
       await guardarMultiples('cobros', migrado.cobros || []);
+      if (migrado.recordatorios) await guardarMultiples('recordatorios', migrado.recordatorios);
       await DB.cargarTodo();
       toast('✅ Datos importados');
       cerrarModales();
@@ -1680,7 +1560,6 @@ async function importarBackup(event) {
   };
   reader.readAsText(file);
 }
-
 async function borrarTodosLosDatos() {
   if (!confirm('⚠️ ¿Borrar TODOS los datos?')) return;
   if (!confirm('¿Estás TOTALMENTE seguro?')) return;

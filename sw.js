@@ -1,4 +1,4 @@
-const CACHE_NAME = 'variedades-karen-v4';
+const CACHE_NAME = 'variedades-karen-v5';
 const urlsToCache = [
   './',
   './index.html',
