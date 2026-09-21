@@ -13,6 +13,7 @@
   <link rel="apple-touch-icon" href="https://via.placeholder.com/192.png/4f46e5/ffffff?text=VK">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <link rel="stylesheet" href="styles.css">
   <script>
@@ -44,6 +45,10 @@
         <button onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
           <svg id="themeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
         </button>
+        <button onclick="abrirPanelNotificaciones()" class="relative p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          <span id="badgeNotif" class="hidden absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">0</span>
+        </button>
         <button onclick="abrirMenuBackup()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3 3h10c1.5 0 3-1 3-3V7c0-2-1.5-3-3-3H7C5.5 4 4 5 4 7z M9 12l2 2 4-4"/></svg>
         </button>
@@ -67,9 +72,9 @@
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         <span>Ventas</span>
       </button>
-      <button data-nav="finanzas" onclick="navegar('finanzas')" class="nav-item">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-        <span>Finanzas</span>
+      <button data-nav="reportes" onclick="navegar('reportes')" class="nav-item">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <span>Reportes</span>
       </button>
       <button data-nav="mas" onclick="navegar('mas')" class="nav-item">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -89,9 +94,9 @@
       </div>
       <div class="p-4 space-y-4">
         <input type="hidden" id="provId">
-        <div><label class="lbl">Nombre *</label><input type="text" id="provNombre" class="inp" placeholder="Ej: Carmen"></div>
-        <div><label class="lbl">Teléfono</label><input type="tel" id="provTelefono" class="inp" placeholder="Ej: 88888888"></div>
-        <div><label class="lbl">Tipo de pago</label><select id="provTipo" class="inp"><option value="credito">Crédito</option><option value="contado">Contado</option><option value="ambos">Ambos</option></select></div>
+        <div><label class="lbl">Nombre *</label><input type="text" id="provNombre" class="inp"></div>
+        <div><label class="lbl">Teléfono</label><input type="tel" id="provTelefono" class="inp"></div>
+        <div><label class="lbl">Tipo</label><select id="provTipo" class="inp"><option value="credito">Crédito</option><option value="contado">Contado</option><option value="ambos">Ambos</option></select></div>
         <div><label class="lbl">Notas</label><textarea id="provNotas" rows="2" class="inp"></textarea></div>
       </div>
       <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-2">
@@ -112,7 +117,7 @@
       <div class="p-4 space-y-4">
         <input type="hidden" id="compraId">
         <div class="grid grid-cols-2 gap-3">
-          <div><label class="lbl">ID Compra</label><input type="text" id="compraCodigo" class="inp" placeholder="C001"></div>
+          <div><label class="lbl">ID</label><input type="text" id="compraCodigo" class="inp" placeholder="C001"></div>
           <div><label class="lbl">Fecha</label><input type="date" id="compraFecha" class="inp"></div>
         </div>
         <div><label class="lbl">Proveedor *</label><select id="compraProveedor" class="inp"><option value="">Seleccione...</option></select></div>
@@ -129,13 +134,13 @@
           <div id="listaProductosCompra" class="space-y-3"></div>
         </div>
         <div class="bg-brand-50 dark:bg-brand-900/20 rounded-xl p-3 space-y-1">
-          <div class="flex justify-between text-sm"><span class="text-slate-600 dark:text-slate-400">Total:</span><span id="compraTotal" class="font-bold text-slate-800 dark:text-white">C$0.00</span></div>
-          <div class="flex justify-between text-sm"><span class="text-slate-600 dark:text-slate-400">Pago inicial:</span><span id="compraPagado" class="font-bold text-emerald-600">C$0.00</span></div>
-          <div class="flex justify-between text-sm border-t border-brand-200 dark:border-brand-800 pt-1"><span class="text-slate-700 dark:text-slate-300 font-medium">Saldo:</span><span id="compraSaldo" class="font-bold text-rose-600">C$0.00</span></div>
+          <div class="flex justify-between text-sm"><span>Total:</span><span id="compraTotal" class="font-bold">C$0.00</span></div>
+          <div class="flex justify-between text-sm"><span>Pago inicial:</span><span id="compraPagado" class="font-bold text-emerald-600">C$0.00</span></div>
+          <div class="flex justify-between text-sm border-t border-brand-200 dark:border-brand-800 pt-1"><span>Saldo:</span><span id="compraSaldo" class="font-bold text-rose-600">C$0.00</span></div>
         </div>
       </div>
       <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-2">
-        <button onclick="guardarCompra()" class="btn-primary flex-1">Guardar Compra</button>
+        <button onclick="guardarCompra()" class="btn-primary flex-1">Guardar</button>
         <button onclick="eliminarCompra()" id="btnEliminarCompra" class="btn-danger hidden">Eliminar</button>
         <button onclick="cerrarModales()" class="btn-ghost">Cancelar</button>
       </div>
@@ -150,12 +155,11 @@
         <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
       </div>
       <div class="p-4 space-y-4">
-        <input type="hidden" id="pagoId">
         <div><label class="lbl">Proveedor *</label><select id="pagoProveedor" class="inp" onchange="cargarComprasDelProveedor()"><option value="">Seleccione...</option></select></div>
         <div><label class="lbl">Compra a pagar</label><select id="pagoCompra" class="inp"><option value="">Seleccione proveedor primero...</option></select></div>
         <div><label class="lbl">Fecha</label><input type="date" id="pagoFecha" class="inp"></div>
-        <div><label class="lbl">Monto (C$) *</label><input type="number" id="pagoMonto" min="0" step="0.01" class="inp" placeholder="0.00"></div>
-        <div><label class="lbl">Método</label><select id="pagoMetodo" class="inp"><option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option><option value="Depósito">Depósito</option></select></div>
+        <div><label class="lbl">Monto (C$) *</label><input type="number" id="pagoMonto" min="0" step="0.01" class="inp"></div>
+        <div><label class="lbl">Método</label><select id="pagoMetodo" class="inp"><option>Efectivo</option><option>Transferencia</option><option>Depósito</option></select></div>
         <div><label class="lbl">Notas</label><textarea id="pagoNotas" rows="2" class="inp"></textarea></div>
       </div>
       <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-2">
@@ -175,7 +179,7 @@
       <div class="p-4 space-y-4">
         <input type="hidden" id="ventaId">
         <div class="grid grid-cols-2 gap-3">
-          <div><label class="lbl">ID Venta</label><input type="text" id="ventaCodigo" class="inp" placeholder="V001"></div>
+          <div><label class="lbl">ID</label><input type="text" id="ventaCodigo" class="inp" placeholder="V001"></div>
           <div><label class="lbl">Fecha</label><input type="date" id="ventaFecha" class="inp"></div>
         </div>
         <div>
@@ -189,7 +193,7 @@
           <div class="flex items-center justify-between mb-2">
             <label class="lbl mb-0">Productos</label>
             <div class="flex gap-2">
-              <button type="button" onclick="abrirSelectorProductosVenta()" class="text-xs px-3 py-1.5 rounded-lg bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-medium">📦 Del Stock</button>
+              <button type="button" onclick="abrirSelectorProductosVenta()" class="text-xs px-3 py-1.5 rounded-lg bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-medium">📦 Stock</button>
               <button type="button" onclick="agregarProductoVentaManual()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">+ Manual</button>
             </div>
           </div>
@@ -204,20 +208,17 @@
             <div><label class="lbl">Meses</label><input type="number" id="ventaMeses" value="12" min="1" class="inp" oninput="recalcularVenta()"></div>
             <div><label class="lbl">Frecuencia</label><select id="ventaFrecuencia" class="inp" onchange="cambiarFrecuenciaVenta()"><option value="mensual">Mensual</option><option value="quincenal">Quincenal</option><option value="semanal">Semanal</option></select></div>
           </div>
-          <div id="contenedorProximaFecha" class="mt-3">
-            <label class="lbl">Próximo cobro</label>
-            <input type="date" id="ventaProximaFecha" class="inp">
-          </div>
+          <div class="mt-3"><label class="lbl">Próximo cobro</label><input type="date" id="ventaProximaFecha" class="inp"></div>
         </div>
         <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 space-y-1">
-          <div class="flex justify-between text-sm"><span class="text-slate-600 dark:text-slate-400">Total:</span><span id="ventaTotal" class="font-bold text-slate-800 dark:text-white">C$0.00</span></div>
-          <div class="flex justify-between text-sm"><span class="text-slate-600 dark:text-slate-400">Prima:</span><span id="ventaPrimaVer" class="font-bold text-emerald-600">C$0.00</span></div>
-          <div class="flex justify-between text-sm border-t border-emerald-200 dark:border-emerald-800 pt-1"><span class="text-slate-700 dark:text-slate-300 font-medium">Saldo:</span><span id="ventaSaldo" class="font-bold text-rose-600">C$0.00</span></div>
-          <div class="flex justify-between text-sm"><span class="text-slate-600 dark:text-slate-400">Cuota:</span><span id="ventaCuota" class="font-bold text-brand-600">C$0.00</span></div>
+          <div class="flex justify-between text-sm"><span>Total:</span><span id="ventaTotal" class="font-bold">C$0.00</span></div>
+          <div class="flex justify-between text-sm"><span>Prima:</span><span id="ventaPrimaVer" class="font-bold text-emerald-600">C$0.00</span></div>
+          <div class="flex justify-between text-sm border-t border-emerald-200 dark:border-emerald-800 pt-1"><span>Saldo:</span><span id="ventaSaldo" class="font-bold text-rose-600">C$0.00</span></div>
+          <div class="flex justify-between text-sm"><span>Cuota:</span><span id="ventaCuota" class="font-bold text-brand-600">C$0.00</span></div>
         </div>
       </div>
       <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-2">
-        <button onclick="guardarVenta()" class="btn-primary flex-1">Guardar Venta</button>
+        <button onclick="guardarVenta()" class="btn-primary flex-1">Guardar</button>
         <button onclick="eliminarVenta()" id="btnEliminarVenta" class="btn-danger hidden">Eliminar</button>
         <button onclick="cerrarModales()" class="btn-ghost">Cancelar</button>
       </div>
@@ -234,7 +235,7 @@
       <div class="p-4 space-y-4">
         <input type="hidden" id="clienteId">
         <div><label class="lbl">Nombre *</label><input type="text" id="clienteNombre" class="inp"></div>
-        <div><label class="lbl">Teléfono</label><input type="tel" id="clienteTelefono" class="inp" placeholder="88888888"></div>
+        <div><label class="lbl">Teléfono</label><input type="tel" id="clienteTelefono" class="inp"></div>
         <div><label class="lbl">Notas</label><textarea id="clienteNotas" rows="2" class="inp"></textarea></div>
       </div>
       <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-2">
@@ -253,13 +254,12 @@
         <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
       </div>
       <div class="p-4 space-y-4">
-        <input type="hidden" id="cobroId">
-        <div><label class="lbl">Buscar venta *</label><input type="text" id="cobroBusqueda" class="inp" placeholder="ID o nombre del cliente..." oninput="buscarVentaParaCobro()"><div id="resultadosCobro" class="hidden mt-2 space-y-2 max-h-40 overflow-y-auto"></div></div>
+        <div><label class="lbl">Buscar venta *</label><input type="text" id="cobroBusqueda" class="inp" oninput="buscarVentaParaCobro()"><div id="resultadosCobro" class="hidden mt-2 space-y-2 max-h-40 overflow-y-auto"></div></div>
         <input type="hidden" id="cobroVentaId">
         <div id="infoVentaCobro" class="hidden bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3"></div>
         <div><label class="lbl">Fecha</label><input type="date" id="cobroFecha" class="inp"></div>
-        <div><label class="lbl">Monto (C$) *</label><input type="number" id="cobroMonto" min="0" step="0.01" class="inp" placeholder="0.00"></div>
-        <div><label class="lbl">Método</label><select id="cobroMetodo" class="inp"><option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option><option value="Depósito">Depósito</option></select></div>
+        <div><label class="lbl">Monto (C$) *</label><input type="number" id="cobroMonto" min="0" step="0.01" class="inp"></div>
+        <div><label class="lbl">Método</label><select id="cobroMetodo" class="inp"><option>Efectivo</option><option>Transferencia</option><option>Depósito</option></select></div>
         <div><label class="lbl">Notas</label><textarea id="cobroNotas" rows="2" class="inp"></textarea></div>
       </div>
       <div class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex gap-2">
@@ -269,7 +269,7 @@
     </div>
   </div>
 
-  <!-- MODAL SELECTOR PRODUCTOS DEL STOCK -->
+  <!-- MODAL SELECTOR PRODUCTOS -->
   <div id="modalSelectorProductos" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
@@ -277,7 +277,7 @@
         <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
       </div>
       <div class="p-4">
-        <input type="text" id="buscarProductoStock" class="inp mb-3" placeholder="🔍 Buscar producto..." oninput="filtrarProductosStock()">
+        <input type="text" id="buscarProductoStock" class="inp mb-3" placeholder="🔍 Buscar..." oninput="filtrarProductosStock()">
         <div id="listaProductosStock" class="space-y-2 max-h-[60vh] overflow-y-auto"></div>
       </div>
     </div>
@@ -287,15 +287,22 @@
   <div id="modalEscaner" class="hidden fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black">
     <div class="bg-slate-900 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
       <div class="p-4 flex items-center justify-between text-white">
-        <h3 class="text-lg font-bold">📷 Escanear código</h3>
-        <button onclick="cerrarEscaner()" class="p-2 rounded-xl bg-white/10 text-white">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
+        <h3 class="text-lg font-bold">📷 Escanear</h3>
+        <button onclick="cerrarEscaner()" class="p-2 rounded-xl bg-white/10 text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
       </div>
       <div id="lectorQR" class="w-full aspect-square bg-black"></div>
-      <div class="p-4 text-center text-white text-sm">
-        <p id="resultadoEscaner">Apunta al código de barras o QR</p>
+      <div class="p-4 text-center text-white text-sm"><p id="resultadoEscaner">Apunta al código</p></div>
+    </div>
+  </div>
+
+  <!-- MODAL NOTIFICACIONES -->
+  <div id="modalNotificaciones" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl">
+      <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-800 dark:text-white">🔔 Notificaciones</h3>
+        <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
       </div>
+      <div id="listaNotificaciones" class="p-4 space-y-2"></div>
     </div>
   </div>
 
@@ -309,11 +316,11 @@
       <div class="p-4 space-y-3">
         <button onclick="exportarBackup()" class="w-full p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></div>
-          <div class="text-left"><p class="font-bold text-slate-800 dark:text-white">Exportar Backup</p><p class="text-xs text-slate-500">Descarga un .json</p></div>
+          <div class="text-left"><p class="font-bold text-slate-800 dark:text-white">Exportar Backup</p><p class="text-xs text-slate-500">Descarga .json</p></div>
         </button>
         <button onclick="document.getElementById('inputImportar').click()" class="w-full p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></div>
-          <div class="text-left"><p class="font-bold text-slate-800 dark:text-white">Importar Backup</p><p class="text-xs text-slate-500">Carga un .json</p></div>
+          <div class="text-left"><p class="font-bold text-slate-800 dark:text-white">Importar Backup</p><p class="text-xs text-slate-500">Carga .json</p></div>
         </button>
         <input type="file" id="inputImportar" accept=".json" class="hidden" onchange="importarBackup(event)">
         <button onclick="borrarTodosLosDatos()" class="w-full p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 flex items-center gap-3">
@@ -324,7 +331,6 @@
     </div>
   </div>
 
-  <!-- TOAST -->
   <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-5 py-3 rounded-2xl shadow-2xl opacity-0 pointer-events-none transition-all duration-300 z-[60] max-w-[90vw]">
     <p id="toastMsg" class="text-sm font-medium">Listo</p>
   </div>
