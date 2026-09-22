@@ -1490,26 +1490,59 @@ function enviarWhatsAppVenta(ventaId) {
 
 /* ═══════════ MODALES ═══════════ */
 function abrirModal(id) {
-  document.getElementById('modalOverlay').classList.remove('hidden');
-  document.getElementById(id).classList.remove('hidden');
-  const card = document.querySelector(`#${id} > div`);
-  if (card) card.classList.add('slide-up');
+  const overlay = document.getElementById('modalOverlay');
+  const modal = document.getElementById(id);
+  if (!modal) { console.error('Modal no encontrado:', id); return; }
+  // Quitar TODOS los modales visibles primero
+  document.querySelectorAll('[id^="modal"]').forEach(m => {
+    if (m.id !== 'modalOverlay') m.classList.add('hidden');
+  });
+  overlay.classList.remove('hidden');
+  overlay.style.zIndex = '90';
+  modal.classList.remove('hidden');
+  modal.style.zIndex = '100';
+  const card = modal.querySelector(':scope > div');
+  if (card) {
+    card.classList.remove('slide-up');
+    void card.offsetWidth;
+    card.classList.add('slide-up');
+  }
 }
+
 function cerrarModales() {
-  if (App.scannerActivo) { try { App.scannerActivo.stop(); App.scannerActivo.clear(); } catch(e){} App.scannerActivo = null; }
-  document.getElementById('modalOverlay').classList.add('hidden');
-  ['modalProveedor','modalCompra','modalPagoProveedor','modalVenta','modalCliente','modalCobro','modalSelectorProductos','modalEscaner','modalBackup','modalContenido','modalNotificaciones','modalBuscador','modalRecordatorio'].forEach(id => {
+  if (App.scannerActivo) {
+    try { App.scannerActivo.stop(); App.scannerActivo.clear(); } catch(e){}
+    App.scannerActivo = null;
+  }
+  const overlay = document.getElementById('modalOverlay');
+  if (overlay) overlay.classList.add('hidden');
+  const modales = [
+    'modalProveedor','modalCompra','modalPagoProveedor','modalVenta',
+    'modalCliente','modalCobro','modalSelectorProductos','modalEscaner',
+    'modalBackup','modalContenido','modalNotificaciones','modalBuscador',
+    'modalRecordatorio','modalConfiguracion'
+  ];
+  modales.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
   });
 }
+
 function abrirModalContenido(titulo, html) {
   let modal = document.getElementById('modalContenido');
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'modalContenido';
-    modal.className = 'hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4';
-    modal.innerHTML = `<div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl"><div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between z-10"><h3 id="tituloModalContenido" class="text-lg font-bold text-slate-800 dark:text-white"></h3><button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div id="cuerpoModalContenido" class="p-4"></div></div>`;
+    modal.className = 'hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4';
+    modal.style.zIndex = '100';
+    modal.innerHTML = `
+      <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between z-10">
+          <h3 id="tituloModalContenido" class="text-lg font-bold text-slate-800 dark:text-white"></h3>
+          <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+        <div id="cuerpoModalContenido" class="p-4"></div>
+      </div>`;
     document.body.appendChild(modal);
   }
   document.getElementById('tituloModalContenido').textContent = titulo;
@@ -1518,7 +1551,22 @@ function abrirModalContenido(titulo, html) {
 }
 
 /* ═══════════ BACKUP ═══════════ */
-function abrirMenuBackup() { abrirModal('modalBackup'); }
+function abrirMenuBackup() {
+  const overlay = document.getElementById('modalOverlay');
+  const modal = document.getElementById('modalBackup');
+  if (!modal) { toast('❌ No se encontró el modal'); return; }
+  overlay.classList.remove('hidden');
+  overlay.style.zIndex = '90';
+  modal.classList.remove('hidden');
+  modal.style.zIndex = '100';
+  const card = modal.querySelector(':scope > div');
+  if (card) {
+    card.classList.remove('slide-up');
+    void card.offsetWidth;
+    card.classList.add('slide-up');
+  }
+}
+
 function exportarBackup() {
   const datos = { version: 4, exportadoEn: new Date().toISOString(), app: App.config.nombre, proveedores: DB.proveedores, compras: DB.compras, ventas: DB.ventas, clientes: DB.clientes, pagosProveedor: DB.pagosProveedor, cobros: DB.cobros, recordatorios: DB.recordatorios || [] };
   const fecha = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);

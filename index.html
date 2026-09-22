@@ -86,10 +86,10 @@
     </div>
   </nav>
 
-  <div id="modalOverlay" class="hidden fixed inset-0 bg-black/50 z-50 backdrop-blur-sm" onclick="cerrarModales()"></div>
+  <div id="modalOverlay" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm" style="z-index: 90;" onclick="cerrarModales()"></div>
 
   <!-- MODAL PROVEEDOR -->
-  <div id="modalProveedor" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div id="modalProveedor" class="hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4" style="z-index: 100;">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
         <h3 id="tituloModalProveedor" class="text-lg font-bold text-slate-800 dark:text-white">Nuevo Proveedor</h3>
@@ -111,7 +111,7 @@
   </div>
 
   <!-- MODAL COMPRA -->
-  <div id="modalCompra" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div id="modalCompra" class="hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4" style="z-index: 100;">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-2xl max-h-[95vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between z-10">
         <h3 id="tituloModalCompra" class="text-lg font-bold text-slate-800 dark:text-white">Nueva Compra</h3>
@@ -151,7 +151,7 @@
   </div>
 
   <!-- MODAL PAGO A PROVEEDOR -->
-  <div id="modalPagoProveedor" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div id="modalPagoProveedor" class="hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4" style="z-index: 100;">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
         <h3 id="tituloModalPago" class="text-lg font-bold text-slate-800 dark:text-white">Pago a Proveedor</h3>
@@ -173,7 +173,7 @@
   </div>
 
   <!-- MODAL VENTA -->
-  <div id="modalVenta" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div id="modalVenta" class="hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4" style="z-index: 100;">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-2xl max-h-[95vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between z-10">
         <h3 id="tituloModalVenta" class="text-lg font-bold text-slate-800 dark:text-white">Nueva Venta</h3>
@@ -229,7 +229,7 @@
   </div>
 
   <!-- MODAL CLIENTE -->
-  <div id="modalCliente" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div id="modalCliente" class="hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4" style="z-index: 100;">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
         <h3 id="tituloModalCliente" class="text-lg font-bold text-slate-800 dark:text-white">Nuevo Cliente</h3>
@@ -250,7 +250,7 @@
   </div>
 
   <!-- MODAL COBRO -->
-  <div id="modalCobro" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div id="modalCobro" class="hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4" style="z-index: 100;">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
         <h3 id="tituloModalCobro" class="text-lg font-bold text-slate-800 dark:text-white">Registrar Cobro</h3>
@@ -273,7 +273,7 @@
   </div>
 
   <!-- MODAL SELECTOR PRODUCTOS -->
-  <div id="modalSelectorProductos" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div id="modalSelectorProductos" class="hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4" style="z-index: 100;">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
         <h3 class="text-lg font-bold text-slate-800 dark:text-white">Productos en Stock</h3>
@@ -287,7 +287,7 @@
   </div>
 
   <!-- MODAL ESCÁNER -->
-  <div id="modalEscaner" class="hidden fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black">
+  <div id="modalEscaner" class="hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4" style="z-index: 100;">
     <div class="bg-slate-900 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
       <div class="p-4 flex items-center justify-between text-white">
         <h3 class="text-lg font-bold">📷 Escanear</h3>
@@ -299,7 +299,7 @@
   </div>
 
   <!-- MODAL NOTIFICACIONES -->
-  <div id="modalNotificaciones" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div id="modalNotificaciones" class="hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4" style="z-index: 100;">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
         <h3 class="text-lg font-bold text-slate-800 dark:text-white">🔔 Notificaciones</h3>
@@ -310,7 +310,7 @@
   </div>
 
   <!-- MODAL BUSCADOR GLOBAL -->
-  <div id="modalBuscador" class="hidden fixed inset-0 z-50 flex items-start justify-center p-0 sm:p-4 bg-black/50">
+  <div id="modalBuscador" class="hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4" style="z-index: 100;">
     <div class="bg-white dark:bg-slate-900 rounded-b-3xl sm:rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
       <div class="p-4 flex items-center gap-2">
         <div class="search-box flex-1">
@@ -324,7 +324,7 @@
   </div>
 
   <!-- MODAL RECORDATORIO -->
-  <div id="modalRecordatorio" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div id="modalRecordatorio" class="hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4" style="z-index: 100;">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
         <h3 id="tituloModalRecordatorio" class="text-lg font-bold text-slate-800 dark:text-white">Nuevo Recordatorio</h3>
@@ -346,7 +346,7 @@
   </div>
 
   <!-- MODAL CONFIGURACIÓN -->
-  <div id="modalConfiguracion" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div id="modalConfiguracion" class="hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4" style="z-index: 100;">
     <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
       <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
         <h3 class="text-lg font-bold text-slate-800 dark:text-white">⚙️ Configuración</h3>
@@ -389,6 +389,31 @@
       </div>
     </div>
   </div>
+
+  <!-- MODAL BACKUP -->
+<div id="modalBackup" class="hidden fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4" style="z-index: 100;">
+  <div class="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-md shadow-2xl">
+    <div class="border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
+      <h3 class="text-lg font-bold text-slate-800 dark:text-white">Backup y Datos</h3>
+      <button onclick="cerrarModales()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+    </div>
+    <div class="p-4 space-y-3">
+      <button onclick="exportarBackup()" class="w-full p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></div>
+        <div class="text-left"><p class="font-bold text-slate-800 dark:text-white">Exportar Backup</p><p class="text-xs text-slate-500">Descarga un archivo .json</p></div>
+      </button>
+      <button onclick="document.getElementById('inputImportar').click()" class="w-full p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></div>
+        <div class="text-left"><p class="font-bold text-slate-800 dark:text-white">Importar Backup</p><p class="text-xs text-slate-500">Carga un archivo .json</p></div>
+      </button>
+      <input type="file" id="inputImportar" accept=".json,application/json" class="hidden" onchange="importarBackup(event)">
+      <button onclick="borrarTodosLosDatos()" class="w-full p-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></div>
+        <div class="text-left"><p class="font-bold text-slate-800 dark:text-white">Borrar todos los datos</p><p class="text-xs text-slate-500">⚠️ Irreversible</p></div>
+      </button>
+    </div>
+  </div>
+</div>
 
   <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-5 py-3 rounded-2xl shadow-2xl opacity-0 pointer-events-none transition-all duration-300 z-[60] max-w-[90vw]">
     <p id="toastMsg" class="text-sm font-medium">Listo</p>
