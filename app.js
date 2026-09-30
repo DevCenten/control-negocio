@@ -1627,3 +1627,32 @@ function toast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.add('opacity-0'), 3000);
 }
+
+/* ═══════════ AUTO-ACTUALIZACIÓN DEL SERVICE WORKER ═══════════ */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    // Buscar actualizaciones cada vez que se abre la app
+    reg.update();
+
+    // Detectar cuando hay una versión nueva instalada
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // Hay nueva versión → recargar automáticamente
+          console.log('🔄 Nueva versión detectada, recargando...');
+          newWorker.postMessage('SKIP_WAITING');
+          setTimeout(() => window.location.reload(), 800);
+        }
+      });
+    });
+  }).catch(err => console.warn('SW:', err));
+
+  // Si el SW cambia, recargar la página
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+}
